@@ -86,18 +86,25 @@ src/
 1. **`00_kaggle_dataset_audit_and_profiling.ipynb`**:
    - Tích hợp module *Deep Hierarchical Anatomizer* tự động bóc tách 3 bộ dữ liệu gắn trên Kaggle.
    - Kiểm toán độ phân giải thực tế, tỷ lệ ảnh $<512\text{px}$ và đưa ra phán quyết tự động (Clinical Verdict).
-2. **`00a_nih_audit_baseline.ipynb`**:
+2. **`00_rescale_nih_512.ipynb`** (K?m script `scripts/rescale_nih_kaggle.py`):
+   - ?a ti?n tr?nh 4 vCPUs (`ProcessPoolExecutor`) downscale to?n b? 112,120 ?nh NIH ($1024 \times 1024 \to 512 \times 512$) b?ng `cv2.INTER_AREA` (ch?ng r?ng c?a, b?o t?n t?n th??ng vi m?) trong ~25 ph?t.
+   - Xu?t th? m?c ?nh n?n PNG m?c 4 (~13 GB) k?m `Data_Entry_2017.csv` v? `patient_splits.csv` (Zero Patient Leakage) ?? 1-click t?o Kaggle Dataset m?i: **`lungray-nih-512`**.
+3. **`00_rescale_covidx_512.ipynb`** (K?m script `scripts/rescale_covidx_kaggle.py`):
+   - ?p d?ng **Medical Letterboxing** (`LongestMaxSize(512)` + vi?n ?en ??i x?ng $512 \times 512$) cho 16,400+ ?nh trong `train/` v? `test/` c?a COVIDx CXR-4 trong ~3?5 ph?t. B?o to?n 100% t? l? h?nh h?c th?t c?a b?ng tim v? l?ng ng?c.
+   - Xu?t th? m?c output (~2 GB) k?m `train.txt` v? `test.txt` ?? 1-click t?o Kaggle Dataset m?i: **`lungray-covidx-512`**.
+   *(L?u ?: B? TB Chest Radiography 7,000 ?nh ?? chu?n $512 \times 512$ s?n c? n?n gi? nguy?n 100%, kh?ng c?n notebook resize).*
+4. **`00a_nih_audit_baseline.ipynb`**:
    - Kiểm toán độc lập Head A (NIH ChestX-ray14): Bóc tách 12 chunks, kiểm tra Zero Patient Leakage, tính `pos_weight` cho 14 bệnh.
    - Huấn luyện DenseNet-121 baseline (3–5 epochs) xuất 14 đường cong ROC curves và Macro AUROC.
-3. **`00b_covid_audit_baseline.ipynb`**:
+5. **`00b_covid_audit_baseline.ipynb`**:
    - Kiểm toán độc lập Head C (COVIDx CXR-4 Benchmark): Đọc 	rain.txt/	est.txt, cân bằng mẫu 1:1, tiền xử lý Anti-Shortcut (CLAHE + Inset Border Crop), huấn luyện baseline nhị phân với BCEWithLogitsLoss và Youden's J threshold.
    - Huấn luyện baseline DenseNet-121 3 lớp với `CrossEntropyLoss`, xuất Normalized Confusion Matrix và Macro AUROC.
-4. **`00c_tb_audit_baseline.ipynb`**:
+6. **`00c_tb_audit_baseline.ipynb`**:
    - Kiểm toán độc lập Head B (Tuberculosis TB): Phân tích tỷ lệ mất cân bằng 5:1, tính `pos_weight=5.0`.
    - Huấn luyện baseline (3–5 epochs), tối ưu ngưỡng quyết định $\tau^*$ theo chỉ số **Youden's J statistic**, xuất AUROC, Sensitivity, Specificity.
-5. **`01_exploratory_data_analysis.ipynb`**:
+7. **`01_exploratory_data_analysis.ipynb`**:
    - Phân tích và trực quan hóa chuyên sâu EDA: Phân bố bệnh lý, ma trận đồng xuất hiện (Co-occurrence Matrix), nhân khẩu học bệnh nhân và trực quan hóa ảnh X-quang thực tế.
-6. **`02_multitask_baseline_training.ipynb`**:
+8. **`02_multitask_baseline_training.ipynb`**:
    - Notebook huấn luyện toàn diện Multi-Task 3-Head Baseline trên Kaggle GPU (P100 / T4).
    - Tích hợp *Dataset Structure & Resolution Inspector*, On-the-Fly $512 \times 512$, nạp `WeightedMultiTaskBatchSampler` (60:25:15).
    - Đánh giá chuyên sâu trên tập Test độc lập cho cả 3 heads và xuất Delivery Gate 2 Scorecard.

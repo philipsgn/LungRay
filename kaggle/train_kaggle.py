@@ -38,13 +38,17 @@ def resolve_dataset_paths() -> Dict[str, str]:
 
     if is_kaggle:
         print("[Kaggle Environment Detected] Searching for mounted datasets...")
-        # Adapt common Kaggle dataset mount names
+        # Prioritize 512x512 pre-resized datasets for 4x training speed
         nih_candidates = [
+            os.path.join(kaggle_base, "lungray-nih-512"),
+            os.path.join(kaggle_base, "lungray-nih-512", "nih_512"),
             os.path.join(kaggle_base, "data-nih-chestxray14"),
             os.path.join(kaggle_base, "nih-chest-xrays"),
             os.path.join(kaggle_base, "data"),
         ]
         covid_candidates = [
+            os.path.join(kaggle_base, "lungray-covidx-512"),
+            os.path.join(kaggle_base, "lungray-covidx-512", "covidx_512"),
             os.path.join(kaggle_base, "covidx-cxr2"),
             os.path.join(kaggle_base, "covid19-radiography-database"),
             os.path.join(kaggle_base, "covid19-radiography-dataset"),
@@ -60,15 +64,28 @@ def resolve_dataset_paths() -> Dict[str, str]:
         output_dir = "/kaggle/working"
     else:
         print("[Local Environment Detected] Using workspace relative paths...")
-        nih_path = "dataset/nih_chestxray14"
-        covid_path = "dataset/covidx_cxr4" if os.path.exists("dataset/covidx_cxr4") else "dataset/covid19_radiography"
+        nih_candidates = ["data/processed/nih_512", "dataset/nih_chestxray14"]
+        covid_candidates = ["data/processed/covidx_512", "dataset/covidx_cxr4", "dataset/covid19_radiography"]
+        nih_path = next((p for p in nih_candidates if os.path.exists(p)), "dataset/nih_chestxray14")
+        covid_path = next((p for p in covid_candidates if os.path.exists(p)), "dataset/covid19_radiography")
         tb_path = "dataset/tb_chestxray"
         output_dir = "checkpoints"
+
+    nih_pre_resized = "512" in os.path.basename(nih_path).lower() or os.path.exists(os.path.join(nih_path, "images"))
+    covid_pre_resized = "512" in os.path.basename(covid_path).lower()
+    tb_pre_resized = True  # TB dataset is natively 512x512
+
+    print(f"[Dataset Auto-Detect] NIH: {nih_path} (pre_resized={nih_pre_resized})")
+    print(f"[Dataset Auto-Detect] COVIDx: {covid_path} (pre_resized={covid_pre_resized})")
+    print(f"[Dataset Auto-Detect] TB: {tb_path} (pre_resized={tb_pre_resized})")
 
     return {
         "nih_dir": nih_path,
         "covid_dir": covid_path,
         "tb_dir": tb_path,
+        "nih_pre_resized": nih_pre_resized,
+        "covid_pre_resized": covid_pre_resized,
+        "tb_pre_resized": tb_pre_resized,
         "output_dir": output_dir,
     }
 
@@ -152,10 +169,40 @@ def main():
     train_transforms = get_train_transforms(image_size=512)
     val_transforms = get_val_transforms(image_size=512)
 
-    # Build Training Datasets
-    ds_train_nih = ChestXrayDataset(train_nih, paths["nih_dir"], "Finding Labels", 0, 14, train_transforms, ignore_missing=True)
-    ds_train_covid = ChestXrayDataset(train_covid, paths["covid_dir"], "label", 2, 1, train_transforms, ignore_missing=True)
-    ds_train_tb = ChestXrayDataset(train_tb, paths["tb_dir"], "label", 1, 1, train_transforms, ignore_missing=True)
+    # Build Training Datasets with Dual-Mode High-Speed Support
+    ds_train_nih = ChestXrayDataset(
+        df=train_nih,
+        image_dir=paths["nih_dir"],
+        image_col="Image Index" if "Image Index" in train_nih.columns else "image_id",
+        label_col="Finding Labels" if "Finding Labels" in train_nih.columns else "label",
+        task_id=0,
+        num_classes=14,
+        transforms=train_transforms,
+        pre_resized=paths["nih_pre_resized"],
+        ignore_missing=True,
+    )
+    ds_train_covid = ChestXrayDataset(
+        df=train_covid,
+        image_dir=paths["covid_dir"],
+        image_col="filename" if "filename" in train_covid.columns else "image_id",
+        label_col="label" if "label" in train_covid.columns else "Finding Labels",
+        task_id=2,
+        num_classes=1,
+        transforms=train_transforms,
+        pre_resized=paths["covid_pre_resized"],
+        ignore_missing=True,
+    )
+    ds_train_tb = ChestXrayDataset(
+        df=train_tb,
+        image_dir=paths["tb_dir"],
+        image_col="filename" if "filename" in train_tb.columns else "image_id",
+        label_col="label" if "label" in train_tb.columns else "Finding Labels",
+        task_id=1,
+        num_classes=1,
+        transforms=train_transforms,
+        pre_resized=paths["tb_pre_resized"],
+        ignore_missing=True,
+    )
 
     concat_train = ConcatDataset([ds_train_nih, ds_train_covid, ds_train_tb])
 
@@ -182,14 +229,44 @@ def main():
         concat_train,
         batch_sampler=batch_sampler,
         collate_fn=multitask_collate_fn,
-        num_workers=2 if os.name != "nt" else 0,
+        num_workers=4 if os.name != "nt" else 0,
         pin_memory=torch.cuda.is_available(),
     )
 
     # Validation DataLoaders per head
-    ds_val_nih = ChestXrayDataset(val_nih, paths["nih_dir"], "Finding Labels", 0, 14, val_transforms, ignore_missing=True)
-    ds_val_covid = ChestXrayDataset(val_covid, paths["covid_dir"], "label", 2, 1, val_transforms, ignore_missing=True)
-    ds_val_tb = ChestXrayDataset(val_tb, paths["tb_dir"], "label", 1, 1, val_transforms, ignore_missing=True)
+    ds_val_nih = ChestXrayDataset(
+        df=val_nih,
+        image_dir=paths["nih_dir"],
+        image_col="Image Index" if "Image Index" in val_nih.columns else "image_id",
+        label_col="Finding Labels" if "Finding Labels" in val_nih.columns else "label",
+        task_id=0,
+        num_classes=14,
+        transforms=val_transforms,
+        pre_resized=paths["nih_pre_resized"],
+        ignore_missing=True,
+    )
+    ds_val_covid = ChestXrayDataset(
+        df=val_covid,
+        image_dir=paths["covid_dir"],
+        image_col="filename" if "filename" in val_covid.columns else "image_id",
+        label_col="label" if "label" in val_covid.columns else "Finding Labels",
+        task_id=2,
+        num_classes=1,
+        transforms=val_transforms,
+        pre_resized=paths["covid_pre_resized"],
+        ignore_missing=True,
+    )
+    ds_val_tb = ChestXrayDataset(
+        df=val_tb,
+        image_dir=paths["tb_dir"],
+        image_col="filename" if "filename" in val_tb.columns else "image_id",
+        label_col="label" if "label" in val_tb.columns else "Finding Labels",
+        task_id=1,
+        num_classes=1,
+        transforms=val_transforms,
+        pre_resized=paths["tb_pre_resized"],
+        ignore_missing=True,
+    )
 
     val_loader_a = DataLoader(ds_val_nih, batch_size=args.batch_size, shuffle=False, collate_fn=multitask_collate_fn)
     val_loader_b = DataLoader(ds_val_tb, batch_size=args.batch_size, shuffle=False, collate_fn=multitask_collate_fn)

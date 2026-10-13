@@ -24,15 +24,21 @@ IMAGENET_STD = (0.229, 0.224, 0.225)
 def get_train_transforms(img_size: int = 512, anti_shortcut: bool = True) -> A.Compose:
     """
     Returns training transformations with safe medical augmentations & anti-shortcut mechanisms.
+    - Medical Letterboxing: Preserves thoracic anatomical aspect ratio without elongation or distortion.
     - CLAHE: Balances contrast distribution across multi-center imaging machines (BIMCV, RSNA, etc.).
     - Safe Affine: Subtle +-10 deg rotation, +-5% shift/scale with constant border.
     - STRICTLY PROHIBITED: Vertical flip (violates thoracic gravity & organ topology).
     """
     aug_list = [
-        A.Resize(
-            height=img_size,
-            width=img_size,
+        A.LongestMaxSize(
+            max_size=img_size,
             interpolation=cv2.INTER_AREA
+        ),
+        A.PadIfNeeded(
+            min_height=img_size,
+            min_width=img_size,
+            border_mode=cv2.BORDER_CONSTANT,
+            value=0
         )
     ]
 
@@ -74,13 +80,18 @@ def get_train_transforms(img_size: int = 512, anti_shortcut: bool = True) -> A.C
 
 def get_val_transforms(img_size: int = 512) -> A.Compose:
     """
-    Returns validation and test deterministic transformations (resize + normalize only).
+    Returns validation and test deterministic transformations (medical letterbox + normalize only).
     """
     return A.Compose([
-        A.Resize(
-            height=img_size,
-            width=img_size,
+        A.LongestMaxSize(
+            max_size=img_size,
             interpolation=cv2.INTER_AREA
+        ),
+        A.PadIfNeeded(
+            min_height=img_size,
+            min_width=img_size,
+            border_mode=cv2.BORDER_CONSTANT,
+            value=0
         ),
         A.Normalize(
             mean=IMAGENET_MEAN,
