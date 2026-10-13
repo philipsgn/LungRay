@@ -1,0 +1,65 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+lungray.egg-info/
+.eggs/
+
+# Unit test / coverage reports
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+dataset/**/*.ipynb
+
+# Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Deep Learning weights & checkpoints
+checkpoints/
+*.pth
+*.pt
+*.bin
+*.onnx
+*.safetensors
+
+# Large datasets, raw archives & images (> 50MB)
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+dataset/*.zip
+dataset/**/*.zip
+dataset/**/images/
+dataset/**/images_*/
+dataset/**/subsets/
+
+# Local IDE configuration & Agent rules
+.agents/
+
+# Ignore all markdown files EXCEPT README.md and Handoff.md
+*.md
+**/*.md
+!/README.md
+!/Handoff.md
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini

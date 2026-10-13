@@ -1,0 +1,87 @@
+# ==============================================================================
+# LUNGRAY DEFAULT CONFIGURATION (configs/default_config.yaml)
+# Multi-Task CADx + WSOL Grounding Engine
+# ==============================================================================
+
+system:
+  seed: 42
+  device: "cuda" # fallback to "cpu" if cuda unavailable
+  mixed_precision: true
+  num_workers: 4
+
+data:
+  image_size: 512 # Standard resolution: 512x512 for all heads & test sets
+  batch_size: 16  # Adjusted for 512x512 VRAM optimization (32 on 16GB VRAM mixed precision)
+  datasets:
+    nih_chestxray14:
+      path: "dataset/nih_chestxray14"
+      num_classes: 14
+      split_ratio: [0.70, 0.10, 0.20] # Train / Val / Test by Patient_ID
+    tb_chestxray:
+      path: "dataset/tb_chestxray"
+      num_classes: 2 # Normal vs TB
+      split_ratio: [0.70, 0.10, 0.20]
+    covid19_radiography:
+      path: "dataset/covid19_radiography"
+      num_classes: 4 # COVID, Normal, Lung_Opacity, Viral_Pneumonia
+      split_method: "source_stratified" # PadChest, SIRM, RSNA, Kermany
+      split_ratio: [0.70, 0.10, 0.20]
+    vindr_cxr:
+      path: "dataset/vindr_cxr"
+      role: "wsol_evaluation_test_only"
+    rsna_pneumonia:
+      path: "dataset/rsna_pneumonia"
+      role: "wsol_evaluation_test_only"
+    chexpert_small:
+      path: "dataset/chexpert_small"
+      role: "external_generalization_test_only"
+
+sampler:
+  type: "WeightedMultiTaskBatchSampler"
+  ratios:
+    nih: 0.60
+    covid: 0.25
+    tb: 0.15
+
+model:
+  backbone: "densenet121" # options: densenet121, resnet50, vit_base_patch16_224, vit_base_patch16_384
+  pretrained: true
+  freeze_backbone_epochs: 1
+  vit:
+    resample_pos_embed: true # dynamic 2D bicubic interpolation via timm.layers.resample_abs_pos_embed for 512x512
+    patch_size: 16
+    grid_size: [32, 32] # (512 / 16) = 32x32 patches
+  heads:
+    head_a:
+      name: "nih_14_diseases"
+      num_classes: 14
+      activation: "sigmoid"
+    head_b:
+      name: "tb_screening"
+      num_classes: 1 # binary logit
+      activation: "sigmoid"
+    head_c:
+      name: "covid19_classification"
+      num_classes: 4
+      activation: "softmax"
+
+training:
+  epochs: 30
+  optimizer: "AdamW"
+  learning_rate: 0.0001
+  weight_decay: 0.00001
+  lr_scheduler: "CosineAnnealingLR"
+  min_lr: 0.000001
+  early_stopping_patience: 5
+  loss_weights:
+    head_a: 1.0
+    head_b: 0.8
+    head_c: 0.8
+
+explainability:
+  target_layer: "features.denseblock4"
+  method: "grad_cam" # grad_cam or grad_cam_pp
+  binarization_method: "otsu" # otsu or adaptive_percentile
+  iou_threshold: 0.30
+  shortcut_audit:
+    min_in_lung_ratio: 0.80 # 80% activation energy must reside inside lung field

@@ -1,0 +1,44 @@
+# ==============================================================================
+# LUNGRAY PLATFORM - PRODUCTION DEPENDENCIES (requirements.txt)
+# Multi-Task CADx + WSOL Grounding Engine for Chest X-rays
+# ==============================================================================
+
+# Core Deep Learning & Computer Vision
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+timm>=0.9.0
+pytorch-grad-cam>=1.4.8
+
+# Scientific Computing & Data Processing
+numpy>=1.23.0,<2.0.0
+scipy>=1.10.0
+pandas>=2.0.0
+scikit-learn>=1.2.0
+scikit-image>=0.20.0
+
+# Medical Imaging & Augmentation
+opencv-python-headless>=4.7.0
+albumentations>=1.3.0
+pydicom>=2.3.0
+Pillow>=9.5.0
+
+# Experiment Tracking, CLI & Utilities
+tqdm>=4.65.0
+PyYAML>=6.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+rich>=13.0.0
+
+# API Serving & Backend (Phase 6)
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+python-multipart>=0.0.6
+requests>=2.30.0
+
+# Testing, QA & Linting
+pytest>=7.3.0
+pytest-cov>=4.1.0
+flake8>=6.0.0
+black>=23.3.0
+isort>=5.12.0
