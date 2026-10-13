@@ -66,10 +66,12 @@ class MaskedMultiTaskLoss(nn.Module):
         pos_weight_a: Optional[torch.Tensor] = None,
         focal_gamma: float = 2.0,
         focal_alpha: float = 0.25,
+        head_c_criterion: str = "bce",  # 'bce' (binary) or 'ce' (categorical)
     ):
         super().__init__()
         self.weights = weights or {"head_a": 1.0, "head_b": 0.8, "head_c": 0.8}
         self.head_a_criterion_name = head_a_criterion
+        self.head_c_criterion_name = head_c_criterion.lower()
 
         # Head A: 14 thoracic pathologies (multi-label)
         if head_a_criterion == "focal":
@@ -85,8 +87,11 @@ class MaskedMultiTaskLoss(nn.Module):
         # Head B: TB screening (binary logit)
         self.criterion_b = nn.BCEWithLogitsLoss()
 
-        # Head C: COVID-19 screening (4-class categorical)
-        self.criterion_c = nn.CrossEntropyLoss()
+        # Head C: COVID-19 screening (binary BCE by default or categorical CE)
+        if self.head_c_criterion_name == "ce":
+            self.criterion_c = nn.CrossEntropyLoss()
+        else:
+            self.criterion_c = nn.BCEWithLogitsLoss()
 
     def forward(
         self,
@@ -154,18 +159,28 @@ class MaskedMultiTaskLoss(nn.Module):
             metrics["loss_b"] = float(loss_b.detach().item())
             active_heads += 1
 
-        # --- Head C: COVID-19 Radiography ---
+        # --- Head C: COVID-19 Screening ---
         if mask_c.any():
             logits_c = logits_dict["head_c"][mask_c]
             if isinstance(targets, dict):
                 y_c = targets["head_c"]
             else:
                 idx_c = torch.nonzero(mask_c, as_tuple=True)[0]
-                y_c = torch.stack([targets[i] for i in idx_c]).to(device).long()
+                y_c = torch.stack([targets[i] for i in idx_c]).to(device)
+
+            if isinstance(self.criterion_c, nn.BCEWithLogitsLoss):
+                y_c = y_c.float()
+                if logits_c.size(-1) == 1 and y_c.dim() == 1:
+                    y_c = y_c.unsqueeze(-1)
+                elif logits_c.dim() == 1 and y_c.dim() == 2:
+                    y_c = y_c.squeeze(-1)
+                loss_c = self.criterion_c(logits_c, y_c)
+            else:
+                y_c = y_c.long()
                 if y_c.dim() > 1 and y_c.size(-1) == 1:
                     y_c = y_c.squeeze(-1)
+                loss_c = self.criterion_c(logits_c, y_c)
 
-            loss_c = self.criterion_c(logits_c, y_c)
             total_loss = total_loss + self.weights.get("head_c", 0.8) * loss_c
             metrics["loss_c"] = float(loss_c.detach().item())
             active_heads += 1

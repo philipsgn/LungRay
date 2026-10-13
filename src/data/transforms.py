@@ -21,16 +21,32 @@ IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
-def get_train_transforms(img_size: int = 512) -> A.Compose:
+def get_train_transforms(img_size: int = 512, anti_shortcut: bool = True) -> A.Compose:
     """
-    Returns training transformations with safe medical augmentations.
+    Returns training transformations with safe medical augmentations & anti-shortcut mechanisms.
+    - CLAHE: Balances contrast distribution across multi-center imaging machines (BIMCV, RSNA, etc.).
+    - Safe Affine: Subtle +-10 deg rotation, +-5% shift/scale with constant border.
+    - STRICTLY PROHIBITED: Vertical flip (violates thoracic gravity & organ topology).
     """
-    return A.Compose([
+    aug_list = [
         A.Resize(
             height=img_size,
             width=img_size,
             interpolation=cv2.INTER_AREA
-        ),
+        )
+    ]
+
+    if anti_shortcut:
+        # CLAHE suppresses inter-scanner histogram discrepancy
+        aug_list.append(
+            A.CLAHE(
+                clip_limit=2.0,
+                tile_grid_size=(8, 8),
+                p=0.7
+            )
+        )
+
+    aug_list.extend([
         A.HorizontalFlip(p=0.5),
         A.ShiftScaleRotate(
             shift_limit=0.05,
@@ -52,6 +68,8 @@ def get_train_transforms(img_size: int = 512) -> A.Compose:
         ),
         ToTensorV2()
     ])
+
+    return A.Compose(aug_list)
 
 
 def get_val_transforms(img_size: int = 512) -> A.Compose:

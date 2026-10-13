@@ -39,7 +39,7 @@ class MultiTaskChestXrayNet(nn.Module):
         dropout_rate: float = 0.2,
         num_classes_a: int = 14,
         num_classes_b: int = 1,
-        num_classes_c: int = 3,
+        num_classes_c: int = 1,
     ):
         super().__init__()
         self.backbone_name = backbone_name.lower()
@@ -109,7 +109,7 @@ class MultiTaskChestXrayNet(nn.Module):
         Inference forward pass returning activated probabilities:
         - Head A: Sigmoid across 14 multi-label pathologies in [0, 1].
         - Head B: Sigmoid for binary TB screening in [0, 1].
-        - Head C: Softmax across 3 COVID-Net classes (COVID-19, Normal, Pneumonia) (sum to 1.0).
+        - Head C: Sigmoid for binary COVID-19 screening (if num_classes_c=1) or Softmax.
 
         Args:
             x: Input tensor of shape (B, 3, H, W).
@@ -123,7 +123,10 @@ class MultiTaskChestXrayNet(nn.Module):
         logits = self.forward(x)
         prob_a = torch.sigmoid(logits["head_a"])
         prob_b = torch.sigmoid(logits["head_b"])
-        prob_c = torch.softmax(logits["head_c"], dim=-1)
+        if self.num_classes_c == 1:
+            prob_c = torch.sigmoid(logits["head_c"])
+        else:
+            prob_c = torch.softmax(logits["head_c"], dim=-1)
 
         if was_training:
             self.train()

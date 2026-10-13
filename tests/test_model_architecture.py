@@ -26,7 +26,7 @@ def dummy_model():
         dropout_rate=0.2,
         num_classes_a=14,
         num_classes_b=1,
-        num_classes_c=3,
+        num_classes_c=1,
     )
 
 
@@ -45,11 +45,11 @@ def test_multitask_net_forward_shapes(dummy_model):
 
     assert outputs["head_a"].shape == (batch_size, 14), f"Expected (2, 14), got {outputs['head_a'].shape}"
     assert outputs["head_b"].shape == (batch_size, 1), f"Expected (2, 1), got {outputs['head_b'].shape}"
-    assert outputs["head_c"].shape == (batch_size, 3), f"Expected (2, 3), got {outputs['head_c'].shape}"
+    assert outputs["head_c"].shape == (batch_size, 1), f"Expected (2, 1), got {outputs['head_c'].shape}"
 
 
 def test_multitask_net_predict_probabilities(dummy_model):
-    """Verify .predict() returns valid activated probabilities within [0, 1] and softmax sums to 1.0."""
+    """Verify .predict() returns valid activated probabilities within [0, 1] via Sigmoids."""
     batch_size = 2
     dummy_input = torch.randn(batch_size, 3, 512, 512)
 
@@ -59,13 +59,10 @@ def test_multitask_net_predict_probabilities(dummy_model):
     prob_b = preds["head_b"]
     prob_c = preds["head_c"]
 
-    # Sigmoid ranges in [0, 1]
+    # Sigmoid ranges in [0, 1] for all 3 clinical heads
     assert (prob_a >= 0.0).all() and (prob_a <= 1.0).all()
     assert (prob_b >= 0.0).all() and (prob_b <= 1.0).all()
-
-    # Softmax ranges in [0, 1] and sums to 1.0
     assert (prob_c >= 0.0).all() and (prob_c <= 1.0).all()
-    assert torch.allclose(prob_c.sum(dim=-1), torch.ones(batch_size), atol=1e-5)
 
 
 def test_masked_loss_gradient_isolation(dummy_model):
@@ -157,7 +154,7 @@ def test_trainer_dryrun_one_step(dummy_model, tmp_path):
         "labels": [
             torch.zeros(14, dtype=torch.float32),  # NIH
             torch.tensor([1.0], dtype=torch.float32),  # TB
-            torch.tensor(2, dtype=torch.long),  # COVID (Class index 2)
+            torch.tensor([1.0], dtype=torch.float32),  # COVID (Binary 1.0)
         ],
         "image_ids": ["nih_01.png", "tb_01.png", "covid_01.png"],
     }

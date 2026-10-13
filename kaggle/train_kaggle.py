@@ -154,7 +154,7 @@ def main():
 
     # Build Training Datasets
     ds_train_nih = ChestXrayDataset(train_nih, paths["nih_dir"], "Finding Labels", 0, 14, train_transforms, ignore_missing=True)
-    ds_train_covid = ChestXrayDataset(train_covid, paths["covid_dir"], "label", 2, 3, train_transforms, ignore_missing=True)
+    ds_train_covid = ChestXrayDataset(train_covid, paths["covid_dir"], "label", 2, 1, train_transforms, ignore_missing=True)
     ds_train_tb = ChestXrayDataset(train_tb, paths["tb_dir"], "label", 1, 1, train_transforms, ignore_missing=True)
 
     concat_train = ConcatDataset([ds_train_nih, ds_train_covid, ds_train_tb])
@@ -188,7 +188,7 @@ def main():
 
     # Validation DataLoaders per head
     ds_val_nih = ChestXrayDataset(val_nih, paths["nih_dir"], "Finding Labels", 0, 14, val_transforms, ignore_missing=True)
-    ds_val_covid = ChestXrayDataset(val_covid, paths["covid_dir"], "label", 2, 3, val_transforms, ignore_missing=True)
+    ds_val_covid = ChestXrayDataset(val_covid, paths["covid_dir"], "label", 2, 1, val_transforms, ignore_missing=True)
     ds_val_tb = ChestXrayDataset(val_tb, paths["tb_dir"], "label", 1, 1, val_transforms, ignore_missing=True)
 
     val_loader_a = DataLoader(ds_val_nih, batch_size=args.batch_size, shuffle=False, collate_fn=multitask_collate_fn)
@@ -196,10 +196,11 @@ def main():
     val_loader_c = DataLoader(ds_val_covid, batch_size=args.batch_size, shuffle=False, collate_fn=multitask_collate_fn)
 
     # Model & Loss Initialization
-    model = MultiTaskChestXrayNet(backbone_name=args.backbone, pretrained=True, img_size=512, num_classes_c=3)
+    model = MultiTaskChestXrayNet(backbone_name=args.backbone, pretrained=True, img_size=512, num_classes_c=1)
     criterion = MaskedMultiTaskLoss(
         weights={"head_a": 1.0, "head_b": 0.8, "head_c": 0.8},
         head_a_criterion="bce",
+        head_c_criterion="bce",
     )
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-6)

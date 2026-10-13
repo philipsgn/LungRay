@@ -28,7 +28,7 @@
    Dùng chung 1 encoder (DenseNet-121, ResNet-50 hoặc ViT) cho đồng thời:
    - **Head A**: 14 bệnh lồng ngực NIH ChestX-ray14 ($C=14$, Sigmoid).
    - **Head B**: Sàng lọc Lao phổi TB ($C=1$, Sigmoid).
-   - **Head C**: Chuẩn hóa theo benchmark quốc tế **COVIDx CXR-4** ($C=3$, Softmax: COVID-19, Normal, Pneumonia).
+   - **Head C**: Chuẩn hóa theo benchmark quốc tế **COVIDx CXR-4** (=1$, Sigmoid: COVID-19 Positive vs Normal / Negative sàng lọc nhị phân, cân bằng mẫu 1:1 và Anti-Shortcut CLAHE/Crop). Bệnh Viêm phổi (Pneumonia) đã được giải quyết tại Head A và kiểm chứng trên RSNA/VinDr.
 2. 🔴 **Zero Patient Data Leakage**:
    Với NIH ChestX-ray14, bắt buộc phân chia theo `Patient_ID` (70% Train / 10% Val / 20% Test). Tuyệt đối cấm chia ngẫu nhiên theo ảnh ($Train \cap Test = \emptyset$).
 3. 🔴 **Chống Shortcut Learning**:
@@ -52,7 +52,7 @@
 |:---:|:---|:---|:---:|:---:|:---|
 | 1 | **NIH ChestX-ray14** | Huấn luyện Head A (14 bệnh lồng ngực) | 112,120 ảnh | $1024 \times 1024$ | Phân chia nghiêm ngặt theo `Patient_ID` (70/10/20) |
 | 2 | **TB Chest Radiography Database** | Huấn luyện Head B (Sàng lọc Lao phổi) | 7,000 ảnh | $512 \times 512$ | Stratified Split 70/10/20, Youden's J threshold |
-| 3 | **COVIDx CXR-4 Benchmark** (`andyczhao/covidx-cxr2`) | Huấn luyện Head C (COVID-19 3 lớp) | 16,400+ ảnh | $\ge 1024\text{px}$ | Mount tức thì trên Kaggle (0s), phân tầng theo `data_source` |
+| 3 | **COVIDx CXR-4 Benchmark** (ndyczhao/covidx-cxr2) | Huấn luyện Head C (Sàng lọc nhị phân COVID-19) | 16,400+ ảnh | $\ge 1024\text{px}$ | Mount tức thì trên Kaggle (0s), cân bằng 1:1, tiền xử lý Anti-Shortcut |
 | 4 | **VinDr-CXR** | **Chỉ dùng Test**: Đánh giá IoU WSOL | 3,000 ảnh test | $\ge 2048\text{px}$ | Ground-truth Bounding Box từ bác sĩ Việt Nam |
 | 5 | **RSNA Pneumonia Detection** | **Chỉ dùng Test**: Đánh giá IoU WSOL | Tập test | $1024 \times 1024$ | Bounding Box tổn thương Viêm phổi |
 | 6 | **CheXpert-small-v1** | **Chỉ dùng Test**: External Generalization | 22,433 ảnh | $320 \times 320+$ | Đánh giá tổng quát hóa ngoài phân phối (OOD) |
@@ -70,7 +70,7 @@ src/
 │   └── make_splits.py   # Pipeline sinh patient_splits.csv, covid_splits.csv, tb_splits.csv
 ├── models/
 │   ├── backbones.py     # Shared Encoders: DenseNet-121, ResNet-50, ViT-B16 (resample_abs_pos_embed)
-│   ├── multi_task_net.py# MultiTaskChestXrayNet: Head A (14), Head B (1), Head C (3) + Grad-CAM hook
+│   ├── multi_task_net.py# MultiTaskChestXrayNet: Head A (14), Head B (1), Head C (1) + Grad-CAM hook
 │   ├── losses.py        # MaskedMultiTaskLoss (Zero Gradient Leakage), FocalLoss, pos_weight BCE
 │   └── trainer.py       # MultiTaskTrainer: Mixed Precision AMP FP16, CosineAnnealingLR, Macro AUROC
 └── explainability/
@@ -90,7 +90,7 @@ src/
    - Kiểm toán độc lập Head A (NIH ChestX-ray14): Bóc tách 12 chunks, kiểm tra Zero Patient Leakage, tính `pos_weight` cho 14 bệnh.
    - Huấn luyện DenseNet-121 baseline (3–5 epochs) xuất 14 đường cong ROC curves và Macro AUROC.
 3. **`00b_covid_audit_baseline.ipynb`**:
-   - Kiểm toán độc lập Head C (COVIDx CXR-4 Benchmark): Đọc `train.txt`/`test.txt`, kiểm chứng không trùng ID bệnh nhân, phân tầng 3 lớp (`COVID-19`, `Normal`, `Pneumonia`).
+   - Kiểm toán độc lập Head C (COVIDx CXR-4 Benchmark): Đọc 	rain.txt/	est.txt, cân bằng mẫu 1:1, tiền xử lý Anti-Shortcut (CLAHE + Inset Border Crop), huấn luyện baseline nhị phân với BCEWithLogitsLoss và Youden's J threshold.
    - Huấn luyện baseline DenseNet-121 3 lớp với `CrossEntropyLoss`, xuất Normalized Confusion Matrix và Macro AUROC.
 4. **`00c_tb_audit_baseline.ipynb`**:
    - Kiểm toán độc lập Head B (Tuberculosis TB): Phân tích tỷ lệ mất cân bằng 5:1, tính `pos_weight=5.0`.
@@ -120,7 +120,7 @@ src/
 - Đối chiếu chỉ tiêu nghiệm thu:
   - Head A (NIH 14 bệnh): Macro AUROC $\ge 0.80$.
   - Head B (Lao phổi TB): AUROC $\ge 0.90$.
-  - Head C (COVIDx CXR-4 3 lớp): Macro AUROC $\ge 0.90$.
+  - Head C (COVIDx CXR-4 Sàng lọc nhị phân): AUROC $\ge 0.90$, Sensitivity $\ge 0.88$, In-lung Activation Energy $\ge 80\%$.
 
 ---
 

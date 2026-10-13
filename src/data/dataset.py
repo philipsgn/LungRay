@@ -162,21 +162,30 @@ class ChestXrayDataset(Dataset):
             label_val = float(row.get(self.label_col, 0)) if self.label_col else 0.0
             return torch.tensor([label_val], dtype=torch.float32)
 
-        elif self.task_id == 2:  # COVID Head C (COVIDx CXR-4 3-class or categorical)
+        elif self.task_id == 2:  # COVID Head C (Binary screening or multi-class)
             raw_val = row.get(self.label_col, 0) if self.label_col else 0
-            if isinstance(raw_val, str):
-                val_lower = raw_val.lower().strip()
-                if val_lower in ["positive", "covid", "covid-19", "0"]:
-                    label_val = 0
-                elif val_lower in ["negative", "normal", "1"]:
-                    label_val = 1
-                elif val_lower in ["pneumonia", "non-covid", "2"]:
-                    label_val = 2
+            if self.num_classes == 1:
+                # Binary: 1.0 for COVID-19 positive, 0.0 for Normal/Negative
+                val_str = str(raw_val).lower().strip()
+                if val_str in ["positive", "covid", "covid-19", "1", "1.0"]:
+                    label_val = 1.0
                 else:
-                    label_val = 0
+                    label_val = 0.0
+                return torch.tensor([label_val], dtype=torch.float32)
             else:
-                label_val = int(raw_val)
-            return torch.tensor(label_val, dtype=torch.long)
+                if isinstance(raw_val, str):
+                    val_lower = raw_val.lower().strip()
+                    if val_lower in ["positive", "covid", "covid-19", "0"]:
+                        label_val = 0
+                    elif val_lower in ["negative", "normal", "1"]:
+                        label_val = 1
+                    elif val_lower in ["pneumonia", "non-covid", "2"]:
+                        label_val = 2
+                    else:
+                        label_val = 0
+                else:
+                    label_val = int(raw_val)
+                return torch.tensor(label_val, dtype=torch.long)
 
         return torch.zeros(self.num_classes, dtype=torch.float32)
 
