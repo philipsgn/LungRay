@@ -28,7 +28,7 @@
    Dùng chung 1 encoder (DenseNet-121, ResNet-50 hoặc ViT) cho đồng thời:
    - **Head A**: 14 bệnh lồng ngực NIH ChestX-ray14 ($C=14$, Sigmoid).
    - **Head B**: Sàng lọc Lao phổi TB ($C=1$, Sigmoid).
-   - **Head C**: Chuẩn hóa theo benchmark quốc tế **COVIDx CXR-4** (=1$, Sigmoid: COVID-19 Positive vs Normal / Negative sàng lọc nhị phân, cân bằng mẫu 1:1 và Anti-Shortcut CLAHE/Crop). Bệnh Viêm phổi (Pneumonia) đã được giải quyết tại Head A và kiểm chứng trên RSNA/VinDr.
+   - **Head C**: Chuẩn hóa theo benchmark quốc tế **COVIDx CXR-4** ($C=1$, Sigmoid: COVID-19 Positive vs Normal / Negative sàng lọc nhị phân, cân bằng mẫu 1:1 và Anti-Shortcut CLAHE/Crop). Bệnh Viêm phổi (Pneumonia) đã được giải quyết tại Head A và kiểm chứng trên RSNA/VinDr.
 2. 🔴 **Zero Patient Data Leakage**:
    Với NIH ChestX-ray14, bắt buộc phân chia theo `Patient_ID` (70% Train / 10% Val / 20% Test). Tuyệt đối cấm chia ngẫu nhiên theo ảnh ($Train \cap Test = \emptyset$).
 3. 🔴 **Chống Shortcut Learning**:
