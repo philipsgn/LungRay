@@ -26,6 +26,8 @@ PNG_COMPRESSION = 4
 def find_nih_root() -> Tuple[str, str]:
     """Finds NIH image directory and Data_Entry_2017.csv on Kaggle or local."""
     potential_roots = [
+        "/kaggle/input/datasets/nih-chest-xrays/data",
+        "/kaggle/input/datasets/nih-chest-xrays",
         "/kaggle/input/nih-chest-xrays/data",
         "/kaggle/input/nih-chest-xrays",
         "/kaggle/input/data",

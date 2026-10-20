@@ -52,6 +52,8 @@ dataset/**/subsets/
 
 # Local IDE configuration & Agent rules
 .agents/
+.idea/
+.vscode/
 
 # Ignore all markdown files EXCEPT README.md and Handoff.md
 *.md

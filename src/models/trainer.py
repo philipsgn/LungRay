@@ -71,7 +71,11 @@ class MultiTaskTrainer:
         self.lr_scheduler = lr_scheduler
 
         self.mixed_precision = mixed_precision and (self.device.type == "cuda")
-        self.scaler = torch.cuda.amp.GradScaler(enabled=self.mixed_precision)
+        # Modern PyTorch 2.x AMP API with backwards compatibility
+        if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler"):
+            self.scaler = torch.amp.GradScaler("cuda", enabled=self.mixed_precision)
+        else:
+            self.scaler = torch.cuda.amp.GradScaler(enabled=self.mixed_precision)
 
         self.early_stopping_patience = early_stopping_patience
         self.checkpoint_dir = checkpoint_dir
@@ -101,7 +105,12 @@ class MultiTaskTrainer:
         self.optimizer.zero_grad()
 
         if self.mixed_precision:
-            with torch.cuda.amp.autocast():
+            autocast_ctx = (
+                torch.amp.autocast("cuda")
+                if hasattr(torch, "amp") and hasattr(torch.amp, "autocast")
+                else torch.cuda.amp.autocast()
+            )
+            with autocast_ctx:
                 logits = self.model(images)
                 loss, metrics = self.criterion(logits, targets, task_ids)
 

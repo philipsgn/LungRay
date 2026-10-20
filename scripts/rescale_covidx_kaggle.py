@@ -26,6 +26,9 @@ PNG_COMPRESSION = 4
 def find_covidx_root() -> Tuple[str, str, str]:
     """Finds COVIDx CXR-4 root, train.txt and test.txt."""
     potential_roots = [
+        "/kaggle/input/datasets/andyczhao/covidx-cxr2",
+        "/kaggle/input/andyczhao/covidx-cxr2",
+        "/kaggle/input/datasets/covidx-cxr2",
         "/kaggle/input/covidx-cxr2",
         "/kaggle/input/covidx-cxr-4",
         "dataset/covidx-cxr2"

@@ -42,18 +42,26 @@ def resolve_dataset_paths() -> Dict[str, str]:
         nih_candidates = [
             os.path.join(kaggle_base, "lungray-nih-512"),
             os.path.join(kaggle_base, "lungray-nih-512", "nih_512"),
-            os.path.join(kaggle_base, "data-nih-chestxray14"),
+            os.path.join(kaggle_base, "datasets", "nih-chest-xrays", "data"),
+            os.path.join(kaggle_base, "datasets", "nih-chest-xrays"),
+            os.path.join(kaggle_base, "nih-chest-xrays", "data"),
             os.path.join(kaggle_base, "nih-chest-xrays"),
+            os.path.join(kaggle_base, "data-nih-chestxray14"),
             os.path.join(kaggle_base, "data"),
         ]
         covid_candidates = [
             os.path.join(kaggle_base, "lungray-covidx-512"),
             os.path.join(kaggle_base, "lungray-covidx-512", "covidx_512"),
+            os.path.join(kaggle_base, "datasets", "andyczhao", "covidx-cxr2"),
+            os.path.join(kaggle_base, "andyczhao", "covidx-cxr2"),
+            os.path.join(kaggle_base, "datasets", "covidx-cxr2"),
             os.path.join(kaggle_base, "covidx-cxr2"),
             os.path.join(kaggle_base, "covid19-radiography-database"),
             os.path.join(kaggle_base, "covid19-radiography-dataset"),
         ]
         tb_candidates = [
+            os.path.join(kaggle_base, "datasets", "tawsifurrahman", "tuberculosis-tb-chest-xray-dataset"),
+            os.path.join(kaggle_base, "tawsifurrahman", "tuberculosis-tb-chest-xray-dataset"),
             os.path.join(kaggle_base, "tuberculosis-tb-chest-xray-dataset"),
             os.path.join(kaggle_base, "tb-chest-xray"),
         ]
@@ -166,8 +174,8 @@ def main():
     train_tb = df_tb[df_tb["split"] == "train"].reset_index(drop=True)
     val_tb = df_tb[df_tb["split"] == "val"].reset_index(drop=True)
 
-    train_transforms = get_train_transforms(image_size=512)
-    val_transforms = get_val_transforms(image_size=512)
+    train_transforms = get_train_transforms(img_size=512)
+    val_transforms = get_val_transforms(img_size=512)
 
     # Build Training Datasets with Dual-Mode High-Speed Support
     ds_train_nih = ChestXrayDataset(
@@ -181,10 +189,11 @@ def main():
         pre_resized=paths["nih_pre_resized"],
         ignore_missing=True,
     )
+    covid_train_col = "Image Index" if "Image Index" in train_covid.columns else ("filename" if "filename" in train_covid.columns else "image_id")
     ds_train_covid = ChestXrayDataset(
         df=train_covid,
         image_dir=paths["covid_dir"],
-        image_col="filename" if "filename" in train_covid.columns else "image_id",
+        image_col=covid_train_col,
         label_col="label" if "label" in train_covid.columns else "Finding Labels",
         task_id=2,
         num_classes=1,
@@ -245,10 +254,11 @@ def main():
         pre_resized=paths["nih_pre_resized"],
         ignore_missing=True,
     )
+    covid_val_col = "Image Index" if "Image Index" in val_covid.columns else ("filename" if "filename" in val_covid.columns else "image_id")
     ds_val_covid = ChestXrayDataset(
         df=val_covid,
         image_dir=paths["covid_dir"],
-        image_col="filename" if "filename" in val_covid.columns else "image_id",
+        image_col=covid_val_col,
         label_col="label" if "label" in val_covid.columns else "Finding Labels",
         task_id=2,
         num_classes=1,

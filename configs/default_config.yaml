@@ -61,9 +61,9 @@ model:
       num_classes: 1 # binary logit
       activation: "sigmoid"
     head_c:
-      name: "covid19_classification"
-      num_classes: 4
-      activation: "softmax"
+      name: "covid19_screening"
+      num_classes: 1 # binary logit
+      activation: "sigmoid"
 
 training:
   epochs: 30
