@@ -170,6 +170,8 @@ def main():
 
     # Resilient Split File Discovery
     split_candidates = [
+        "/kaggle/working/LungRay/dataset/splits",
+        "/kaggle/working/LungRay/data/splits",
         "dataset/splits",
         "data/splits",
         "../dataset/splits",
