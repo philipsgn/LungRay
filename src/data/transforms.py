@@ -39,8 +39,7 @@ def get_train_transforms(img_size: int = 512, anti_shortcut: bool = True, image_
         A.PadIfNeeded(
             min_height=effective_size,
             min_width=effective_size,
-            border_mode=cv2.BORDER_CONSTANT,
-            value=0
+            border_mode=cv2.BORDER_CONSTANT
         )
     ]
 
@@ -61,7 +60,6 @@ def get_train_transforms(img_size: int = 512, anti_shortcut: bool = True, image_
             scale_limit=0.05,
             rotate_limit=10,
             border_mode=cv2.BORDER_CONSTANT,
-            value=0,
             p=0.5
         ),
         A.RandomBrightnessContrast(
@@ -94,8 +92,7 @@ def get_val_transforms(img_size: int = 512, image_size: Optional[int] = None) ->
         A.PadIfNeeded(
             min_height=effective_size,
             min_width=effective_size,
-            border_mode=cv2.BORDER_CONSTANT,
-            value=0
+            border_mode=cv2.BORDER_CONSTANT
         ),
         A.Normalize(
             mean=IMAGENET_MEAN,
