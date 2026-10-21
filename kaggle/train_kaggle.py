@@ -43,6 +43,20 @@ def locate_file(filename: str, search_dirs: list) -> str:
     return ""
 
 
+def find_kaggle_dataset(target_keys: list) -> str:
+    kaggle_base = "/kaggle/input"
+    if not os.path.exists(kaggle_base):
+        return ""
+    for root, dirs, _ in os.walk(kaggle_base):
+        for d in dirs:
+            if any(k in d.lower() for k in target_keys):
+                return os.path.join(root, d)
+        bname = os.path.basename(root).lower()
+        if any(k in bname for k in target_keys):
+            return root
+    return ""
+
+
 def resolve_dataset_paths() -> Dict[str, str]:
     """
     Auto-detects dataset paths between Kaggle environment and local workspace.
@@ -53,40 +67,9 @@ def resolve_dataset_paths() -> Dict[str, str]:
 
     if is_kaggle:
         print("[Kaggle Environment Detected] Searching for mounted datasets...")
-        # Prioritize 512x512 pre-resized datasets for 4x training speed
-        nih_candidates = [
-            os.path.join(kaggle_base, "lungray-nih-512"),
-            os.path.join(kaggle_base, "lungray-nih-512", "nih_512"),
-            os.path.join(kaggle_base, "nih-512"),
-            os.path.join(kaggle_base, "datasets", "nih-chest-xrays", "data"),
-            os.path.join(kaggle_base, "datasets", "nih-chest-xrays"),
-            os.path.join(kaggle_base, "nih-chest-xrays", "data"),
-            os.path.join(kaggle_base, "nih-chest-xrays"),
-            os.path.join(kaggle_base, "data-nih-chestxray14"),
-            os.path.join(kaggle_base, "data"),
-        ]
-        covid_candidates = [
-            os.path.join(kaggle_base, "lungray-covidx-512"),
-            os.path.join(kaggle_base, "lungray-covidx-512", "covidx_512"),
-            os.path.join(kaggle_base, "covidx-512"),
-            os.path.join(kaggle_base, "datasets", "andyczhao", "covidx-cxr2"),
-            os.path.join(kaggle_base, "andyczhao", "covidx-cxr2"),
-            os.path.join(kaggle_base, "datasets", "covidx-cxr2"),
-            os.path.join(kaggle_base, "covidx-cxr2"),
-            os.path.join(kaggle_base, "covid19-radiography-database"),
-            os.path.join(kaggle_base, "covid19-radiography-dataset"),
-        ]
-        tb_candidates = [
-            os.path.join(kaggle_base, "datasets", "tawsifurrahman", "tuberculosis-tb-chest-xray-dataset"),
-            os.path.join(kaggle_base, "tawsifurrahman", "tuberculosis-tb-chest-xray-dataset"),
-            os.path.join(kaggle_base, "tuberculosis-tb-chest-xray-dataset"),
-            os.path.join(kaggle_base, "tb-chest-xray"),
-            os.path.join(kaggle_base, "tb_chest_radiography_database"),
-        ]
-
-        nih_path = next((p for p in nih_candidates if os.path.exists(p)), "dataset/nih_chestxray14")
-        covid_path = next((p for p in covid_candidates if os.path.exists(p)), "dataset/covid19_radiography")
-        tb_path = next((p for p in tb_candidates if os.path.exists(p)), "dataset/tb_chestxray")
+        nih_path = find_kaggle_dataset(["lungray-nih-512", "nih-512", "nih_512", "chestxray", "nih-chest"]) or "dataset/nih_chestxray14"
+        covid_path = find_kaggle_dataset(["lungray-covidx-512", "covidx-512", "covidx_512", "covidx", "covid19-radiography"]) or "dataset/covid19_radiography"
+        tb_path = find_kaggle_dataset(["tuberculosis-tb-chest-xray-dataset", "tb_chest", "tb-chest"]) or "dataset/tb_chestxray"
         output_dir = "/kaggle/working"
     else:
         print("[Local Environment Detected] Using workspace relative paths...")
@@ -114,6 +97,46 @@ def resolve_dataset_paths() -> Dict[str, str]:
         "tb_pre_resized": tb_pre_resized,
         "output_dir": output_dir,
     }
+
+
+def load_covid_data(covid_dir: str, split_candidates: list) -> pd.DataFrame:
+    """Loads COVID data from COVIDx train.txt/test.txt if present, or falls back to split CSV."""
+    train_txt = None
+    test_txt = None
+    if covid_dir and os.path.exists(covid_dir):
+        for r, _, files in os.walk(covid_dir):
+            for f in files:
+                if f.lower() == "train.txt": train_txt = os.path.join(r, f)
+                elif f.lower() == "test.txt": test_txt = os.path.join(r, f)
+
+    if train_txt and test_txt:
+        print(f"[*] Auto-detected COVIDx CXR-4 Benchmark with train.txt & test.txt:")
+        class_map = {"positive": 1, "negative": 0, "normal": 0, "pneumonia": 0}
+        records = []
+        for split_name, txt_file in [("train", train_txt), ("test", test_txt)]:
+            with open(txt_file, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    parts = line.strip().split()
+                    if len(parts) >= 3:
+                        pid = parts[0]
+                        fname = parts[1]
+                        raw_cls = parts[2].lower()
+                        lbl = class_map.get(raw_cls, 1 if "covid" in raw_cls or "pos" in raw_cls else 0)
+                        records.append({"patient_id": pid, "filename": fname, "Image Index": fname, "label": lbl, "split": split_name})
+        df = pd.DataFrame(records)
+        train_mask = df["split"] == "train"
+        train_pids = df[train_mask]["patient_id"].unique()
+        np.random.seed(42)
+        val_pids = set(np.random.choice(train_pids, size=max(1, int(len(train_pids) * 0.1)), replace=False))
+        df.loc[train_mask & df["patient_id"].isin(val_pids), "split"] = "val"
+        print(f"[OK] COVIDx CXR-4: Train={sum(df['split']=='train'):,d}, Val={sum(df['split']=='val'):,d}, Test={sum(df['split']=='test'):,d}")
+        return df
+    else:
+        covid_split_csv = locate_file("covid_splits.csv", split_candidates)
+        if covid_split_csv and os.path.exists(covid_split_csv):
+            print(f"[Splits Loaded] COVID Split CSV: {covid_split_csv}")
+            return pd.read_csv(covid_split_csv)
+        raise FileNotFoundError(f"[ERROR] Neither COVIDx train.txt/test.txt nor covid_splits.csv found in {covid_dir} or {split_candidates}")
 
 
 def plot_and_save_curves(history_df: pd.DataFrame, output_path: str):
@@ -193,11 +216,10 @@ def main():
         raise FileNotFoundError(f"[ERROR] tb_splits.csv not found in candidate paths: {split_candidates}")
 
     print(f"[Splits Loaded] NIH Split   : {nih_split_csv}")
-    print(f"[Splits Loaded] COVID Split : {covid_split_csv}")
     print(f"[Splits Loaded] TB Split    : {tb_split_csv}")
 
     df_nih = pd.read_csv(nih_split_csv)
-    df_covid = pd.read_csv(covid_split_csv)
+    df_covid = load_covid_data(paths["covid_dir"], split_candidates)
     df_tb = pd.read_csv(tb_split_csv)
 
     # Filter train & val sets
