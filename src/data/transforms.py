@@ -10,7 +10,7 @@ Rules & Inviolable Constraints:
 - Allowed augmentations: Horizontal flip (heart position accounted for in symmetric pathologies),
   subtle rotation (+-10 degrees), subtle scaling (+-5%), subtle brightness/contrast.
 """
-from typing import Tuple
+from typing import Tuple, Optional
 import cv2
 import numpy as np
 import albumentations as A
@@ -21,7 +21,7 @@ IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
-def get_train_transforms(img_size: int = 512, anti_shortcut: bool = True) -> A.Compose:
+def get_train_transforms(img_size: int = 512, anti_shortcut: bool = True, image_size: Optional[int] = None) -> A.Compose:
     """
     Returns training transformations with safe medical augmentations & anti-shortcut mechanisms.
     - Medical Letterboxing: Preserves thoracic anatomical aspect ratio without elongation or distortion.
@@ -29,14 +29,16 @@ def get_train_transforms(img_size: int = 512, anti_shortcut: bool = True) -> A.C
     - Safe Affine: Subtle +-10 deg rotation, +-5% shift/scale with constant border.
     - STRICTLY PROHIBITED: Vertical flip (violates thoracic gravity & organ topology).
     """
+    effective_size = image_size if image_size is not None else img_size
+
     aug_list = [
         A.LongestMaxSize(
-            max_size=img_size,
+            max_size=effective_size,
             interpolation=cv2.INTER_AREA
         ),
         A.PadIfNeeded(
-            min_height=img_size,
-            min_width=img_size,
+            min_height=effective_size,
+            min_width=effective_size,
             border_mode=cv2.BORDER_CONSTANT,
             value=0
         )
@@ -78,18 +80,20 @@ def get_train_transforms(img_size: int = 512, anti_shortcut: bool = True) -> A.C
     return A.Compose(aug_list)
 
 
-def get_val_transforms(img_size: int = 512) -> A.Compose:
+def get_val_transforms(img_size: int = 512, image_size: Optional[int] = None) -> A.Compose:
     """
     Returns validation and test deterministic transformations (medical letterbox + normalize only).
     """
+    effective_size = image_size if image_size is not None else img_size
+
     return A.Compose([
         A.LongestMaxSize(
-            max_size=img_size,
+            max_size=effective_size,
             interpolation=cv2.INTER_AREA
         ),
         A.PadIfNeeded(
-            min_height=img_size,
-            min_width=img_size,
+            min_height=effective_size,
+            min_width=effective_size,
             border_mode=cv2.BORDER_CONSTANT,
             value=0
         ),
