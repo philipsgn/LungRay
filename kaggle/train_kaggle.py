@@ -29,9 +29,24 @@ from src.models.losses import MaskedMultiTaskLoss
 from src.models.trainer import MultiTaskTrainer, multitask_collate_fn
 
 
+def locate_file(filename: str, search_dirs: list) -> str:
+    """Finds a file in a list of candidate directories or their immediate children."""
+    for d in search_dirs:
+        if not d or not os.path.exists(d):
+            continue
+        direct = os.path.join(d, filename)
+        if os.path.exists(direct):
+            return direct
+        for root, _, files in os.walk(d):
+            if filename in files:
+                return os.path.join(root, filename)
+    return ""
+
+
 def resolve_dataset_paths() -> Dict[str, str]:
     """
     Auto-detects dataset paths between Kaggle environment and local workspace.
+    Prioritizes pre-resized 512x512 datasets (lungray-nih-512, lungray-covidx-512).
     """
     kaggle_base = "/kaggle/input"
     is_kaggle = os.path.exists(kaggle_base)
@@ -42,6 +57,7 @@ def resolve_dataset_paths() -> Dict[str, str]:
         nih_candidates = [
             os.path.join(kaggle_base, "lungray-nih-512"),
             os.path.join(kaggle_base, "lungray-nih-512", "nih_512"),
+            os.path.join(kaggle_base, "nih-512"),
             os.path.join(kaggle_base, "datasets", "nih-chest-xrays", "data"),
             os.path.join(kaggle_base, "datasets", "nih-chest-xrays"),
             os.path.join(kaggle_base, "nih-chest-xrays", "data"),
@@ -52,6 +68,7 @@ def resolve_dataset_paths() -> Dict[str, str]:
         covid_candidates = [
             os.path.join(kaggle_base, "lungray-covidx-512"),
             os.path.join(kaggle_base, "lungray-covidx-512", "covidx_512"),
+            os.path.join(kaggle_base, "covidx-512"),
             os.path.join(kaggle_base, "datasets", "andyczhao", "covidx-cxr2"),
             os.path.join(kaggle_base, "andyczhao", "covidx-cxr2"),
             os.path.join(kaggle_base, "datasets", "covidx-cxr2"),
@@ -64,6 +81,7 @@ def resolve_dataset_paths() -> Dict[str, str]:
             os.path.join(kaggle_base, "tawsifurrahman", "tuberculosis-tb-chest-xray-dataset"),
             os.path.join(kaggle_base, "tuberculosis-tb-chest-xray-dataset"),
             os.path.join(kaggle_base, "tb-chest-xray"),
+            os.path.join(kaggle_base, "tb_chest_radiography_database"),
         ]
 
         nih_path = next((p for p in nih_candidates if os.path.exists(p)), "dataset/nih_chestxray14")
@@ -72,7 +90,7 @@ def resolve_dataset_paths() -> Dict[str, str]:
         output_dir = "/kaggle/working"
     else:
         print("[Local Environment Detected] Using workspace relative paths...")
-        nih_candidates = ["data/processed/nih_512", "dataset/nih_chestxray14"]
+        nih_candidates = ["data/processed/nih_512", "dataset/nih-chestXray-14", "dataset/nih_chestxray14"]
         covid_candidates = ["data/processed/covidx_512", "dataset/covidx_cxr4", "dataset/covid19_radiography"]
         nih_path = next((p for p in nih_candidates if os.path.exists(p)), "dataset/nih_chestxray14")
         covid_path = next((p for p in covid_candidates if os.path.exists(p)), "dataset/covid19_radiography")
@@ -80,7 +98,7 @@ def resolve_dataset_paths() -> Dict[str, str]:
         output_dir = "checkpoints"
 
     nih_pre_resized = "512" in os.path.basename(nih_path).lower() or os.path.exists(os.path.join(nih_path, "images"))
-    covid_pre_resized = "512" in os.path.basename(covid_path).lower()
+    covid_pre_resized = "512" in os.path.basename(covid_path).lower() or "512" in str(covid_path).lower()
     tb_pre_resized = True  # TB dataset is natively 512x512
 
     print(f"[Dataset Auto-Detect] NIH: {nih_path} (pre_resized={nih_pre_resized})")
@@ -150,15 +168,31 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[Device] Using compute hardware: {device} ({torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'})")
 
-    # Load Splits
-    split_dir = "dataset/splits"
-    nih_split_csv = os.path.join(split_dir, "patient_splits.csv")
-    covid_split_csv = os.path.join(split_dir, "covid_splits.csv")
-    tb_split_csv = os.path.join(split_dir, "tb_splits.csv")
+    # Resilient Split File Discovery
+    split_candidates = [
+        "dataset/splits",
+        "data/splits",
+        "../dataset/splits",
+        "/kaggle/input/lungray-splits",
+        paths["nih_dir"],
+        paths["covid_dir"],
+        paths["tb_dir"],
+    ]
 
-    assert os.path.exists(nih_split_csv), f"Missing split file: {nih_split_csv}"
-    assert os.path.exists(covid_split_csv), f"Missing split file: {covid_split_csv}"
-    assert os.path.exists(tb_split_csv), f"Missing split file: {tb_split_csv}"
+    nih_split_csv = locate_file("patient_splits.csv", split_candidates)
+    covid_split_csv = locate_file("covid_splits.csv", split_candidates)
+    tb_split_csv = locate_file("tb_splits.csv", split_candidates)
+
+    if not nih_split_csv or not os.path.exists(nih_split_csv):
+        raise FileNotFoundError(f"[ERROR] patient_splits.csv not found in candidate paths: {split_candidates}")
+    if not covid_split_csv or not os.path.exists(covid_split_csv):
+        raise FileNotFoundError(f"[ERROR] covid_splits.csv not found in candidate paths: {split_candidates}")
+    if not tb_split_csv or not os.path.exists(tb_split_csv):
+        raise FileNotFoundError(f"[ERROR] tb_splits.csv not found in candidate paths: {split_candidates}")
+
+    print(f"[Splits Loaded] NIH Split   : {nih_split_csv}")
+    print(f"[Splits Loaded] COVID Split : {covid_split_csv}")
+    print(f"[Splits Loaded] TB Split    : {tb_split_csv}")
 
     df_nih = pd.read_csv(nih_split_csv)
     df_covid = pd.read_csv(covid_split_csv)
