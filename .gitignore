@@ -55,11 +55,17 @@ dataset/**/subsets/
 .idea/
 .vscode/
 
-# Ignore all markdown files EXCEPT README.md and Handoff.md
+# Track only core project documentation markdown files
 *.md
 **/*.md
 !/README.md
 !/Handoff.md
+!/PHASES.md
+!/PLAN.md
+!/AGENTS.md
+!/OPENCODE_GUIDE.md
+!/PRD.md
+!/TECH_ARCHITECTURE.md
 
 # OS specific files
 .DS_Store

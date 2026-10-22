@@ -7,9 +7,9 @@
 |:---|:---|
 | **Tên nền tảng** | **LungRay** (AI Chest X-ray Diagnostic & WSOL Grounding Platform) |
 | **Mã dự án** | LUNGRAY-MULTITASK-WSOL-2026 |
-| **Phiên bản** | v3.5 (SOTA Benchmark Synchronized) |
+| **Phiên bản** | v4.0 (Delivery Gate 2 Approved — Phase 4 Active) |
 | **Kiến trúc cốt lõi** | Multi-Task 3-Head Shared Encoder + Masked Loss + Quantitative WSOL + FastAPI + Next.js |
-| **Trạng thái** | ✅ BASELINE VALIDATED & READY FOR CLOUD EXECUTION |
+| **Trạng thái** | ✅ GATE 2 APPROVED (50% PROGRESS) — PHASE 4 IN PROGRESS |
 
 ---
 
