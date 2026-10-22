@@ -58,6 +58,7 @@ class MultiTaskTrainer:
         results_dir: str = "results",
         metric_weights: Optional[Dict[str, float]] = None,
         max_batches_per_epoch: Optional[int] = None,
+        max_val_batches_per_head: Optional[int] = None,
         log_interval: int = 50,
     ):
         self.device = device or (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
@@ -91,6 +92,7 @@ class MultiTaskTrainer:
             "auc_c": 0.30,
         }
         self.max_batches_per_epoch = max_batches_per_epoch
+        self.max_val_batches_per_head = max_val_batches_per_head
         self.log_interval = max(1, log_interval)
 
         self.best_val_score = -1.0
@@ -187,6 +189,14 @@ class MultiTaskTrainer:
         }
         return summary
 
+    def _val_autocast(self):
+        """Returns the AMP context used during validation/inference."""
+        if not self.mixed_precision:
+            return torch.autocast(device_type=self.device.type, enabled=False)
+        if hasattr(torch, "amp") and hasattr(torch.amp, "autocast"):
+            return torch.amp.autocast(device_type=self.device.type)
+        return torch.cuda.amp.autocast()
+
     @torch.no_grad()
     def validate_loaders(
         self,
@@ -211,24 +221,33 @@ class MultiTaskTrainer:
 
         # 1. Evaluate Head A
         if val_loader_a is not None and len(val_loader_a) > 0:
-            print(f"[*] Validating Head A (NIH): {len(val_loader_a):,d} batches...", flush=True)
+            val_total_a = len(val_loader_a)
+            if self.max_val_batches_per_head is not None:
+                val_total_a = min(val_total_a, max(1, self.max_val_batches_per_head))
+            print(
+                f"[*] Validating Head A (NIH): {val_total_a:,d}/{len(val_loader_a):,d} batches...",
+                flush=True,
+            )
             val_start = time.time()
             all_preds_a, all_targets_a = [], []
             for batch_idx, batch in enumerate(val_loader_a):
+                if batch_idx >= val_total_a:
+                    break
                 if isinstance(batch, dict):
                     images = batch["images"].to(self.device)
                 else:
                     images = batch[0].to(self.device)
                 targets = batch["labels"] if isinstance(batch, dict) else batch[1]
-                preds = self.model.predict(images)["head_a"].cpu().numpy()
+                with self._val_autocast():
+                    preds = self.model.predict(images)["head_a"].cpu().numpy()
                 all_preds_a.append(preds)
                 if isinstance(targets, list):
                     all_targets_a.append(torch.stack(targets).cpu().numpy())
                 else:
                     all_targets_a.append(targets.cpu().numpy())
-                if (batch_idx + 1) % 100 == 0 or batch_idx + 1 == len(val_loader_a):
+                if (batch_idx + 1) % 20 == 0 or batch_idx + 1 == val_total_a:
                     print(
-                        f"  [Val A] batch {batch_idx + 1:,d}/{len(val_loader_a):,d} "
+                        f"  [Val A] batch {batch_idx + 1:,d}/{val_total_a:,d} "
                         f"({time.time() - val_start:.1f}s)",
                         flush=True,
                     )
@@ -245,24 +264,33 @@ class MultiTaskTrainer:
 
         # 2. Evaluate Head B
         if val_loader_b is not None and len(val_loader_b) > 0:
-            print(f"[*] Validating Head B (TB): {len(val_loader_b):,d} batches...", flush=True)
+            val_total_b = len(val_loader_b)
+            if self.max_val_batches_per_head is not None:
+                val_total_b = min(val_total_b, max(1, self.max_val_batches_per_head))
+            print(
+                f"[*] Validating Head B (TB): {val_total_b:,d}/{len(val_loader_b):,d} batches...",
+                flush=True,
+            )
             val_start = time.time()
             all_preds_b, all_targets_b = [], []
             for batch_idx, batch in enumerate(val_loader_b):
+                if batch_idx >= val_total_b:
+                    break
                 if isinstance(batch, dict):
                     images = batch["images"].to(self.device)
                 else:
                     images = batch[0].to(self.device)
                 targets = batch["labels"] if isinstance(batch, dict) else batch[1]
-                preds = self.model.predict(images)["head_b"].cpu().numpy().reshape(-1)
+                with self._val_autocast():
+                    preds = self.model.predict(images)["head_b"].cpu().numpy().reshape(-1)
                 all_preds_b.append(preds)
                 if isinstance(targets, list):
                     all_targets_b.append(torch.stack(targets).cpu().numpy().reshape(-1))
                 else:
                     all_targets_b.append(targets.cpu().numpy().reshape(-1))
-                if (batch_idx + 1) % 100 == 0 or batch_idx + 1 == len(val_loader_b):
+                if (batch_idx + 1) % 20 == 0 or batch_idx + 1 == val_total_b:
                     print(
-                        f"  [Val B] batch {batch_idx + 1:,d}/{len(val_loader_b):,d} "
+                        f"  [Val B] batch {batch_idx + 1:,d}/{val_total_b:,d} "
                         f"({time.time() - val_start:.1f}s)",
                         flush=True,
                     )
@@ -275,24 +303,33 @@ class MultiTaskTrainer:
 
         # 3. Evaluate Head C (binary screening or multi-class benchmark)
         if val_loader_c is not None and len(val_loader_c) > 0:
-            print(f"[*] Validating Head C (COVIDx): {len(val_loader_c):,d} batches...", flush=True)
+            val_total_c = len(val_loader_c)
+            if self.max_val_batches_per_head is not None:
+                val_total_c = min(val_total_c, max(1, self.max_val_batches_per_head))
+            print(
+                f"[*] Validating Head C (COVIDx): {val_total_c:,d}/{len(val_loader_c):,d} batches...",
+                flush=True,
+            )
             val_start = time.time()
             all_preds_c, all_targets_c = [], []
             for batch_idx, batch in enumerate(val_loader_c):
+                if batch_idx >= val_total_c:
+                    break
                 if isinstance(batch, dict):
                     images = batch["images"].to(self.device)
                 else:
                     images = batch[0].to(self.device)
                 targets = batch["labels"] if isinstance(batch, dict) else batch[1]
-                preds = self.model.predict(images)["head_c"].cpu().numpy()
+                with self._val_autocast():
+                    preds = self.model.predict(images)["head_c"].cpu().numpy()
                 all_preds_c.append(preds)
                 if isinstance(targets, list):
                     all_targets_c.append(torch.stack(targets).cpu().numpy().reshape(-1))
                 else:
                     all_targets_c.append(targets.cpu().numpy().reshape(-1))
-                if (batch_idx + 1) % 100 == 0 or batch_idx + 1 == len(val_loader_c):
+                if (batch_idx + 1) % 20 == 0 or batch_idx + 1 == val_total_c:
                     print(
-                        f"  [Val C] batch {batch_idx + 1:,d}/{len(val_loader_c):,d} "
+                        f"  [Val C] batch {batch_idx + 1:,d}/{val_total_c:,d} "
                         f"({time.time() - val_start:.1f}s)",
                         flush=True,
                     )
@@ -325,6 +362,32 @@ class MultiTaskTrainer:
         metrics["val_combined_score"] = float(score)
         return metrics
 
+    def _save_checkpoint(
+        self,
+        path: str,
+        epoch: int,
+        val_metrics: Optional[Dict[str, float]],
+        stage: str,
+    ) -> None:
+        """Atomically saves a resumable checkpoint (survives Kaggle interruptions)."""
+        payload = {
+            "epoch": epoch,
+            "stage": stage,
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "scaler_state_dict": self.scaler.state_dict() if self.mixed_precision else None,
+            "lr_scheduler_state_dict": (
+                self.lr_scheduler.state_dict() if self.lr_scheduler is not None else None
+            ),
+            "best_val_score": self.best_val_score,
+            "patience_counter": self.patience_counter,
+            "val_metrics": val_metrics,
+            "history": self.history,
+        }
+        tmp_path = f"{path}.tmp"
+        torch.save(payload, tmp_path)
+        os.replace(tmp_path, path)
+
     def fit(
         self,
         train_loader: DataLoader,
@@ -332,13 +395,58 @@ class MultiTaskTrainer:
         val_loader_b: Optional[DataLoader] = None,
         val_loader_c: Optional[DataLoader] = None,
         epochs: int = 25,
-        save_name: str = "best_model.pth"
+        save_name: str = "best_model.pth",
+        resume_from: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         Runs full training loop with validation, early stopping and checkpointing.
+
+        Args:
+            resume_from: Optional ``last_model.pth`` path. Restores model,
+                optimizer, scaler, scheduler and history, then continues from
+                the next epoch.
         """
-        for epoch in range(1, epochs + 1):
+        start_epoch = 1
+        if resume_from and os.path.isfile(resume_from):
+            try:
+                checkpoint = torch.load(
+                    resume_from, map_location=self.device, weights_only=False
+                )
+            except TypeError:
+                checkpoint = torch.load(resume_from, map_location=self.device)
+
+            self.model.load_state_dict(checkpoint["model_state_dict"])
+            if checkpoint.get("optimizer_state_dict"):
+                self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            if self.lr_scheduler is not None and checkpoint.get("lr_scheduler_state_dict"):
+                self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler_state_dict"])
+            if self.mixed_precision and checkpoint.get("scaler_state_dict"):
+                self.scaler.load_state_dict(checkpoint["scaler_state_dict"])
+
+            self.best_val_score = float(checkpoint.get("best_val_score", -1.0))
+            self.patience_counter = int(checkpoint.get("patience_counter", 0))
+            self.history = checkpoint.get("history", []) or []
+            start_epoch = int(checkpoint.get("epoch", 0)) + 1
+            # The "trained" checkpoint is written before validation and before
+            # the scheduler step. Catch the LR schedule up on resume.
+            if checkpoint.get("stage") == "trained" and self.lr_scheduler is not None:
+                self.lr_scheduler.step()
+            print(
+                f"[Resume] Loaded {resume_from} | last epoch={start_epoch - 1} | "
+                f"best={self.best_val_score:.4f} | continue from epoch {start_epoch}.",
+                flush=True,
+            )
+
+        last_path = os.path.join(self.checkpoint_dir, "last_model.pth")
+        history_path = os.path.join(self.results_dir, "training_history.csv")
+
+        for epoch in range(start_epoch, epochs + 1):
             train_metrics = self.train_epoch(train_loader, epoch)
+            # Save immediately after training: a validation interruption
+            # must not throw away hours of optimization.
+            self._save_checkpoint(last_path, epoch, None, "trained")
+            print(f" -> Last checkpoint saved to {last_path} (after train).", flush=True)
+
             val_metrics = self.validate_loaders(val_loader_a, val_loader_b, val_loader_c)
 
             if self.lr_scheduler is not None:
@@ -352,6 +460,7 @@ class MultiTaskTrainer:
                 "lr": float(self.optimizer.param_groups[0]["lr"]),
             }
             self.history.append(record)
+            pd.DataFrame(self.history).to_csv(history_path, index=False)
 
             print(
                 f"[Epoch {epoch:02d}/{epochs:02d}] "
@@ -360,29 +469,24 @@ class MultiTaskTrainer:
                 f"AUC_B: {val_metrics['val_auc_b']:.3f}, AUC_C: {val_metrics['val_auc_c']:.3f})"
             )
 
-            # Checkpoint saving on improvement
             if current_score > self.best_val_score:
                 self.best_val_score = current_score
                 self.patience_counter = 0
                 checkpoint_path = os.path.join(self.checkpoint_dir, save_name)
-                torch.save(
-                    {
-                        "epoch": epoch,
-                        "model_state_dict": self.model.state_dict(),
-                        "optimizer_state_dict": self.optimizer.state_dict(),
-                        "best_val_score": self.best_val_score,
-                        "val_metrics": val_metrics,
-                    },
-                    checkpoint_path
+                self._save_checkpoint(checkpoint_path, epoch, val_metrics, "validated")
+                print(
+                    f" -> Best checkpoint saved to {checkpoint_path} "
+                    f"(Best Score: {self.best_val_score:.4f})"
                 )
-                print(f" -> Checkpoint saved to {checkpoint_path} (Best Score: {self.best_val_score:.4f})")
             else:
                 self.patience_counter += 1
                 if self.patience_counter >= self.early_stopping_patience:
+                    self._save_checkpoint(last_path, epoch, val_metrics, "validated")
                     print(f"[Early Stopping] Triggered after {epoch} epochs without improvement.")
                     break
 
+            self._save_checkpoint(last_path, epoch, val_metrics, "validated")
+
         history_df = pd.DataFrame(self.history)
-        history_path = os.path.join(self.results_dir, "training_history.csv")
         history_df.to_csv(history_path, index=False)
         return history_df

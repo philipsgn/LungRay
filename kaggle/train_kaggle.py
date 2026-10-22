@@ -209,13 +209,26 @@ def build_dataloaders(
         shuffle=True,
     )
 
-    num_workers = 4 if os.name != "nt" else 0
+    def _dataloader_worker_init(worker_id: int) -> None:
+        """Prevents OpenCV/OpenMP thread oversubscription inside workers."""
+        cv2.setNumThreads(0)
+        torch.set_num_threads(1)
+
+    num_workers = int(
+        os.environ.get("LUNGRAY_NUM_WORKERS", "8" if os.name != "nt" else "0")
+    )
+    loader_kwargs = {
+        "num_workers": num_workers,
+        "pin_memory": torch.cuda.is_available(),
+        "persistent_workers": num_workers > 0,
+        "prefetch_factor": 2 if num_workers > 0 else None,
+        "worker_init_fn": _dataloader_worker_init if num_workers > 0 else None,
+    }
     train_loader = DataLoader(
         concat_train,
         batch_sampler=batch_sampler,
         collate_fn=multitask_collate_fn,
-        num_workers=num_workers,
-        pin_memory=torch.cuda.is_available(),
+        **loader_kwargs,
     )
 
     ds_val_nih = ChestXrayDataset(
@@ -256,13 +269,19 @@ def build_dataloaders(
     )
 
     val_loader_a = DataLoader(
-        ds_val_nih, batch_size=batch_size, shuffle=False, collate_fn=multitask_collate_fn
+        ds_val_nih, batch_size=batch_size, shuffle=True,
+        generator=torch.Generator().manual_seed(42),
+        collate_fn=multitask_collate_fn, **loader_kwargs,
     )
     val_loader_b = DataLoader(
-        ds_val_tb, batch_size=batch_size, shuffle=False, collate_fn=multitask_collate_fn
+        ds_val_tb, batch_size=batch_size, shuffle=True,
+        generator=torch.Generator().manual_seed(43),
+        collate_fn=multitask_collate_fn, **loader_kwargs,
     )
     val_loader_c = DataLoader(
-        ds_val_covid, batch_size=batch_size, shuffle=False, collate_fn=multitask_collate_fn
+        ds_val_covid, batch_size=batch_size, shuffle=True,
+        generator=torch.Generator().manual_seed(44),
+        collate_fn=multitask_collate_fn, **loader_kwargs,
     )
 
     if not allow_missing:
@@ -293,11 +312,18 @@ def main() -> None:
     parser.add_argument("--lr", type=float, default=1e-4, help="Peak learning rate for AdamW")
     parser.add_argument("--backbone", type=str, default="densenet121", help="Encoder backbone architecture")
     parser.add_argument(
-        "--max-batches", type=int, default=1200,
-        help="Cap batches per epoch for Kaggle session limits (0 = full epoch)",
+        "--max-batches", type=int, default=600,
+        help="Cap training batches per epoch for Kaggle limits (0 = full epoch)",
+    )
+    parser.add_argument(
+        "--max-val-batches", type=int, default=120,
+        help="Cap validation batches per head for monitoring (0 = full)",
     )
     parser.add_argument(
         "--allow-missing", action="store_true", help="Local dry-run: silently skip missing images"
+    )
+    parser.add_argument(
+        "--resume", action="store_true", help="Resume from checkpoints/last_model.pth"
     )
     args = parser.parse_args()
 
@@ -336,6 +362,9 @@ def main() -> None:
         checkpoint_dir=str(paths["output_dir"]),
         results_dir=str(paths["results_dir"]),
         max_batches_per_epoch=args.max_batches if args.max_batches > 0 else None,
+        max_val_batches_per_head=(
+            args.max_val_batches if args.max_val_batches > 0 else None
+        ),
         log_interval=50,
     )
 
@@ -352,6 +381,11 @@ def main() -> None:
         val_loader_c=loaders["val_loader_c"],
         epochs=args.epochs,
         save_name="checkpoint_baseline_multitask.pth",
+        resume_from=(
+            os.path.join(str(paths["output_dir"]), "last_model.pth")
+            if args.resume
+            else None
+        ),
     )
 
     curve_path = os.path.join(str(paths["results_dir"]), "baseline_training_curves.png")

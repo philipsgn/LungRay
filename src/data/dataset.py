@@ -119,14 +119,15 @@ class ChestXrayDataset(Dataset):
 
     def _resolve_path(self, img_name: str) -> Optional[str]:
         """Resolves full image path across top-level and nested subdirectories."""
-        # 1. Direct join
-        direct = os.path.join(self.image_dir, img_name)
-        if os.path.exists(direct) and "masks" not in os.path.normpath(direct).lower().split(os.sep):
-            return direct
-
-        # 2. Lookup in indexed file_map
+        # 1. O(1) lookup first: avoids a slow negative stat on Kaggle FUSE.
         if img_name in self.file_map:
             return self.file_map[img_name]
+
+        # 2. Direct join (only for datasets not pre-indexed)
+        direct = os.path.join(self.image_dir, img_name)
+        if os.path.exists(direct) and "masks" not in os.path.normpath(direct).lower().split(os.sep):
+            self.file_map[img_name] = direct
+            return direct
 
         # 3. Task-specific heuristics
         if self.task_id == 2:  # COVIDx CXR-4 & COVID-19 subfolders
@@ -208,7 +209,7 @@ class ChestXrayDataset(Dataset):
         img_name = str(row[self.image_col])
         img_path = self._resolve_path(img_name)
 
-        if img_path is None or not os.path.exists(img_path):
+        if img_path is None:
             if self.ignore_missing:
                 # Mock fallback strictly in local unit-testing / dry-run mode
                 image = np.zeros((self.target_size, self.target_size, 3), dtype=np.uint8)
@@ -219,6 +220,7 @@ class ChestXrayDataset(Dataset):
                     f"Check dataset extraction path. Silent black-image fallback is strictly forbidden in training."
                 )
         else:
+            # Paths from file_map were indexed on disk; avoid an extra FUSE stat.
             image = cv2.imread(img_path)
             if image is None:
                 if self.ignore_missing:
