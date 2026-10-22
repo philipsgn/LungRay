@@ -57,6 +57,8 @@ class MultiTaskTrainer:
         checkpoint_dir: str = "checkpoints",
         results_dir: str = "results",
         metric_weights: Optional[Dict[str, float]] = None,
+        max_batches_per_epoch: Optional[int] = None,
+        log_interval: int = 50,
     ):
         self.device = device or (torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"))
         self.model = model.to(self.device)
@@ -88,6 +90,8 @@ class MultiTaskTrainer:
             "auc_b": 0.30,
             "auc_c": 0.30,
         }
+        self.max_batches_per_epoch = max_batches_per_epoch
+        self.log_interval = max(1, log_interval)
 
         self.best_val_score = -1.0
         self.patience_counter = 0
@@ -134,19 +138,46 @@ class MultiTaskTrainer:
         head_losses = {"loss_a": 0.0, "loss_b": 0.0, "loss_c": 0.0}
         counts = {"loss_a": 0, "loss_b": 0, "loss_c": 0}
         num_batches = len(train_loader)
+        max_batches = num_batches
+        if self.max_batches_per_epoch is not None:
+            max_batches = min(num_batches, max(1, self.max_batches_per_epoch))
+
+        if max_batches < num_batches:
+            print(
+                f"[*] Epoch {epoch}: speed mode {max_batches:,d}/{num_batches:,d} batches "
+                f"(set max_batches_per_epoch=None for a full epoch).",
+                flush=True,
+            )
 
         start_time = time.time()
+        running_loss = 0.0
+        processed = 0
         for batch_idx, batch in enumerate(train_loader):
+            if batch_idx >= max_batches:
+                break
             loss_val, metrics = self.train_step(batch)
             total_loss += loss_val
+            running_loss += loss_val
+            processed += 1
 
             for k in head_losses:
                 if metrics.get(k, 0.0) > 0.0:
                     head_losses[k] += metrics[k]
                     counts[k] += 1
 
+            if processed == 1 or processed % self.log_interval == 0 or processed == max_batches:
+                elapsed = time.time() - start_time
+                avg_running = running_loss / processed
+                eta = elapsed / processed * (max_batches - processed)
+                print(
+                    f"  [Epoch {epoch:02d}] batch {processed:,d}/{max_batches:,d} | "
+                    f"loss={avg_running:.4f} | elapsed={elapsed / 60:.1f}m | "
+                    f"eta={eta / 60:.1f}m",
+                    flush=True,
+                )
+
         elapsed = time.time() - start_time
-        avg_loss = total_loss / max(1, num_batches)
+        avg_loss = total_loss / max(1, processed)
         summary = {
             "train_loss": avg_loss,
             "train_loss_a": head_losses["loss_a"] / max(1, counts["loss_a"]),
@@ -180,8 +211,10 @@ class MultiTaskTrainer:
 
         # 1. Evaluate Head A
         if val_loader_a is not None and len(val_loader_a) > 0:
+            print(f"[*] Validating Head A (NIH): {len(val_loader_a):,d} batches...", flush=True)
+            val_start = time.time()
             all_preds_a, all_targets_a = [], []
-            for batch in val_loader_a:
+            for batch_idx, batch in enumerate(val_loader_a):
                 if isinstance(batch, dict):
                     images = batch["images"].to(self.device)
                 else:
@@ -193,6 +226,12 @@ class MultiTaskTrainer:
                     all_targets_a.append(torch.stack(targets).cpu().numpy())
                 else:
                     all_targets_a.append(targets.cpu().numpy())
+                if (batch_idx + 1) % 100 == 0 or batch_idx + 1 == len(val_loader_a):
+                    print(
+                        f"  [Val A] batch {batch_idx + 1:,d}/{len(val_loader_a):,d} "
+                        f"({time.time() - val_start:.1f}s)",
+                        flush=True,
+                    )
 
             if all_preds_a:
                 y_pred = np.concatenate(all_preds_a, axis=0)
@@ -206,8 +245,10 @@ class MultiTaskTrainer:
 
         # 2. Evaluate Head B
         if val_loader_b is not None and len(val_loader_b) > 0:
+            print(f"[*] Validating Head B (TB): {len(val_loader_b):,d} batches...", flush=True)
+            val_start = time.time()
             all_preds_b, all_targets_b = [], []
-            for batch in val_loader_b:
+            for batch_idx, batch in enumerate(val_loader_b):
                 if isinstance(batch, dict):
                     images = batch["images"].to(self.device)
                 else:
@@ -219,6 +260,12 @@ class MultiTaskTrainer:
                     all_targets_b.append(torch.stack(targets).cpu().numpy().reshape(-1))
                 else:
                     all_targets_b.append(targets.cpu().numpy().reshape(-1))
+                if (batch_idx + 1) % 100 == 0 or batch_idx + 1 == len(val_loader_b):
+                    print(
+                        f"  [Val B] batch {batch_idx + 1:,d}/{len(val_loader_b):,d} "
+                        f"({time.time() - val_start:.1f}s)",
+                        flush=True,
+                    )
 
             if all_preds_b:
                 y_pred = np.concatenate(all_preds_b, axis=0)
@@ -228,8 +275,10 @@ class MultiTaskTrainer:
 
         # 3. Evaluate Head C (binary screening or multi-class benchmark)
         if val_loader_c is not None and len(val_loader_c) > 0:
+            print(f"[*] Validating Head C (COVIDx): {len(val_loader_c):,d} batches...", flush=True)
+            val_start = time.time()
             all_preds_c, all_targets_c = [], []
-            for batch in val_loader_c:
+            for batch_idx, batch in enumerate(val_loader_c):
                 if isinstance(batch, dict):
                     images = batch["images"].to(self.device)
                 else:
@@ -241,6 +290,12 @@ class MultiTaskTrainer:
                     all_targets_c.append(torch.stack(targets).cpu().numpy().reshape(-1))
                 else:
                     all_targets_c.append(targets.cpu().numpy().reshape(-1))
+                if (batch_idx + 1) % 100 == 0 or batch_idx + 1 == len(val_loader_c):
+                    print(
+                        f"  [Val C] batch {batch_idx + 1:,d}/{len(val_loader_c):,d} "
+                        f"({time.time() - val_start:.1f}s)",
+                        flush=True,
+                    )
 
             if all_preds_c:
                 y_pred = np.concatenate(all_preds_c, axis=0)

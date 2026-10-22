@@ -135,13 +135,13 @@ def build_dataloaders(
     tb_label_col = _select_column(df_tb, ["label", "Finding Labels"])
     covid_label_col = _select_column(df_covid, ["label", "Finding Labels"])
 
-    coverage_specs = [
-        ("NIH", df_nih, str(paths["nih_dir"])),
-        ("COVIDx", df_covid, str(paths["covid_dir"])),
-        ("TB", df_tb, str(paths["tb_dir"])),
-    ]
-    for name, df, root_dir in coverage_specs:
-        _, total, pct = audit_split_coverage(df, build_recursive_file_map(root_dir), name)
+    file_maps = {
+        "NIH": build_recursive_file_map(str(paths["nih_dir"])),
+        "COVIDx": build_recursive_file_map(str(paths["covid_dir"])),
+        "TB": build_recursive_file_map(str(paths["tb_dir"])),
+    }
+    for name, df in (("NIH", df_nih), ("COVIDx", df_covid), ("TB", df_tb)):
+        _, total, pct = audit_split_coverage(df, file_maps[name], name)
         if not allow_missing and total > 0 and pct < 100.0:
             raise AssertionError(f"[CRITICAL] {name} split coverage is {pct:.2f}% (< 100.00%).")
 
@@ -166,6 +166,7 @@ def build_dataloaders(
         transforms=train_transforms,
         pre_resized=bool(paths["nih_pre_resized"]),
         ignore_missing=ignore_missing,
+        file_map=file_maps["NIH"],
     )
     ds_train_covid = ChestXrayDataset(
         df=train_covid,
@@ -177,6 +178,7 @@ def build_dataloaders(
         transforms=train_transforms,
         pre_resized=bool(paths["covid_pre_resized"]),
         ignore_missing=ignore_missing,
+        file_map=file_maps["COVIDx"],
     )
     ds_train_tb = ChestXrayDataset(
         df=train_tb,
@@ -188,6 +190,7 @@ def build_dataloaders(
         transforms=train_transforms,
         pre_resized=bool(paths["tb_pre_resized"]),
         ignore_missing=ignore_missing,
+        file_map=file_maps["TB"],
     )
 
     concat_train = ConcatDataset([ds_train_nih, ds_train_covid, ds_train_tb])
@@ -225,6 +228,7 @@ def build_dataloaders(
         transforms=val_transforms,
         pre_resized=bool(paths["nih_pre_resized"]),
         ignore_missing=ignore_missing,
+        file_map=file_maps["NIH"],
     )
     ds_val_covid = ChestXrayDataset(
         df=val_covid,
@@ -236,6 +240,7 @@ def build_dataloaders(
         transforms=val_transforms,
         pre_resized=bool(paths["covid_pre_resized"]),
         ignore_missing=ignore_missing,
+        file_map=file_maps["COVIDx"],
     )
     ds_val_tb = ChestXrayDataset(
         df=val_tb,
@@ -247,6 +252,7 @@ def build_dataloaders(
         transforms=val_transforms,
         pre_resized=bool(paths["tb_pre_resized"]),
         ignore_missing=ignore_missing,
+        file_map=file_maps["TB"],
     )
 
     val_loader_a = DataLoader(
@@ -287,6 +293,10 @@ def main() -> None:
     parser.add_argument("--lr", type=float, default=1e-4, help="Peak learning rate for AdamW")
     parser.add_argument("--backbone", type=str, default="densenet121", help="Encoder backbone architecture")
     parser.add_argument(
+        "--max-batches", type=int, default=1200,
+        help="Cap batches per epoch for Kaggle session limits (0 = full epoch)",
+    )
+    parser.add_argument(
         "--allow-missing", action="store_true", help="Local dry-run: silently skip missing images"
     )
     args = parser.parse_args()
@@ -325,9 +335,16 @@ def main() -> None:
         early_stopping_patience=5,
         checkpoint_dir=str(paths["output_dir"]),
         results_dir=str(paths["results_dir"]),
+        max_batches_per_epoch=args.max_batches if args.max_batches > 0 else None,
+        log_interval=50,
     )
 
     print(f"\n[MultiTaskTrainer] Launching {args.epochs} Epochs on {device}...")
+    print(
+        f"[MultiTaskTrainer] Batches/epoch: "
+        f"{args.max_batches if args.max_batches > 0 else len(loaders['train_loader']):,d} "
+        f"of {len(loaders['train_loader']):,d} available."
+    )
     history_df = trainer.fit(
         train_loader=loaders["train_loader"],
         val_loader_a=loaders["val_loader_a"],

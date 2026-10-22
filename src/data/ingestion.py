@@ -16,6 +16,7 @@ Design rules:
 """
 from __future__ import annotations
 
+import glob
 import os
 import re
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
@@ -60,14 +61,20 @@ def build_recursive_file_map(root_dir: str) -> Dict[str, str]:
     return file_map
 
 
-def _contains_images(directory: str, min_images: int = 1) -> bool:
-    """Checks whether a directory tree contains at least ``min_images`` images."""
+def _contains_images(
+    directory: str, min_images: int = 1, max_files: int = 5000
+) -> bool:
+    """Checks for images while capping the scan to avoid slow network walks."""
     if not os.path.isdir(directory):
         return False
     found = 0
+    scanned = 0
     for root, dirs, files in os.walk(directory):
         dirs[:] = [d for d in dirs if d.lower() not in _EXCLUDED_DIRS]
         for filename in files:
+            scanned += 1
+            if scanned > max_files:
+                return False
             if filename.lower().endswith(IMAGE_EXTENSIONS):
                 found += 1
                 if found >= min_images:
@@ -75,11 +82,15 @@ def _contains_images(directory: str, min_images: int = 1) -> bool:
     return False
 
 
-def find_covidx_manifests(root_dir: str) -> Tuple[Optional[str], Optional[str]]:
+def find_covidx_manifests(
+    root_dir: str, max_depth: int = 2
+) -> Tuple[Optional[str], Optional[str]]:
     """Locates ``train.txt`` and ``test.txt`` inside a COVIDx dataset tree.
 
     Args:
         root_dir: Directory that may contain the COVIDx manifests.
+        max_depth: Maximum subdirectory depth to inspect (manifests normally
+            live at the dataset root or one folder below).
 
     Returns:
         ``(train_txt_path, test_txt_path)`` or ``(None, None)``.
@@ -89,7 +100,12 @@ def find_covidx_manifests(root_dir: str) -> Tuple[Optional[str], Optional[str]]:
     if not root_dir or not os.path.isdir(root_dir):
         return None, None
 
+    base_depth = os.path.normpath(root_dir).count(os.sep)
     for root, dirs, files in os.walk(root_dir):
+        depth = os.path.normpath(root).count(os.sep) - base_depth
+        if depth > max_depth:
+            dirs[:] = []
+            continue
         dirs[:] = [d for d in dirs if d.lower() not in _EXCLUDED_DIRS]
         lowered = {f.lower(): f for f in files}
         if train_txt is None and "train.txt" in lowered:
@@ -98,6 +114,8 @@ def find_covidx_manifests(root_dir: str) -> Tuple[Optional[str], Optional[str]]:
             test_txt = os.path.join(root, lowered["test.txt"])
         if train_txt and test_txt:
             break
+        if depth == max_depth:
+            dirs[:] = []
     return train_txt, test_txt
 
 
@@ -130,12 +148,25 @@ def find_kaggle_dataset(
 
     normalised_keys = [(_normalise_token(k), i) for i, k in enumerate(slug_keys)]
     base_depth = os.path.normpath(base_dir).count(os.sep)
-    candidates: List[Tuple[int, int, int, str]] = []
 
-    for root, dirs, _ in os.walk(base_dir):
+    # Kaggle mounts are shallow: /kaggle/input/<slug>,
+    # /kaggle/input/<user>/<slug>, /kaggle/input/datasets/<user>/<slug>.
+    # Glob only directory names; never walk full image trees (can take hours).
+    search_dirs = {os.path.normpath(base_dir)}
+    patterns = [
+        os.path.join(base_dir, "*"),
+        os.path.join(base_dir, "*", "*"),
+        os.path.join(base_dir, "datasets", "*", "*"),
+        os.path.join(base_dir, "datasets", "*", "*", "*"),
+    ]
+    for pattern in patterns:
+        for path in glob.glob(pattern):
+            if os.path.isdir(path):
+                search_dirs.add(os.path.normpath(path))
+
+    candidates: List[Tuple[int, int, int, str]] = []
+    for root in search_dirs:
         depth = os.path.normpath(root).count(os.sep) - base_depth
-        if depth >= max_depth:
-            dirs[:] = []
         basename = os.path.basename(root)
         normalised_name = _normalise_token(basename)
         for normalised_key, key_order in normalised_keys:
@@ -148,10 +179,10 @@ def find_kaggle_dataset(
 
     for _, _, _, candidate in sorted(candidates, reverse=True):
         if require_manifest:
-            train_txt, test_txt = find_covidx_manifests(candidate)
+            train_txt, test_txt = find_covidx_manifests(candidate, max_depth=2)
             if not (train_txt and test_txt):
                 continue
-        if require_images and not _contains_images(candidate):
+        if require_images and not _contains_images(candidate, max_files=5000):
             continue
         return candidate
     return None

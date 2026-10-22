@@ -54,7 +54,8 @@ class ChestXrayDataset(Dataset):
         transforms: Optional[Callable] = None,
         pre_resized: bool = False,
         ignore_missing: bool = False,
-        target_size: int = 512
+        target_size: int = 512,
+        file_map: Optional[Dict[str, str]] = None,
     ):
         self.image_dir = image_dir
         self.image_col = image_col
@@ -66,9 +67,13 @@ class ChestXrayDataset(Dataset):
         self.target_size = target_size
         self.transforms = transforms or get_val_transforms(img_size=target_size)
 
-        # Smart Path Indexer: Index subdirectories if files are nested
-        self.file_map: Dict[str, str] = {}
-        self._init_path_indexer()
+        # Smart Path Indexer: reuse a pre-built O(1) map when supplied to avoid
+        # re-walking Kaggle's network-mounted datasets for every split.
+        if file_map:
+            self.file_map: Dict[str, str] = file_map
+        else:
+            self.file_map = {}
+            self._init_path_indexer()
 
         # Filter missing images only if running in local dry-run / mock mode
         if self.ignore_missing:
