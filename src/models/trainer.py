@@ -182,7 +182,10 @@ class MultiTaskTrainer:
         if val_loader_a is not None and len(val_loader_a) > 0:
             all_preds_a, all_targets_a = [], []
             for batch in val_loader_a:
-                images = batch["images"].to(self.device) if isinstance(batch, dict) else batch[0].to(self.device)
+                if isinstance(batch, dict):
+                    images = batch["images"].to(self.device)
+                else:
+                    images = batch[0].to(self.device)
                 targets = batch["labels"] if isinstance(batch, dict) else batch[1]
                 preds = self.model.predict(images)["head_a"].cpu().numpy()
                 all_preds_a.append(preds)
@@ -205,14 +208,17 @@ class MultiTaskTrainer:
         if val_loader_b is not None and len(val_loader_b) > 0:
             all_preds_b, all_targets_b = [], []
             for batch in val_loader_b:
-                images = batch["images"].to(self.device) if isinstance(batch, dict) else batch[0].to(self.device)
+                if isinstance(batch, dict):
+                    images = batch["images"].to(self.device)
+                else:
+                    images = batch[0].to(self.device)
                 targets = batch["labels"] if isinstance(batch, dict) else batch[1]
-                preds = self.model.predict(images)["head_b"].cpu().numpy().squeeze()
+                preds = self.model.predict(images)["head_b"].cpu().numpy().reshape(-1)
                 all_preds_b.append(preds)
                 if isinstance(targets, list):
-                    all_targets_b.append(torch.stack(targets).cpu().numpy().squeeze())
+                    all_targets_b.append(torch.stack(targets).cpu().numpy().reshape(-1))
                 else:
-                    all_targets_b.append(targets.cpu().numpy().squeeze())
+                    all_targets_b.append(targets.cpu().numpy().reshape(-1))
 
             if all_preds_b:
                 y_pred = np.concatenate(all_preds_b, axis=0)
@@ -220,27 +226,35 @@ class MultiTaskTrainer:
                 if len(np.unique(y_true)) > 1:
                     metrics["val_auc_b"] = float(roc_auc_score(y_true, y_pred))
 
-        # 3. Evaluate Head C
+        # 3. Evaluate Head C (binary screening or multi-class benchmark)
         if val_loader_c is not None and len(val_loader_c) > 0:
             all_preds_c, all_targets_c = [], []
             for batch in val_loader_c:
-                images = batch["images"].to(self.device) if isinstance(batch, dict) else batch[0].to(self.device)
+                if isinstance(batch, dict):
+                    images = batch["images"].to(self.device)
+                else:
+                    images = batch[0].to(self.device)
                 targets = batch["labels"] if isinstance(batch, dict) else batch[1]
                 preds = self.model.predict(images)["head_c"].cpu().numpy()
                 all_preds_c.append(preds)
                 if isinstance(targets, list):
-                    all_targets_c.append(torch.stack(targets).cpu().numpy().squeeze())
+                    all_targets_c.append(torch.stack(targets).cpu().numpy().reshape(-1))
                 else:
-                    all_targets_c.append(targets.cpu().numpy().squeeze())
+                    all_targets_c.append(targets.cpu().numpy().reshape(-1))
 
             if all_preds_c:
                 y_pred = np.concatenate(all_preds_c, axis=0)
-                y_true = np.concatenate(all_targets_c, axis=0)
+                y_true = np.concatenate(all_targets_c, axis=0).ravel()
+                if y_pred.ndim > 1 and y_pred.shape[1] == 1:
+                    y_pred = y_pred.ravel()
                 if len(np.unique(y_true)) > 1:
                     try:
-                        metrics["val_auc_c"] = float(
-                            roc_auc_score(y_true, y_pred, multi_class="ovr", average="macro")
-                        )
+                        if y_pred.ndim == 1 or y_pred.shape[1] == 1:
+                            metrics["val_auc_c"] = float(roc_auc_score(y_true, y_pred.ravel()))
+                        else:
+                            metrics["val_auc_c"] = float(
+                                roc_auc_score(y_true, y_pred, multi_class="ovr", average="macro")
+                            )
                     except Exception:
                         metrics["val_auc_c"] = 0.50
 

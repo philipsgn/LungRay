@@ -5,10 +5,37 @@ Provides factory functions to initialize CNN encoders (DenseNet-121, ResNet-50)
 and Vision Transformer (ViT) with dynamic 2D positional embedding interpolation
 for 512x512 chest X-ray resolution.
 """
-from typing import Tuple
+import os
+import glob
+import socket
+from typing import Tuple, Optional
 import torch
 import torch.nn as nn
 import timm
+
+# Set a safe default socket timeout (30s) to prevent indefinite hanging when internet is blocked or unstable
+socket.setdefaulttimeout(30.0)
+
+
+def _find_local_weights(model_name: str) -> Optional[str]:
+    """
+    Search for locally cached or Kaggle-mounted pretrained checkpoint files
+    to enable offline model initialization when Kaggle Internet is OFF.
+    """
+    search_patterns = [
+        f"/kaggle/input/**/{model_name}*.pth",
+        f"/kaggle/input/**/{model_name}*.pt",
+        os.path.expanduser(f"~/.cache/torch/hub/checkpoints/{model_name}*.pth"),
+        os.path.expanduser(f"~/.cache/huggingface/hub/**/{model_name}*.bin"),
+        f"checkpoints/{model_name}*.pth",
+        f"../checkpoints/{model_name}*.pth",
+        f"dataset/{model_name}*.pth",
+    ]
+    for pattern in search_patterns:
+        matches = glob.glob(pattern, recursive=True)
+        if matches and os.path.exists(matches[0]):
+            return matches[0]
+    return None
 
 
 def interpolate_vit_pos_embed_for_512(
@@ -75,19 +102,51 @@ def build_backbone(
         tuple: (backbone_encoder, in_features_dim)
     """
     name = name.lower()
+    local_weights = _find_local_weights(name) if pretrained else None
+
+    print(f"[*] Initializing backbone '{name}' (pretrained={pretrained})...")
+    if local_weights:
+        print(f"[*] Found local offline weights for '{name}': {local_weights}")
+
+    def _create_with_fallback(arch_name: str, pretrained_flag: bool):
+        try:
+            # If local checkpoint found and pretrained requested, create uninitialized first
+            if local_weights and pretrained_flag:
+                m = timm.create_model(arch_name, pretrained=False, num_classes=0)
+                state_dict = torch.load(local_weights, map_location="cpu")
+                # Handle possible state_dict key wrappers (e.g. 'state_dict', 'model')
+                if "state_dict" in state_dict:
+                    state_dict = state_dict["state_dict"]
+                elif "model" in state_dict:
+                    state_dict = state_dict["model"]
+                m.load_state_dict(state_dict, strict=False)
+                print(f"[OK] Successfully loaded local pretrained weights into {arch_name}!")
+                return m
+            
+            # Normal creation via timm (downloads if pretrained_flag is True)
+            return timm.create_model(arch_name, pretrained=pretrained_flag, num_classes=0)
+        except Exception as err:
+            if pretrained_flag:
+                print(f"[!] Warning: Failed to load pretrained weights for '{arch_name}' via timm.")
+                print(f"    Detail: {type(err).__name__}: {err}")
+                print("[!] Kaggle Tip: Ensure 'Internet: ON' is enabled in the right panel (Notebook Settings),")
+                print("    or add a Kaggle dataset containing pretrained .pth checkpoints.")
+                print("[*] Falling back to uninitialized weights (pretrained=False) to prevent deadlock...")
+                return timm.create_model(arch_name, pretrained=False, num_classes=0)
+            raise err
+
     if name == "densenet121":
-        model = timm.create_model("densenet121", pretrained=pretrained, num_classes=0)
+        model = _create_with_fallback("densenet121", pretrained)
         in_features = model.num_features  # 1024
         return model, in_features
 
     elif name == "resnet50":
-        model = timm.create_model("resnet50", pretrained=pretrained, num_classes=0)
+        model = _create_with_fallback("resnet50", pretrained)
         in_features = model.num_features  # 2048
         return model, in_features
 
     elif "vit" in name:
-        # Load base model, dynamic interpolation applied for img_size != pretrained size
-        model = timm.create_model(name, pretrained=pretrained, num_classes=0)
+        model = _create_with_fallback(name, pretrained)
         if img_size != 224:
             model = interpolate_vit_pos_embed_for_512(model, new_img_size=img_size, patch_size=16)
         in_features = model.num_features  # 768 for vit_base

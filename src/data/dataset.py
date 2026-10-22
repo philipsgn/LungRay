@@ -79,7 +79,16 @@ class ChestXrayDataset(Dataset):
                 if resolved is not None and os.path.exists(resolved):
                     valid_indices.append(idx)
             self.df = df.loc[valid_indices].reset_index(drop=True)
-            print(f"[Dataset Task {self.task_id}] Filtered {len(self.df)} existing images out of {len(df)} total rows.")
+            print(
+                f"[Dataset Task {self.task_id}] Filtered {len(self.df)} existing images "
+                f"out of {len(df)} total rows."
+            )
+            if self.df.empty and len(df) > 0:
+                self.df = df.head(min(32, len(df))).reset_index(drop=True)
+                print(
+                    f"[Dataset Task {self.task_id}] No local images found; "
+                    f"using {len(self.df)} black mock samples for dry-run."
+                )
         else:
             self.df = df.reset_index(drop=True)
 

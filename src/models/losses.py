@@ -125,8 +125,7 @@ class MaskedMultiTaskLoss(nn.Module):
         mask_b = (task_ids == 1)
         mask_c = (task_ids == 2)
 
-        total_loss = torch.tensor(0.0, device=device, requires_grad=True)
-        active_heads = 0
+        weighted_losses: List[torch.Tensor] = []
 
         # --- Head A: NIH ChestX-ray14 ---
         if mask_a.any():
@@ -139,9 +138,8 @@ class MaskedMultiTaskLoss(nn.Module):
                 y_a = torch.stack([targets[i] for i in idx_a]).to(device).float()
 
             loss_a = self.criterion_a(logits_a, y_a)
-            total_loss = total_loss + self.weights.get("head_a", 1.0) * loss_a
+            weighted_losses.append(self.weights.get("head_a", 1.0) * loss_a)
             metrics["loss_a"] = float(loss_a.detach().item())
-            active_heads += 1
 
         # --- Head B: Tuberculosis ---
         if mask_b.any():
@@ -155,9 +153,8 @@ class MaskedMultiTaskLoss(nn.Module):
                     y_b = y_b.unsqueeze(-1)
 
             loss_b = self.criterion_b(logits_b, y_b)
-            total_loss = total_loss + self.weights.get("head_b", 0.8) * loss_b
+            weighted_losses.append(self.weights.get("head_b", 0.8) * loss_b)
             metrics["loss_b"] = float(loss_b.detach().item())
-            active_heads += 1
 
         # --- Head C: COVID-19 Screening ---
         if mask_c.any():
@@ -181,9 +178,13 @@ class MaskedMultiTaskLoss(nn.Module):
                     y_c = y_c.squeeze(-1)
                 loss_c = self.criterion_c(logits_c, y_c)
 
-            total_loss = total_loss + self.weights.get("head_c", 0.8) * loss_c
+            weighted_losses.append(self.weights.get("head_c", 0.8) * loss_c)
             metrics["loss_c"] = float(loss_c.detach().item())
-            active_heads += 1
+
+        if weighted_losses:
+            total_loss = torch.stack(weighted_losses).sum()
+        else:
+            total_loss = logits_dict["head_a"].sum() * 0.0
 
         metrics["loss_total"] = float(total_loss.detach().item())
         return total_loss, metrics

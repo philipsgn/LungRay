@@ -4,7 +4,7 @@ LungRay Multi-Task 3-Head Network Architecture
 Shared Encoder Backbone with 3 independent clinical classification heads:
 - Head A: 14 thoracic pathologies (NIH ChestX-ray14, multi-label)
 - Head B: Tuberculosis screening (TB Database, binary)
-- Head C: COVID-19 screening (COVID-19 Radiography, 4-class)
+- Head C: COVID-19 screening (COVIDx CXR-4, binary positive vs negative)
 
 Supports DenseNet-121 (default CheXNet baseline), ResNet-50, and Vision Transformer (ViT).
 Standard input resolution: 512x512.
@@ -28,7 +28,7 @@ class MultiTaskChestXrayNet(nn.Module):
          ┌────┼────┐
          │    │    │
        HeadA HeadB HeadC
-       (14)  (1)   (3)
+       (14)  (1)   (1)
     """
 
     def __init__(
