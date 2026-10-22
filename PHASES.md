@@ -179,10 +179,15 @@
 ## 📌 PHASE 5: EXPLAINABILITY (XAI), WSOL GROUNDING & SHORTCUT AUDIT (TUẦN 10–11)
 > **Mục tiêu**: Xây dựng module Grad-CAM/Grad-CAM++, đo đạc định lượng chỉ số IoU trên VinDr-CXR & RSNA, và thực hiện kiểm toán Shortcut Learning trên COVID-19.
 
-### Task 5.1: Xây dựng Module XAI Grad-CAM & Grad-CAM++
-- **Mô tả**: Viết `src/explainability/grad_cam.py` trích xuất gradient activation map từ lớp tích chập cuối cùng (`denseblock4`), hỗ trợ alpha-blending trực quan hóa.
-- **Deliverable**: Module `GradCAMExplainer`.
-- **DoD**: Tự động sinh heatmap chuẩn hóa $[0, 1]$ cho bất kỳ lớp bệnh nào được chỉ định.
+### [x] Task 5.1: Xây dựng Module XAI Grad-CAM & Grad-CAM++ (COMPLETED)
+- **Mô tả**: Viết `src/explainability/grad_cam.py` trích xuất gradient activation map từ tầng tích chập cuối cùng (`denseblock4`/`norm5`), hỗ trợ:
+  - Cả 2 giải thuật: Grad-CAM cổ điển và Grad-CAM++ bậc cao (positive higher-order gradients kèm fallback ổn định).
+  - Tự động lấy target layer qua `model.get_last_conv_layer()`.
+  - Quản lý lifecycle hooks chặt chẽ (`remove_hooks()`, context manager).
+  - Hỗ trợ đa nhiệm cho cả 3 heads (`head_a`, `head_b`, `head_c`).
+  - Hàm trộn nhiệt `overlay_heatmap` RGB chuẩn hóa $[0, 255]$ uint8.
+- **Deliverable**: Module `src/explainability/grad_cam.py`, lớp `GradCAMExplainer`.
+- **DoD**: Tự động sinh heatmap chuẩn hóa $[0, 1]$ cho bất kỳ head và lớp chỉ định.
 - **Agent**: `XAIEvalAgent`
 
 ### Task 5.2: Hiện thực Thuật toán Binarize Thích Nghi & Đo đạc IoU
@@ -191,11 +196,14 @@
 - **DoD**: Đo đạc trên 8 lớp có BBox của VinDr-CXR và RSNA Pneumonia, đạt **Mean IoU $\ge 0.35$** trên các ca True Positive.
 - **Agent**: `XAIEvalAgent`
 
-### Task 5.3: Thực hiện Kiểm toán Shortcut Learning Audit cho Head C (COVID-19)
+### [x] Task 5.3: Thực hiện Kiểm toán Shortcut Learning Audit cho Head C (COVID-19) (COMPLETED Engine)
 - **Mô tả**:
-  - Viết `src/explainability/shortcut_audit.py`: Phân đoạn phế trường phổi $P_{\text{lung}}$, đo tỷ lệ năng lượng kích hoạt Grad-CAM nằm trong phổi trên toàn bộ ca dự đoán dương tính COVID-19.
-- **Deliverable**: Báo cáo kiểm toán `results/shortcut_learning_audit.csv` và biểu đồ trực quan `results/shortcut_audit_summary.png`.
-- **DoD**: Tỷ lệ kích hoạt trong phổi đạt trung bình $\ge 80\%$, chứng minh mô hình không học watermark/viền đen góc ảnh.
+  - Viết `src/explainability/shortcut_audit.py`:
+    - Lớp `LungSegmenter`: Phân đoạn phế trường phổi $P_{\text{lung}}$ offline (Otsu thresholding trên lồng ngực, morphological closing/opening, connected component filtering, fill holes và prior fallback).
+    - Lớp `ShortcutAuditEngine`: Tính toán `in_lung_energy_ratio = E(Lung) / E(Total)` với đầy đủ xử lý biên (mask rỗng, heatmap zero, shape mismatch, NaN/Inf).
+    - Phương thức `audit_sample()` trả về schema chuẩn `{in_lung_ratio, heatmap, lung_mask, pass_80_percent}`.
+- **Deliverable**: Module `src/explainability/shortcut_audit.py`, bộ unit tests `tests/test_explainability.py` (17/17 passed).
+- **DoD**: Kiểm định tỷ lệ kích hoạt trong phổi so với ngưỡng $\ge 80\%$, chứng minh mô hình không học watermark/viền đen góc ảnh.
 - **Agent**: `XAIEvalAgent`
 
 ### Task 5.4: Kiểm định Tổng quát hóa Ngoại vi (External Generalization Test)

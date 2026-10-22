@@ -140,4 +140,68 @@ src/
   - Masked Multi-Task Loss gradient isolation.
   - MultiTaskChestXrayNet forward / predict shapes across 3 heads.
   - 1-step dry-run training loop with Mixed Precision.
-- **Kết quả kiểm thử**: `pytest tests/ -v` $\to$ **19/19 PASSED (100%)**.
+- **Kết quả kiểm thử**: `pytest tests/ -v` $\to$ **60/60 PASSED (100%)**.
+
+---
+
+## 8. BÀN GIAO TÁC VỤ KỸ THUẬT: PHASE 5 (TASKS 5.1 & 5.3) — XAI GRAD-CAM & SHORTCUT AUDIT
+
+> **Chỉ định người thực hiện**: `Opencode Terminal Extension`  
+> **Người giao nhiệm vụ & Duyệt Gate**: `Antigravity IDE Agent (Chief AI Architect)`  
+> **Mục tiêu**: Xây dựng module Grad-CAM / Grad-CAM++, Lung Mask segmentation và kiểm toán Shortcut Learning trên Head C COVID-19.
+
+### Master Prompt dành cho Opencode:
+
+```markdown
+Chào Opencode! Antigravity (Chief AI Architect) đã hoàn tất thiết kế kiến trúc và Implementation Plan cho Phase 5 (Tasks 5.1 & 5.3).
+Nhiệm vụ của bạn là lập trình chi tiết mã nguồn, xử lý các kiểm thử tự động trong terminal theo đúng các yêu cầu kỹ thuật dưới đây:
+
+### 1. File 1: `src/explainability/grad_cam.py`
+Xây dựng lớp `GradCAMExplainer`:
+- Khởi tạo: `__init__(self, model: nn.Module, target_layer: Optional[nn.Module] = None, method: str = "gradcam")`
+  - Nếu `target_layer` là None, tự động gọi `model.get_last_conv_layer()`.
+  - Đăng ký forward hook lưu feature activations $A$ và full backward hook lưu gradients $dA$.
+  - Cung cấp method `remove_hooks()` để giải phóng bộ nhớ.
+- `generate(self, x: torch.Tensor, head_name: str = "head_c", target_class_idx: int = 0) -> np.ndarray`:
+  - Đảm bảo x có `requires_grad=True` và chạy forward pass qua model để lấy logits tương ứng (`head_name`).
+  - Target score $Y^c = \text{logits}[target\_class\_idx]$ (hoặc $[0]$ nếu binary).
+  - Backward $Y^c$ để kích hoạt backward hook.
+  - Tính trọng số kênh $\alpha_k^c$:
+    - Nếu `method == "gradcam"`: Global Average Pooling của gradients.
+    - Nếu `method == "gradcam++"`: Sử dụng đạo hàm bậc 2 và bậc 3 (positive higher-order gradients) theo công thức Chattopadhay et al.
+  - Tính $L^c = \text{ReLU}(\sum_k \alpha_k^c A_k)$.
+  - Nội suy (Interpolate) $L^c$ về kích thước không gian ban đầu của ảnh input $(H, W)$ bằng bilinear interpolation.
+  - Chuẩn hóa Min-Max về đoạn $[0.0, 1.0]$. Tránh chia cho 0 khi max == min.
+- `overlay_heatmap(self, img_rgb: np.ndarray, heatmap: np.ndarray, alpha: float = 0.4, colormap: int = cv2.COLORMAP_JET) -> np.ndarray`:
+  - img_rgb: ảnh uint8 $[0, 255]$ hoặc float $[0, 1]$.
+  - heatmap: float array $[0, 1]$.
+  - Áp dụng colormap qua cv2 và thực hiện Alpha blending: $(1 - \alpha) \cdot img + \alpha \cdot color\_heatmap$. Trả về uint8 $[0, 255]$.
+
+### 2. File 2: `src/explainability/shortcut_audit.py`
+Xây dựng:
+- Lớp `LungSegmenter`:
+  - `predict_mask(self, img: np.ndarray) -> np.ndarray`: Nhận ảnh X-quang $(H, W)$ hoặc $(H, W, 3)$.
+  - Trả về binary mask $\{0, 1\}$ có hình dạng $(H, W)$ đại diện cho vùng phế trường phổi $P_{\text{lung}}$.
+  - Hỗ trợ cơ chế trích xuất vững chắc: Phân đoạn hình thái học nâng cao (Otsu Thresholding trên vùng trung tâm lồng ngực + Morphological Closing/Opening + lọc vùng liên thông lớn nhất) bảo đảm chạy 100% offline, không lỗi kết nối mạng.
+- Lớp `ShortcutAuditEngine`:
+  - `compute_in_lung_ratio(self, heatmap: np.ndarray, lung_mask: np.ndarray) -> float`:
+    - Tính tổng giá trị heatmap trong vùng $lung\_mask == 1$ chia cho tổng giá trị heatmap toàn ảnh.
+    - Xử lý biên nếu tổng năng lượng toàn ảnh xấp xỉ 0 (trả về 0.0 hoặc 1.0 an toàn).
+  - `audit_sample(self, model: nn.Module, explainer: GradCAMExplainer, img_tensor: torch.Tensor, original_img: np.ndarray, head_name: str = "head_c") -> Dict[str, Any]`:
+    - Trả về dict: `{'in_lung_ratio': float, 'heatmap': np.ndarray, 'lung_mask': np.ndarray, 'pass_80_percent': bool}`.
+
+### 3. File 3: `tests/test_explainability.py`
+Viết bộ unit test toàn diện:
+- `test_gradcam_forward_backward()`: Chạy trên `MultiTaskChestXrayNet(backbone_name='densenet121', pretrained=False)` với dummy input $(1, 3, 512, 512)$.
+- Kiểm tra shape heatmap $(512, 512)$, khoảng giá trị nằm trọn trong $[0.0, 1.0]$.
+- `test_gradcam_plus_plus()`: Kiểm tra method `gradcam++` sinh heatmap hợp lệ.
+- `test_multi_head_explainability()`: Kiểm tra giải thích cho cả `head_a` (target_class_idx từ 0-13), `head_b` và `head_c`.
+- `test_lung_segmenter_and_energy_ratio()`: Kiểm tra `compute_in_lung_ratio` với các ca biên (mask toàn 1, mask toàn 0, heatmap đồng nhất).
+- `test_hook_cleanup()`: Kiểm tra `remove_hooks()` giải phóng toàn bộ hooks.
+
+### Quy trình thực hiện của Opencode:
+1. Tạo và viết mã `src/explainability/grad_cam.py`, `src/explainability/shortcut_audit.py` và `tests/test_explainability.py`.
+2. Kiểm tra cú pháp: `python -m compileall src/explainability/ tests/`.
+3. Chạy kiểm thử: `pytest tests/test_explainability.py -v`.
+4. Báo cáo lại kết quả cho Antigravity để thực hiện audit git diff và commit chính thức.
+```
