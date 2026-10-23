@@ -66,6 +66,7 @@ dataset/**/subsets/
 !/OPENCODE_GUIDE.md
 !/PRD.md
 !/TECH_ARCHITECTURE.md
+!/reports/*.md
 
 # OS specific files
 .DS_Store

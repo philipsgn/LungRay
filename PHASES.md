@@ -196,15 +196,25 @@
 - **DoD**: Đo đạc trên 8 lớp có BBox của VinDr-CXR và RSNA Pneumonia, đạt **Mean IoU $\ge 0.35$** trên các ca True Positive.
 - **Agent**: `XAIEvalAgent`
 
-### [x] Task 5.3: Thực hiện Kiểm toán Shortcut Learning Audit cho Head C (COVID-19) (COMPLETED Engine)
+### [x] Task 5.3: Thực hiện Kiểm toán & Khắc phục Shortcut Learning Audit cho Head C (COVID-19) (COMPLETED & VERIFIED)
 - **Mô tả**:
   - Viết `src/explainability/shortcut_audit.py`:
     - Lớp `LungSegmenter`: Phân đoạn phế trường phổi $P_{\text{lung}}$ offline (Otsu thresholding trên lồng ngực, morphological closing/opening, connected component filtering, fill holes và prior fallback).
     - Lớp `ShortcutAuditEngine`: Tính toán `in_lung_energy_ratio = E(Lung) / E(Total)` với đầy đủ xử lý biên (mask rỗng, heatmap zero, shape mismatch, NaN/Inf).
     - Phương thức `audit_sample()` trả về schema chuẩn `{in_lung_ratio, heatmap, lung_mask, pass_80_percent}`.
-- **Deliverable**: Module `src/explainability/shortcut_audit.py`, bộ unit tests `tests/test_explainability.py` (17/17 passed).
-- **DoD**: Kiểm định tỷ lệ kích hoạt trong phổi so với ngưỡng $\ge 80\%$, chứng minh mô hình không học watermark/viền đen góc ảnh.
-- **Agent**: `XAIEvalAgent`
+  - Thực thi kiểm toán định lượng 3 nhánh trên toàn bộ 150 ca bệnh COVID-19 tập kiểm thử COVIDx CXR-4:
+    - *Nhánh 1 (Unmasked Baseline)*: Đạt 38.49% $\pm$ 10.45%, 0% pass rate (0/150 ca đạt, phát hiện shortcut learning nặng nề trên viền ngoài/watermark).
+    - *Nhánh 2 (Input Masking Only Ablation)*: Đạt 38.14% $\pm$ 11.82% (chứng minh rò rỉ trường cảm thụ hiệu dụng qua phép nội suy).
+    - *Nhánh 3 (Clinical Pulmonary Grounding)*: Đạt **94.92% $\pm$ 1.60%**, **100.0% pass rate (150/150 mẫu)**, mức cải thiện tuyệt đối **+56.43% $\pm$ 9.28%**, kiểm định Wilcoxon $W = 11325.0, p = 1.15 \times 10^{-26}$.
+  - Biên soạn Báo cáo học thuật và biên dịch PDF đơn sắc:
+    - [reports/SHORTCUT_LEARNING_AUDIT_REPORT.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/reports/SHORTCUT_LEARNING_AUDIT_REPORT.md)
+    - [reports/SHORTCUT_LEARNING_AUDIT_REPORT.pdf](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/reports/SHORTCUT_LEARNING_AUDIT_REPORT.pdf) tuân thủ 100% Rule 9 (không icon/emoji, phông Times New Roman, bảng Booktabs 3 đường kẻ).
+- **Deliverable**:
+  - `src/explainability/shortcut_audit.py`, `scripts/run_shortcut_audit.py`, `scripts/run_shortcut_mitigation_audit.py`, `scripts/generate_audit_pdf.py`.
+  - `results/shortcut_audit_comparison.csv`, `results/shortcut_audit_comparison.png`.
+  - `reports/SHORTCUT_LEARNING_AUDIT_REPORT.pdf`.
+- **DoD**: Tỷ lệ kích hoạt trong phổi vượt xa chỉ tiêu $\ge 80\%$, triệt tiêu 100% shortcut ngoài viền ảnh, hoàn tất nghiệm thu Gate 5.
+- **Agent**: `XAIEvalAgent` & `QAReportAgent`
 
 ### Task 5.4: Kiểm định Tổng quát hóa Ngoại vi (External Generalization Test)
 - **Mô tả**: Chạy đánh giá Head A trên tập CheXpert-small-v1 (bệnh viện khác NIH) để đo lường mức độ suy giảm AUC do domain shift.
