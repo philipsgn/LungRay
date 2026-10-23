@@ -43,16 +43,20 @@
 ---
 
 ## 1. MÔ HÌNH HỢP TÁC SONG SONG (DUAL-AGENT SYNERGY MODEL)
-### Antigravity (Chief AI Architect & Quality Gatekeeper) & Opencode (Tactical Coding & Execution Engine)
+### Antigravity (Chief AI Architect & Quality Gatekeeper) & CommandCode Go (Tactical Coding & Execution Engine)
 
 Nền tảng **LungRay** vận hành theo mô hình phân tầng chuyên trách (Two-Tier Agent Architecture) giữa 2 trợ lý AI:
 
 1. **Antigravity (IDE Agent - Chief Architect & Quality Gatekeeper)**:
-   - **Vai trò**: Lãnh đạo kỹ thuật (Senior AI Lead 10+ YOE).
-   - **Trách nhiệm**: Lên kế hoạch tổng thể (`/plan`, `/grill-me`), thiết kế kiến trúc hệ thống, xây dựng workflow, phân tích dữ liệu chuyên sâu, biên soạn Master Prompt cho Opencode, kiểm toán chất lượng code qua `git diff` (bảo đảm tuân thủ 8 Ràng Buộc Sống Còn), và độc quyền phụ trách `git commit` / `git push`.
-2. **Opencode (Terminal Agent - Tactical Coding & Execution Engine)**:
-   - **Vai trò**: Kỹ sư lập trình & tối ưu chiến thuật (DeepSeek V4.1 Flash Free / CLI Engine).
-   - **Trách nhiệm**: Hiện thực hóa chi tiết mã nguồn Python/PyTorch, sửa lỗi logic, xử lý ngoại lệ, tinh chỉnh siêu tham số (hyperparameters), tối ưu hóa training scripts, và trực tiếp chạy bộ kiểm thử tự động (`compileall`, `pytest`) trên terminal.
+   - **Vai trò**: Lãnh đạo kỹ thuật & Cố vấn quy trình (Senior AI Lead 10+ YOE).
+   - **Trách nhiệm**: Cùng Kỹ sư Trưởng (User) lên kế hoạch triển khai tổng thể (`/plan`, `/grill-me`), thiết kế kiến trúc hệ thống, xây dựng workflow, biên soạn Handoff Specification cho CommandCode, yêu cầu CommandCode hiện thực hóa chặt chẽ logic, kiểm toán chất lượng code qua `git diff`, và độc quyền phụ trách `git commit` / `git push`.
+2. **CommandCode CLI (Terminal Agent - Tactical Coding & Execution Engine)**:
+   - **Vai trò**: Kỹ sư lập trình & tối ưu chiến thuật (Gói Go $1 / Terminal CLI Engine).
+   - **Trách nhiệm tối cao**: **Chịu trách nhiệm 100% về tính chính xác của mã nguồn, logic kỹ thuật, thuật toán và toàn bộ Unit Tests cho Team.**
+   - **Quy tắc nghiệm thu bất di bất dịch**: Trước khi nghiệm thu bất kỳ task nào, cả hai Agent **BẮT BUỘC** phải xác nhận MỘT lệnh duy nhất chạy đạt 100% PASS:
+     ```powershell
+     powershell -File scripts/verify.ps1
+     ```
 
 ```mermaid
 graph TD
@@ -60,24 +64,24 @@ graph TD
     
     subgraph GovernanceTier ["TIER 1: KIẾN TRÚC & KIỂM SOÁT CHẤT LƯỢNG (ANTIGRAVITY)"]
         AG["Antigravity IDE Agent\n(Chief AI Architect & Quality Gatekeeper)"]
-        Plan["Kế hoạch, Thiết kế & Master Prompt"]
+        Plan["Kế hoạch, Thiết kế & Handoff Spec"]
         Gate["Kiểm duyệt Git Diff & 8 Ràng Buộc Sống Còn"]
     end
 
-    subgraph TacticalTier ["TIER 2: THỰC THI CHIẾN THUẬT (OPENCODE EXTENSION)"]
-        OC["Opencode Terminal Agent\n(Tactical Coding & Execution Engine)"]
+    subgraph TacticalTier ["TIER 2: THỰC THI CHIẾN THUẬT (COMMANDCODE CLI GO)"]
+        CC["CommandCode CLI Go\n(Tactical Coding & Execution Engine)"]
         Code["Code Logic, Bug Fixes, Hyperparameters"]
-        Test["Self-Testing: compileall & pytest"]
+        Test["Self-Testing: scripts/verify.ps1 & pytest"]
     end
 
     Git[("GitHub Repo: origin/main")]
 
     User -->|Yêu cầu bài toán| AG
     AG --> Plan
-    Plan -->|Master Prompt| OC
-    OC --> Code
+    Plan -->|docs/HANDOFF/<ID>.md| CC
+    CC --> Code
     Code --> Test
-    Test -->|Báo cáo hoàn thành & test pass| AG
+    Test -->|Báo cáo hoàn thành & Result log| AG
     AG --> Gate
     Gate -->|Official Git Commit & Push| Git
     Git -->|Phản hồi hoàn tất| User
@@ -91,7 +95,7 @@ graph TD
 graph TD
     Lead["Lead AI Orchestrator (Antigravity)\n(10YOE Senior AI Engineer)"]
     
-    subgraph CoreTeam ["SPECIALIZED AGENT SQUAD (Triển khai bởi Opencode dưới sự chỉ đạo của Antigravity)"]
+    subgraph CoreTeam ["SPECIALIZED AGENT SQUAD (Triển khai bởi CommandCode CLI dưới sự chỉ đạo của Antigravity)"]
         DE["DataEngineerAgent\n(DataOps, Splits, Sampler)"]
         MA["ModelArchitectAgent\n(Backbones, Multi-Task, Losses)"]
         XE["XAIEvalAgent\n(Grad-CAM, IoU, Shortcut Audit)"]

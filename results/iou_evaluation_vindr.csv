@@ -1,0 +1,51 @@
+sample_index,patient_id,disease,num_gt_boxes,num_pred_boxes,best_box_iou,mean_box_iou,mask_iou,pass_iou_01,pass_iou_03,pass_iou_05
+0,9a5094b2563a1ef3ff50dc5c7ff71345,Cardiomegaly,6,3,0.4938,0.1327,0.3831,True,True,False
+1,051132a778e61a86eb147c7c6f564dfe,Aortic enlargement,7,2,0.7099,0.2474,0.4184,True,True,True
+2,1c32170b4af4ce1a3030eb8167753b06,Pleural thickening,9,1,0.6928,0.1891,0.3424,True,True,True
+3,0c7a38f293d5f5e4846aa4ca6db4daf1,ILD,5,1,0.4297,0.2751,0.3724,True,True,False
+4,47ed17dcb2cbeec15182ed335a8b5a9e,Nodule/Mass,8,1,0.3802,0.0912,0.2983,True,True,False
+5,d3637a1935a905b3c326af31389cb846,Aortic enlargement,11,2,0.7999,0.1303,0.5871,True,True,True
+6,afb6230703512afc370f236e8fe98806,Pulmonary fibrosis,17,2,0.8068,0.1081,0.3399,True,True,True
+7,7c1add6833d5f0102b0d3619a1682a64,Lung Opacity,6,1,0.5227,0.3141,0.4231,True,True,True
+8,18a61a07e6f5f13ebfee57fa36cd8b6f,Pulmonary fibrosis,10,1,0.6024,0.286,0.3376,True,True,True
+9,321c111713c3ee5385db0effb54ff568,Aortic enlargement,5,1,0.741,0.1482,0.5063,True,True,True
+10,80caa435b6ab5edaff4a0a758ffaec6e,Atelectasis,28,1,0.6142,0.1258,0.4257,True,True,True
+11,5da264775732004f1b724b660138854a,Aortic enlargement,6,1,0.2334,0.0739,0.0699,True,False,False
+12,fb8e11c6b2886b2d41b379e0598669b9,Aortic enlargement,20,3,0.8046,0.0848,0.5431,True,True,True
+13,0622cd29e4e0e4f198abf15614819ae8,Cardiomegaly,6,2,0.8207,0.2382,0.2485,True,True,True
+14,347180362348e522905047dde655b6d7,Pleural thickening,5,1,0.7004,0.4033,0.4329,True,True,True
+15,22b8e616a61bbc4caaed0cf23b7159df,Pulmonary fibrosis,6,2,0.9031,0.2844,0.7032,True,True,True
+16,c394eadea89e5795c8037280492d116d,Other lesion,11,3,0.7264,0.1136,0.2654,True,True,True
+17,be1bb194dfb986bf7554b491852b8901,Lung Opacity,9,1,0.5343,0.2514,0.3961,True,True,True
+18,d7aea6f37597df566725da73655edcc2,Infiltration,20,3,0.6896,0.0563,0.3254,True,True,True
+19,8ae85268313b0db2f58d2193aab645c9,Other lesion,14,1,0.5771,0.1913,0.303,True,True,True
+20,8e063eadea9a6aeb684c893c8598be3e,Nodule/Mass,8,2,0.8123,0.1419,0.5694,True,True,True
+21,04bb8bd7ee6f88a16623fe5c6dd4da91,Pleural effusion,9,2,0.362,0.1065,0.176,True,True,False
+22,bd6eb525438d6da1ced0ed1810857772,Pleural effusion,10,1,0.0085,0.0009,0.0,False,False,False
+23,4016b176eaf40d514b0559a0aeb48f21,Cardiomegaly,10,3,0.7622,0.1136,0.2031,True,True,True
+24,25f2c7b53a6ed09a9aaf73c30357aaf6,Cardiomegaly,6,3,0.8999,0.2086,0.3962,True,True,True
+25,18ee9ef3baea468de2087e0edd85e919,Cardiomegaly,10,1,0.8335,0.215,0.2069,True,True,True
+26,7eda1e28e4cee7d8016276c87b76259f,Pleural thickening,14,1,0.4658,0.0691,0.1074,True,True,False
+27,abb91bdaa9d02f50bde1eaa88e13afab,Lung Opacity,9,2,0.583,0.1756,0.2612,True,True,True
+28,98d44861c84d532bcca874fcde5e5f42,Aortic enlargement,6,2,0.8025,0.363,0.5405,True,True,True
+29,222b7757f55bee221e7aba69fc9928d0,Aortic enlargement,8,2,0.8805,0.2068,0.2283,True,True,True
+30,9b9f47628be6a48ddb41aec8ba39b454,Pleural effusion,14,2,0.745,0.2456,0.3202,True,True,True
+31,d106ec9b305178f3da060efe3191499a,Nodule/Mass,39,1,0.4913,0.03,0.3856,True,True,False
+32,f32ab457c492c30221d3a89fe7c6b25a,Nodule/Mass,5,1,0.4499,0.2194,0.4451,True,True,False
+33,b9f09915187c2cc01e958da90d97ac89,Aortic enlargement,11,2,0.7767,0.1334,0.3254,True,True,True
+34,f769eea17a2e7678f481f386c3c6261c,Cardiomegaly,9,3,0.8221,0.1097,0.3409,True,True,True
+35,6900482a91a538ead56b483f77bcf289,Pleural effusion,4,1,0.1544,0.0838,0.0426,True,False,False
+36,a3f5ac68c8d1b1805be21f18c47fc186,Nodule/Mass,8,1,0.6083,0.1507,0.4635,True,True,True
+37,0cfae3f740f87ca3b96dec765d06fad0,Aortic enlargement,5,2,0.8896,0.2604,0.7161,True,True,True
+38,0a14aeaf02d42990d8bb5d55270b7274,ILD,13,1,0.0779,0.012,0.0482,False,False,False
+39,aa3535cb70d8142fdbdac165de546a8c,Aortic enlargement,14,1,0.6527,0.1193,0.1634,True,True,True
+40,75de97fbdf15aa3e1927a97ff9479327,Pulmonary fibrosis,8,2,0.6251,0.1059,0.201,True,True,True
+41,ebf4ffbcf6de699bf9deab70f0dee8ff,Cardiomegaly,6,2,0.6747,0.0847,0.1187,True,True,True
+42,d77ef79ee4580a65dcb1e0e26b91d017,Infiltration,10,3,0.6391,0.1228,0.4097,True,True,True
+43,bb315b4bc113c0506a9e24593cb06a6b,Aortic enlargement,4,1,0.3906,0.1994,0.1685,True,True,False
+44,9598f874069cca35ff56d54925d35ccb,Nodule/Mass,12,2,0.9375,0.0582,0.3358,True,True,True
+45,b42e930c16c0166dbeae813b47bb8b07,Pleural thickening,11,1,0.2545,0.0437,0.145,True,False,False
+46,5bf3368744630f459a499ccdccc9cdf1,Aortic enlargement,8,1,0.67,0.2239,0.2477,True,True,True
+47,def03f80d3b78a52a6f9af13565343ff,Pleural thickening,16,3,0.5785,0.0686,0.3159,True,True,True
+48,d07557904cbe57fc1bdebac1e8aeefa1,Nodule/Mass,14,4,0.6124,0.0753,0.5269,True,True,True
+49,b48d6f9b38b698b6ac534ec7ded5c4e8,Pleural effusion,17,1,0.0,0.0,0.0,False,False,False
