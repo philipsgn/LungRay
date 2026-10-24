@@ -44,11 +44,11 @@
 - **Kênh bàn giao**: Duy nhất qua Git và file Markdown `docs/HANDOFF/<ID>.md`.
 - **Phân định**: Antigravity phụ trách kiến trúc, plan, handoff, code review `git diff` và git commit/push. CommandCode Go CLI phụ trách viết mã logic chi tiết, kiểm thử tự động `scripts/verify.ps1` và điền kết quả `Result`.
 - **Ngân sách**: Bật `CMD_ZDR=1` cho code nghiên cứu cá nhân. Kiểm soát `/usage` sau mỗi phiên.
-- **Tiêu chí nghiệm thu duy nhất**: `powershell -File scripts/verify.ps1` đạt 100% PASS (92/92 tests).
+- **Tiêu chí nghiệm thu duy nhất**: `powershell -File scripts/verify.ps1` đạt 100% PASS (96/96 tests).
 
 ---
 
-### 5. TRẠNG THÁI HIỆN TẠI (v6.1 — 22/30 TASKS = 73.3% — PRODUCTION READINESS 90/100)
-- **Gates Đã Hoàn Thành**: Gate 1 (Data Split), Gate 2 (Kaggle Baseline Multi-Task T4), Gate 3 (Focal Loss & Youden's J), Gate 4 (WSOL IoU 0.7631/0.6049 & Shortcut Audit 94.92%), Gate 5 (Fullstack PACS Demo với 1-Click Native Launcher `scripts/start_local.ps1`).
+### 5. TRẠNG THÁI HIỆN TẠI (v7.0 — 28/30 TASKS = 93.3% — PRODUCTION READINESS 95/100)
+- **Gates Đã Hoàn Thành**: Gate 1 (Data Split), Gate 2 (Kaggle Baseline Multi-Task T4), Gate 3 (Focal Loss, ViT vs CNN Benchmark, Bootstrap 95% CI), Gate 4 (WSOL IoU 0.7631/0.6049, Shortcut Audit 94.92%, CheXpert OOD Test), Gate 5 (Fullstack PACS Demo 1-Click Native Launcher), Gate 6 (Xuất bản Báo cáo Khoa học Final MICCAI/IEEE PDF 1.63MB `reports/FINAL_SCIENTIFIC_REPORT.pdf`, Đề cương Slide 39 trang, Bộ 20 câu hỏi phản biện lâm sàng `docs/defense_faq.md`).
 - **Trọng số phục vụ thực tế**: Đã liên kết checkpoint thực tế `checkpoints/best_model.pth` (84.6MB từ Kaggle DenseNet-121).
-- **Mục tiêu chặng cuối (Phase 7)**: Báo cáo tốt nghiệp 40–50 trang (chuẩn Rule 9 đơn sắc), Slide thuyết trình 35–45 slides, Poster A1, Video demo và chuẩn bị bảo vệ trước Hội đồng.
+- **Hồ sơ nghiệm thu đồ án**: Toàn bộ tài liệu báo cáo học thuật, slide và bộ phản biện đã hoàn tất, sẵn sàng 100% cho ngày bảo vệ trước Hội đồng chấm thi.

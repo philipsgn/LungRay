@@ -1,0 +1,4 @@
+Architecture,Total_Params_M,Trainable_Params_M,Model_Size_MB,Latency_B1_ms,Latency_B1_std,Latency_B8_ms_per_img,Peak_VRAM_MB,Device,Head_A_AUROC,Head_B_TB_AUROC,Head_C_COVID_AUROC,MultiTask_Macro_AUROC
+densenet121,6.97,6.97,26.59,674.85,67.72,691.74,0.0,cpu,0.8271,1.0,0.7342,0.8538
+resnet50,23.54,23.54,89.8,631.15,28.56,712.51,0.0,cpu,0.8145,0.9982,0.721,0.8446
+vit_base_patch16_224,86.45,86.45,329.77,1783.9,76.84,1733.77,0.0,cpu,0.835,0.999,0.758,0.864

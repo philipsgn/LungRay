@@ -7,10 +7,11 @@
 |:---|:---|
 | **Tên nền tảng** | **LungRay** (AI Chest X-ray Diagnostic & WSOL Grounding Platform) |
 | **Mã dự án** | LUNGRAY-MULTITASK-WSOL-2026 |
-| **Phiên bản** | **v6.1 (Delivery Gate 5 Approved — 73.3% Progress)** |
+| **Phiên bản** | **v7.0 (Delivery Gate 6 Approved — 93.3% Progress — Ready for Defense)** |
 | **Kiến trúc cốt lõi** | Multi-Task 3-Head Shared Encoder + Masked Loss + Quantitative WSOL + FastAPI + Next.js |
-| **Trạng thái** | ✅ **GATE 5 APPROVED (73.3% PROGRESS — 22/30 TASKS — PHASE 6 COMPLETED)** — **PRODUCTION READINESS: 90/100** |
+| **Trạng thái** | ✅ **GATE 6 APPROVED (93.3% PROGRESS — 28/30 TASKS COMPLETED)** — **PRODUCTION READINESS: 95/100** |
 | **Trọng số phục vụ** | Đã kích hoạt weights thực tế `checkpoints/best_model.pth` (84.6MB từ Kaggle DenseNet-121) |
+| **Hồ sơ Nghiệm thu** | [reports/FINAL_SCIENTIFIC_REPORT.pdf](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/reports/FINAL_SCIENTIFIC_REPORT.pdf) (1.63 MB, 20–25 trang MICCAI/IEEE) |
 
 ---
 
