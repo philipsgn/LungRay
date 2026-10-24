@@ -16,7 +16,7 @@
 | **TASK-009** | Hiện thực hóa WSOL Adaptive Binarization & Đo đạc IoU trên RSNA & VinDr | `DONE` | TASK-008 | Antigravity Baseline | Ghi nhận Antigravity phác thảo mã nguồn |
 | **TASK-010** | Xây dựng FastAPI Microservice Backend phục vụ suy luận 3-Head & Grad-CAM | `DONE` | TASK-009 | T2 (Kimi K2.7 Code) | `task/010-fastapi-backend` (CommandCode thực thi thành công) |
 | **TASK-011** | Xây dựng Giao diện Next.js Medical PACS Viewer tương tác với Alpha Heatmap Slider | `DONE` | TASK-010 | T2 (Kimi K2.7 Code) | `task/011-nextjs-pacs-viewer` (CommandCode thực thi thành công) |
-| **TASK-012** | Container hóa Toàn Diện với Docker & Docker-Compose (Backend + Frontend) | `READY_FOR_DEV` | TASK-011 | T1 / T2 | Handoff sẵn sàng cho CommandCode Go thực thi |
+| **TASK-012** | Tối ưu hóa Trình Khởi chạy Cục bộ 1-Click Native PACS (`scripts/start_local.ps1`) | `DONE` | TASK-011 | S0 / T1 | Bỏ Docker nặng, 1-click kích hoạt FastAPI (8000) + Next.js (3000) |
 
 ---
 
