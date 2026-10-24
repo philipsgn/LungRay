@@ -88,7 +88,11 @@ class LungRayService:
         checkpoint_path = "checkpoints/best_model.pth"
         if os.path.exists(checkpoint_path):
             logger.info("Loading checkpoint from %s", checkpoint_path)
-            state = torch.load(checkpoint_path, map_location=self.device, weights_only=True)
+            state = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
+            if isinstance(state, dict) and "model_state_dict" in state:
+                state = state["model_state_dict"]
+            elif isinstance(state, dict) and "state_dict" in state:
+                state = state["state_dict"]
             model.load_state_dict(state)
         else:
             logger.warning(

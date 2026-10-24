@@ -8,15 +8,15 @@
 | **TASK-001** | Tạo script kiểm thử tự động `scripts/verify.ps1` và test runner | `DONE` | Không | S0 / T1 | `task/001-verify-script` |
 | **TASK-002** | Dọn dẹp tàn dư Opencode và cấu hình rules cho CommandCode Go | `DONE` | Không | T1 | `task/002-cleanup-opencode` |
 | **TASK-003** | Khởi tạo cấu trúc `docs/HANDOFF/` và file template chuẩn hóa | `DONE` | Không | S0 / T1 | `task/003-handoff-template` |
-| **TASK-004** | Kiểm định & chuẩn hóa `WeightedMultiTaskBatchSampler` (tỷ lệ 60:25:15) | `TODO` | TASK-001 | T2 (Kimi K2.7 Code) | `task/004-multitask-sampler` |
-| **TASK-005** | Tối ưu hóa pipeline tiền xử lý Anti-Shortcut CLAHE/Crop cho COVIDx CXR-4 | `TODO` | TASK-004 | T2 (Kimi K2.7 Code) | `task/005-covidx-anti-shortcut` |
-| **TASK-006** | Hoàn thiện Unit Test cho Zero Data Leakage kiểm tra `Patient_ID` | `TODO` | TASK-001 | T1 (DeepSeek V4.1) | `task/006-test-data-leakage` |
+| **TASK-004** | Kiểm định & chuẩn hóa `WeightedMultiTaskBatchSampler` (tỷ lệ 60:25:15) | `DONE` | TASK-001 | T2 (Kimi K2.7 Code) | `src/data/sampler.py` (Đã tích hợp và kiểm thử) |
+| **TASK-005** | Tối ưu hóa pipeline tiền xử lý Anti-Shortcut CLAHE/Crop cho COVIDx CXR-4 | `DONE` | TASK-004 | T2 (Kimi K2.7 Code) | `src/explainability/shortcut_audit.py` (Đạt 94.92%) |
+| **TASK-006** | Hoàn thiện Unit Test cho Zero Data Leakage kiểm tra `Patient_ID` | `DONE` | TASK-001 | T1 (DeepSeek V4.1) | `tests/test_data_pipeline.py` (Pass 100%) |
 | **TASK-007** | Tích hợp ngưỡng Youden's J threshold per-class vào module dự đoán | `DONE` | TASK-004 | T2 (GLM-5.3) | `task/007-youdens-j-threshold` |
 | **TASK-008** | Hiện thực hóa Grad-CAM Energy Ratio Calculator cho phế trường phổi | `DONE` | TASK-004 | T2 (Kimi K2.7 Code) | `task/008-gradcam-inlung-energy` |
 | **TASK-009** | Hiện thực hóa WSOL Adaptive Binarization & Đo đạc IoU trên RSNA & VinDr | `DONE` | TASK-008 | Antigravity Baseline | Ghi nhận Antigravity phác thảo mã nguồn |
 | **TASK-010** | Xây dựng FastAPI Microservice Backend phục vụ suy luận 3-Head & Grad-CAM | `DONE` | TASK-009 | T2 (Kimi K2.7 Code) | `task/010-fastapi-backend` (CommandCode thực thi thành công) |
 | **TASK-011** | Xây dựng Giao diện Next.js Medical PACS Viewer tương tác với Alpha Heatmap Slider | `DONE` | TASK-010 | T2 (Kimi K2.7 Code) | `task/011-nextjs-pacs-viewer` (CommandCode thực thi thành công) |
-| **TASK-012** | Container hóa Toàn Diện với Docker & Docker-Compose (Backend + Frontend) | `READY_FOR_DEV` | TASK-011 | T1 / T2 | `task/012-docker-containerization` |
+| **TASK-012** | Container hóa Toàn Diện với Docker & Docker-Compose (Backend + Frontend) | `READY_FOR_DEV` | TASK-011 | T1 / T2 | Handoff sẵn sàng cho CommandCode Go thực thi |
 
 ---
 

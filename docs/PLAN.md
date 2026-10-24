@@ -44,3 +44,11 @@
 - **Kênh bàn giao**: Duy nhất qua Git và file Markdown `docs/HANDOFF/<ID>.md`.
 - **Phân định**: Antigravity phụ trách kiến trúc, plan, handoff, code review `git diff` và git commit/push. CommandCode Go CLI phụ trách viết mã logic chi tiết, kiểm thử tự động `scripts/verify.ps1` và điền kết quả `Result`.
 - **Ngân sách**: Bật `CMD_ZDR=1` cho code nghiên cứu cá nhân. Kiểm soát `/usage` sau mỗi phiên.
+- **Tiêu chí nghiệm thu duy nhất**: `powershell -File scripts/verify.ps1` đạt 100% PASS (92/92 tests).
+
+---
+
+### 5. TRẠNG THÁI HIỆN TẠI (v6.0 — 21/30 TASKS = 70.0% — PRODUCTION READINESS 85/100)
+- **Gates Đã Hoàn Thành**: Gate 1 (Data Split), Gate 2 (Kaggle Baseline Multi-Task T4), Gate 3 (Focal Loss & Youden's J), Gate 4 (WSOL IoU 0.7631/0.6049 & Shortcut Audit 94.92%), Gate 5 (FastAPI Backend + Next.js PACS Viewer).
+- **Trọng số phục vụ thực tế**: Đã liên kết checkpoint thực tế `checkpoints/best_model.pth` (84.6MB từ Kaggle DenseNet-121).
+- **Mục tiêu chặng cuối (Phase 7)**: Docker Containerization (Task 6.3 / TASK-012), Báo cáo tốt nghiệp 40–50 trang, Slide thuyết trình 35–45 slides, Poster A1 và chuẩn bị bảo vệ trước Hội đồng.

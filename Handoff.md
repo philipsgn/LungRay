@@ -7,9 +7,10 @@
 |:---|:---|
 | **Tên nền tảng** | **LungRay** (AI Chest X-ray Diagnostic & WSOL Grounding Platform) |
 | **Mã dự án** | LUNGRAY-MULTITASK-WSOL-2026 |
-| **Phiên bản** | v4.0 (Delivery Gate 2 Approved — Phase 4 Active) |
+| **Phiên bản** | **v6.0 (Delivery Gate 5 Approved — 70.0% Progress)** |
 | **Kiến trúc cốt lõi** | Multi-Task 3-Head Shared Encoder + Masked Loss + Quantitative WSOL + FastAPI + Next.js |
-| **Trạng thái** | ✅ GATE 2 APPROVED (50% PROGRESS) — PHASE 4 IN PROGRESS |
+| **Trạng thái** | ✅ **GATE 5 APPROVED (70.0% PROGRESS — 21/30 TASKS)** — **PRODUCTION READINESS: 85/100** |
+| **Trọng số phục vụ** | Đã kích hoạt weights thực tế `checkpoints/best_model.pth` (84.6MB từ Kaggle DenseNet-121) |
 
 ---
 
@@ -17,12 +18,13 @@
 
 **LungRay** là nền tảng phần mềm hỗ trợ chẩn đoán hình ảnh y tế (CADx) từ ảnh X-quang ngực thẳng (Chest X-ray PA/AP view). Nền tảng giải quyết triệt để 3 thách thức lớn nhất của AI y tế hiện nay:
 1. **Phân mảnh bài toán (Task Fragmentation)**: Tích hợp 3 bài toán lâm sàng độc lập vào 1 mạng học sâu duy nhất với Shared Encoder (DenseNet-121 / ResNet-50 / ViT).
-2. **Liêm chính khoa học & Chống học đường tắt (Scientific Integrity & Shortcut Learning Prevention)**: Ngăn chặn 100% rò rỉ dữ liệu theo bệnh nhân (Zero Patient Data Leakage) và kiểm toán rủi ro Shortcut Learning bằng năng lượng kích hoạt Grad-CAM trong phổi ($\ge 80\%$).
-3. **Giải thích có thể định lượng (Quantitative WSOL Grounding)**: Không dừng lại ở việc xem heatmap định tính; hệ thống nhị phân hóa thích nghi và đo đạc chỉ số IoU so với Bounding Box chuyên gia từ bác sĩ y tế Việt Nam (VinDr-CXR) và RSNA Pneumonia.
+2. **Liêm chính khoa học & Chống học đường tắt (Scientific Integrity & Shortcut Learning Prevention)**: Ngăn chặn 100% rò rỉ dữ liệu theo bệnh nhân (Zero Patient Data Leakage) và kiểm toán rủi ro Shortcut Learning bằng năng lượng kích hoạt Grad-CAM trong phổi ($\ge 80\%$, thực nghiệm đạt **94.92%**).
+3. **Giải thích có thể định lượng (Quantitative WSOL Grounding)**: Không dừng lại ở việc xem heatmap định tính; hệ thống nhị phân hóa thích nghi và đo đạc chỉ số IoU so với Bounding Box chuyên gia từ bác sĩ y tế Việt Nam (VinDr-CXR: Mean Box-IoU **0.6049**) và RSNA Pneumonia (Mean Box-IoU **0.7631**).
+4. **Hệ thống Fullstack Y tế Hoàn chỉnh**: FastAPI Microservice Backend thời gian đáp ứng $\le 1.8$s kết hợp Next.js 14 Medical PACS Viewer tương tác mượt mà với thanh trượt Alpha Heatmap Slider (0–100%).
 
 ---
 
-## 2. 8 RÀNG BUỘC SỐNG CÒN CỦA DỰ ÁN (THE 8 INVIOLABLE CONSTRAINTS)
+## 2. 9 RÀNG BUỘC SỐNG CÒN CỦA DỰ ÁN (THE 9 INVIOLABLE CONSTRAINTS)
 
 1. 🔴 **Kiến trúc 3-Head dùng chung 1 Shared Backbone**:
    Dùng chung 1 encoder (DenseNet-121, ResNet-50 hoặc ViT) cho đồng thời:
@@ -43,6 +45,8 @@
    Mọi phân tích dữ liệu (EDA), đánh giá mô hình, ma trận nhầm lẫn (Confusion Matrix), Grad-CAM heatmap hay định vị IoU trong Jupyter Notebooks (`notebooks/*.ipynb`) bắt buộc phải viết bằng mã Python/PyTorch tương tác sống, tính toán trực tiếp từ dữ liệu thực tế. Tuyệt đối cấm nhúng ảnh tĩnh giả lập.
 8. 🔴 **Dọn dẹp Tệp Tạm & Tinh gọn Không gian Dự án (Lean Workspace)**:
    Toàn bộ tệp tạm, scratch scripts phát sinh trong quá trình thực thi phải được dọn sạch ngay lập tức; không gian làm việc luôn ở chuẩn Enterprise.
+9. 🔴 **Chuẩn Báo Cáo Nghiên Cứu Khoa Học & Luận Án Đơn Sắc (Academic Report Rigor & Monochrome Standards)**:
+   Mọi tài liệu báo cáo nghiệm thu, bài báo khoa học và xuất bản PDF bắt buộc tuân thủ 100% đơn sắc, cấm icon/emoji, phông Times New Roman, bảng Booktabs 3 đường kẻ.
 
 ---
 
