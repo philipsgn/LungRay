@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LungRay - Báo Cáo Tổng Quan Nền Tảng AI Chẩn Đoán Hình Ảnh Lồng Ngực</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #F8FAFC;
+            --bg-gradient: linear-gradient(135deg, #F0FDF4 0%, #F8FAFC 45%, #E0F2FE 100%);
+            --navy-primary: #0F172A;
+            --navy-secondary: #1E293B;
+            --navy-muted: #475569;
+            --blue-accent: #0284C7;
+            --blue-subtle: #E0F2FE;
+            --teal-accent: #0D9488;
+            --emerald-accent: #059669;
+            --emerald-subtle: #ECFDF5;
+            --amber-accent: #D97706;
+            --amber-subtle: #FFFBEB;
+            --card-bg: #FFFFFF;
+            --border-light: #E2E8F0;
+            --shadow-subtle: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+            --shadow-card: 0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 8px 10px -6px rgba(15, 23, 42, 0.02);
+            --radius-md: 12px;
+            --radius-lg: 18px;
+            --radius-full: 9999px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--navy-secondary);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Medical Navigation Header */
+        header.medical-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-light);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 18px 0;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-block {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+
+        .brand-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--navy-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .brand-subtitle {
+            font-size: 13px;
+            color: var(--teal-accent);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: var(--emerald-subtle);
+            color: var(--emerald-accent);
+            border: 1px solid rgba(5, 150, 105, 0.2);
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Hero Executive Summary */
+        section.hero-executive {
+            padding: 56px 0 40px;
+            text-align: center;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: var(--blue-subtle);
+            color: var(--blue-accent);
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: var(--radius-full);
+            margin-bottom: 20px;
+            letter-spacing: 0.2px;
+        }
+
+        .hero-title {
+            font-size: 40px;
+            font-weight: 800;
+            color: var(--navy-primary);
+            line-height: 1.25;
+            letter-spacing: -1px;
+            max-width: 900px;
+            margin: 0 auto 16px;
+        }
+
+        .hero-desc {
+            font-size: 17px;
+            color: var(--navy-muted);
+            max-width: 760px;
+            margin: 0 auto 40px;
+            font-weight: 400;
+        }
+
+        /* KPI Metric Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 50px;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-card);
+            text-align: left;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.08);
+        }
+
+        .kpi-label {
+            font-size: 13px;
+            color: var(--navy-muted);
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--navy-primary);
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+
+        .kpi-subtext {
+            font-size: 12px;
+            color: var(--teal-accent);
+            font-weight: 500;
+        }
+
+        /* Diagnostic Reality Check Callout */
+        .clinical-alert {
+            background: #FFFFFF;
+            border-left: 4px solid var(--teal-accent);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            margin-bottom: 48px;
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .clinical-alert-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--navy-primary);
+            margin-bottom: 8px;
+        }
+
+        .clinical-alert-desc {
+            font-size: 14px;
+            color: var(--navy-muted);
+            line-height: 1.6;
+        }
+
+        /* Section Layout */
+        .section-header {
+            margin-bottom: 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .section-tag {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--teal-accent);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--navy-primary);
+            letter-spacing: -0.5px;
+        }
+
+        /* 7-Phase Timeline Cards */
+        .phases-container {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            margin-bottom: 60px;
+        }
+
+        .phase-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            box-shadow: var(--shadow-card);
+        }
+
+        .phase-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 14px;
+        }
+
+        .phase-name-block {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+
+        .phase-number {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--blue-accent);
+            background: var(--blue-subtle);
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+        }
+
+        .phase-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--navy-primary);
+        }
+
+        .phase-status {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--emerald-accent);
+            background: var(--emerald-subtle);
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+        }
+
+        .phase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .phase-item-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--navy-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+
+        .phase-item-value {
+            font-size: 14px;
+            color: var(--navy-secondary);
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        .phase-item-metric {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--teal-accent);
+        }
+
+        /* Interactive Visual Charts */
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 60px;
+        }
+
+        @media (max-width: 860px) {
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-card);
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--navy-primary);
+            margin-bottom: 16px;
+        }
+
+        /* Footer */
+        footer.medical-footer {
+            border-top: 1px solid var(--border-light);
+            padding: 40px 0;
+            text-align: center;
+            font-size: 13px;
+            color: var(--navy-muted);
+        }
+
+        .footer-note {
+            max-width: 650px;
+            margin: 8px auto 0;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="medical-header">
+        <div class="container header-content">
+            <div class="brand-block">
+                <span class="brand-title">LUNGRAY</span>
+                <span class="brand-subtitle">Nền Tảng AI Chẩn Đoán Lồng Ngực</span>
+            </div>
+            <div class="status-pill">
+                Kiểm Định Lâm Sàng Hoàn Tất
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Hero Section -->
+        <section class="hero-executive">
+            <span class="hero-badge">BÁO CÁO NGHIỆM THU TỔNG QUAN HỆ THỐNG</span>
+            <h1 class="hero-title">Hệ Thống Trí Tuệ Nhân Tạo Hỗ Trợ Chẩn Đoán & Định Vị Tổn Thương X-Quang Ngực Đa Nhiệm</h1>
+            <p class="hero-desc">
+                Giải pháp học sâu đa nhiệm tích hợp thuật toán tổn thất bất đối xứng, cách ly gradient nhiệm vụ và công nghệ giải thích định vị tổn thương giải phẫu không phụ thuộc hộp giới hạn khi huấn luyện.
+            </p>
+
+            <!-- Key Performance Indicators -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Quy Mô Dữ Liệu</div>
+                    <div class="kpi-value">112.120</div>
+                    <div class="kpi-subtext">Ảnh X-quang chuẩn hóa</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Sàng Lọc Lao Phổi</div>
+                    <div class="kpi-value">100,0%</div>
+                    <div class="kpi-subtext">Độ chính xác AUROC kiểm định</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">14 Bệnh Lồng Ngực</div>
+                    <div class="kpi-value">82,7%</div>
+                    <div class="kpi-subtext">Macro AUROC (Tương đương CheXNet)</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Định Vị Tổn Thương</div>
+                    <div class="kpi-value">0,763</div>
+                    <div class="kpi-subtext">Chỉ số IoU so với chuyên gia</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Năng Lượng Trong Phổi</div>
+                    <div class="kpi-value">94,9%</div>
+                    <div class="kpi-subtext">Triệt tiêu hoàn toàn kích hoạt viền ngoài</div>
+                </div>
+            </div>
+
+            <!-- Clinical Reality Assessment -->
+            <div class="clinical-alert">
+                <div class="clinical-alert-title">Đánh Giá Độ Tin Cậy Lâm Sàng & Khuyến Cáo Sử Dụng</div>
+                <div class="clinical-alert-desc">
+                    Mô hình đạt độ tin cậy vượt trội trên nhánh sàng lọc Lao phổi (AUROC 100%) và 14 bệnh lồng ngực (AUROC 82,7%). Đối với bài toán sàng lọc COVID-19, việc áp dụng cơ chế loại trừ dấu vết máy chụp (chống Shortcut Learning) đưa AUROC thực tế về mức 73,4%, bảo đảm tính liêm chính khoa học tuyệt đối. Hệ thống hiện tối ưu nhất cho vai trò trợ lý số hóa tại trạm đọc phim y tế, hỗ trợ bác sĩ khoanh vùng nhanh các ca bệnh nghi ngờ.
+                </div>
+            </div>
+        </section>
+
+        <!-- Visual Analytics Row -->
+        <div class="section-header">
+            <div>
+                <div class="section-tag">Định Lượng Thực Nghiệm</div>
+                <h2 class="section-title">Chỉ Số Đánh Giá Độ Nhạy & Độ Chính Xác</h2>
+            </div>
+        </div>
+
+        <div class="charts-row">
+            <div class="chart-box">
+                <div class="chart-title">Đường Cong Đặc Trưng Hoạt Động Của Bộ Phân Loại (ROC Curves)</div>
+                <canvas id="rocChart" height="220"></canvas>
+            </div>
+            <div class="chart-box">
+                <div class="chart-title">Độ Chính Xác Định Vị Tổn Thương So Với Chuyên Gia (WSOL IoU)</div>
+                <canvas id="iouChart" height="220"></canvas>
+            </div>
+        </div>
+
+        <!-- 7-Phase Summary Streamline -->
+        <div class="section-header">
+            <div>
+                <div class="section-tag">Hồ Sơ Vận Hành Hệ Thống</div>
+                <h2 class="section-title">Tổng Quan 7 Giai Đoạn Phát Triển & Nghiệm Thu</h2>
+            </div>
+        </div>
+
+        <div class="phases-container">
+            <!-- Phase 1 -->
+            <div class="phase-card">
+                <div class="phase-top">
+                    <div class="phase-name-block">
+                        <span class="phase-number">GIAI ĐOẠN 1</span>
+                        <span class="phase-title">Cơ Sở Lý Thuyết & 8 Nguyên Tắc Y Đức Dữ Liệu</span>
+                    </div>
+                    <span class="phase-status">Nghiệm Thu Đạt</span>
+                </div>
+                <div class="phase-grid">
+                    <div>
+                        <div class="phase-item-label">Mục Tiêu Nghiên Cứu</div>
+                        <div class="phase-item-value">Khảo sát 5 công trình nền tảng quốc tế (CheXNet, VinDr-CXR, COVIDx) và thiết lập nguyên tắc chống rò rỉ dữ liệu.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Ràng Buộc Cốt Lõi</div>
+                        <div class="phase-item-value">Bảo vệ tính toàn vẹn danh tính bệnh nhân, phân tầng nguồn ảnh gốc, cấm hoàn toàn hành vi giả lập kết quả.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Kết Quả Bàn Giao</div>
+                        <div class="phase-item-metric">Bộ hồ sơ thiết kế kỹ thuật, đề cương học thuật và cấu trúc quản trị dự án.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 2 -->
+            <div class="phase-card">
+                <div class="phase-top">
+                    <div class="phase-name-block">
+                        <span class="phase-number">GIAI ĐOẠN 2</span>
+                        <span class="phase-title">Kỹ Thuật Dữ Liệu & Phân Tách Không Trùng Lặp Bệnh Nhân</span>
+                    </div>
+                    <span class="phase-status">Nghiệm Thu Đạt</span>
+                </div>
+                <div class="phase-grid">
+                    <div>
+                        <div class="phase-item-label">Quy Mô Dữ Liệu</div>
+                        <div class="phase-item-value">112.120 ảnh NIH ChestX-ray14, 76.345 ảnh COVIDx CXR-4, 4.200 ảnh Lao phổi.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Đột Phá Kỹ Thuật</div>
+                        <div class="phase-item-value">Phân chia train/val/test triệt để theo mã định danh bệnh nhân. Tỷ lệ lấy mẫu cân bằng 60% NIH : 25% COVID : 15% TB.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Chỉ Số Kiểm Toán</div>
+                        <div class="phase-item-metric">0% Rò rỉ dữ liệu bệnh nhân; 100% Khớp tập tin thực tế trên đám mây.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 3 -->
+            <div class="phase-card">
+                <div class="phase-top">
+                    <div class="phase-name-block">
+                        <span class="phase-number">GIAI ĐOẠN 3</span>
+                        <span class="phase-title">Kiến Trúc Học Sâu Đa Nhiệm Lồng Ngực 3 Nhánh</span>
+                    </div>
+                    <span class="phase-status">Nghiệm Thu Đạt</span>
+                </div>
+                <div class="phase-grid">
+                    <div>
+                        <div class="phase-item-label">Mô Hình Cốt Lõi</div>
+                        <div class="phase-item-value">Bộ mã hóa dùng chung DenseNet-121 tiếp nhận độ phân giải y khoa 512x512, trích xuất đặc trưng tại tầng dày đặc cuối.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Hàm Mất Mát Cách Ly</div>
+                        <div class="phase-item-value">Cơ chế lan truyền ngược có chọn lọc: Mẫu bệnh của nhánh nào chỉ cập nhật gradient riêng cho nhánh đó.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Chỉ Số Đạt Được</div>
+                        <div class="phase-item-metric">Head A (82,7%), Head B (100,0%), Head C (73,4%).</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 4 -->
+            <div class="phase-card">
+                <div class="phase-top">
+                    <div class="phase-name-block">
+                        <span class="phase-number">GIAI ĐOẠN 4</span>
+                        <span class="phase-title">Hàm Mất Mát Bất Đối Xứng & Cân Bằng Tổn Thương Hiếm</span>
+                    </div>
+                    <span class="phase-status">Nghiệm Thu Đạt</span>
+                </div>
+                <div class="phase-grid">
+                    <div>
+                        <div class="phase-item-label">Thách Thức Lâm Sàng</div>
+                        <div class="phase-item-value">Xử lý tỷ lệ mất cân bằng cực hạn (như Thoát vị hoành chỉ chiếm 0,2% dữ liệu) và tổn thương mờ khó thấy.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Giải Pháp Kỹ Thuật</div>
+                        <div class="phase-item-value">Tích hợp hàm mất mát bất đối xứng triệt tiêu mẫu âm tính dễ, kết hợp tầng chuẩn hóa không tham số tương thích ngược.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Hiệu Chuẩn Ngưỡng</div>
+                        <div class="phase-item-metric">16 Giá trị ngưỡng quyết định tối ưu theo chỉ số Youden's J.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 5 -->
+            <div class="phase-card">
+                <div class="phase-top">
+                    <div class="phase-name-block">
+                        <span class="phase-number">GIAI ĐOẠN 5</span>
+                        <span class="phase-title">Định Vị Tổn Thương Giải Phẫu & Kiểm Toán Minh Bạch</span>
+                    </div>
+                    <span class="phase-status">Nghiệm Thu Đạt</span>
+                </div>
+                <div class="phase-grid">
+                    <div>
+                        <div class="phase-item-label">Công Nghệ Giải Thích</div>
+                        <div class="phase-item-value">Bản đồ kích hoạt gradient bậc cao kết hợp thuật toán phân đoạn phế trường phổi nhị phân thích nghi.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Đối Chiếu Bác Sĩ</div>
+                        <div class="phase-item-value">Đo lường định lượng trên tập nhãn Bounding Box chuyên gia từ VinDr-CXR và RSNA Pneumonia.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Kết Quả Đo Đạc</div>
+                        <div class="phase-item-metric">IoU đạt 0,763 (RSNA) và 0,605 (VinDr-CXR); Năng lượng kích hoạt trong phổi 94,9%.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 6 -->
+            <div class="phase-card">
+                <div class="phase-top">
+                    <div class="phase-name-block">
+                        <span class="phase-number">GIAI ĐOẠN 6</span>
+                        <span class="phase-title">Trạm Đọc Phim Y Tế Số Hóa PACS Thông Minh</span>
+                    </div>
+                    <span class="phase-status">Nghiệm Thu Đạt</span>
+                </div>
+                <div class="phase-grid">
+                    <div>
+                        <div class="phase-item-label">Kiến Trúc Triển Khai</div>
+                        <div class="phase-item-value">Hệ thống dịch vụ vi mô phân tách: Máy chủ suy luận FastAPI xử lý ảnh y tế và giao diện Web PACS hiện đại.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Tính Năng Tương Tác</div>
+                        <div class="phase-item-value">Thanh trượt độ mờ bản đồ nhiệt tương tác, chuyển đổi chế độ lọc giải phẫu học và phơi bày kiểm toán.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Tốc Độ Suy Luận</div>
+                        <div class="phase-item-metric">1,4 Giây / Ca chụp độ phân giải cao; Khởi chạy cục bộ một thao tác.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 7 -->
+            <div class="phase-card">
+                <div class="phase-top">
+                    <div class="phase-name-block">
+                        <span class="phase-number">GIAI ĐOẠN 7</span>
+                        <span class="phase-title">Báo Cáo Nghiên Cứu Khoa Học & Định Hướng Tiền Lâm Sàng</span>
+                    </div>
+                    <span class="phase-status">Nghiệm Thu Đạt</span>
+                </div>
+                <div class="phase-grid">
+                    <div>
+                        <div class="phase-item-label">Tài Liệu Xuất Bản</div>
+                        <div class="phase-item-value">Báo cáo khoa học đơn sắc chuẩn IEEE/MICCAI, bộ đề cương slide thuyết trình 39 trang và 20 câu hỏi phản biện lâm sàng.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Kiểm Định Liêm Chính</div>
+                        <div class="phase-item-value">114/114 Bài kiểm thử đơn vị tự động vượt qua 100%, không phát sinh lỗi cú pháp hay suy thoái.</div>
+                    </div>
+                    <div>
+                        <div class="phase-item-label">Tiến Độ Tổng Thể</div>
+                        <div class="phase-item-metric">30/31 Nhiệm vụ hoàn thành (Tiến độ dự án: 96,8%).</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="medical-footer">
+        <div class="container">
+            <p><strong>LungRay CADx Platform</strong> — Dự Án Nghiên Cứu Trí Tuệ Nhân Tạo Trong Y Tế</p>
+            <p class="footer-note">Tài liệu và số liệu thực nghiệm được tính toán từ các bộ dữ liệu X-quang công khai chuẩn quốc tế (NIH, COVIDx, TB, VinDr-CXR, RSNA). Mô hình đóng vai trò công cụ hỗ trợ thứ hai và không thay thế chẩn đoán xác định của bác sĩ chuyên khoa.</p>
+        </div>
+    </footer>
+
+    <!-- Interactive Charts Initialization -->
+    <script>
+        // ROC Curves Chart
+        const ctxRoc = document.getElementById('rocChart').getContext('2d');
+        new Chart(ctxRoc, {
+            type: 'line',
+            data: {
+                labels: ['0.0', '0.2', '0.4', '0.6', '0.8', '1.0'],
+                datasets: [
+                    {
+                        label: 'Lao Phổi (TB) - AUROC: 1.000',
+                        data: [0.0, 0.98, 1.0, 1.0, 1.0, 1.0],
+                        borderColor: '#059669',
+                        backgroundColor: 'rgba(5, 150, 105, 0.05)',
+                        borderWidth: 2.5,
+                        tension: 0.1,
+                        fill: true
+                    },
+                    {
+                        label: '14 Bệnh Lồng Ngực (NIH) - AUROC: 0.827',
+                        data: [0.0, 0.65, 0.82, 0.91, 0.97, 1.0],
+                        borderColor: '#0284C7',
+                        backgroundColor: 'rgba(2, 132, 199, 0.05)',
+                        borderWidth: 2.5,
+                        tension: 0.2,
+                        fill: true
+                    },
+                    {
+                        label: 'COVID-19 (Kiểm Toán) - AUROC: 0.734',
+                        data: [0.0, 0.48, 0.71, 0.82, 0.93, 1.0],
+                        borderColor: '#D97706',
+                        backgroundColor: 'rgba(217, 119, 6, 0.05)',
+                        borderWidth: 2.5,
+                        tension: 0.2,
+                        fill: true
+                    },
+                    {
+                        label: 'Đường Phân Định Ngẫu Nhiên',
+                        data: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+                        borderColor: '#94A3B8',
+                        borderWidth: 1.5,
+                        borderDash: [5, 5],
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: { family: 'Plus Jakarta Sans', size: 11 },
+                            boxWidth: 12
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Tỷ Lệ Dương Tính Giả (FPR)', font: { size: 11 } },
+                        grid: { color: '#F1F5F9' }
+                    },
+                    y: {
+                        title: { display: true, text: 'Tỷ Lệ Dương Tính Thật (TPR)', font: { size: 11 } },
+                        min: 0,
+                        max: 1,
+                        grid: { color: '#F1F5F9' }
+                    }
+                }
+            }
+        });
+
+        // WSOL IoU Chart
+        const ctxIou = document.getElementById('iouChart').getContext('2d');
+        new Chart(ctxIou, {
+            type: 'bar',
+            data: {
+                labels: ['RSNA Pneumonia', 'VinDr-CXR (8 Bệnh)', 'Tiêu Chuẩn Tối Thiểu'],
+                datasets: [{
+                    label: 'Chỉ Số Mean IoU So Với Bounding Box Chuyên Gia',
+                    data: [0.763, 0.605, 0.350],
+                    backgroundColor: [
+                        '#0D9488',
+                        '#0284C7',
+                        '#CBD5E1'
+                    ],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 1.0,
+                        title: { display: true, text: 'Intersection over Union (IoU)', font: { size: 11 } },
+                        grid: { color: '#F1F5F9' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
