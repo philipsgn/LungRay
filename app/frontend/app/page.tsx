@@ -35,6 +35,7 @@ export default function Home() {
     grounding: boolean
   ) => {
     setIsExplaining(true);
+    setError(null);
     try {
       const explainResult = await explainImage(
         currentFile,

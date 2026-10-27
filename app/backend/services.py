@@ -196,43 +196,69 @@ class LungRayService:
         finally:
             explainer.remove_hooks()
 
-        # Generate lung mask from segmenter
+        orig_h, orig_w = image_np.shape[:2]
+
+        # Resize raw_heatmap from (512, 512) to the original image dimensions for pixel-perfect alignment
+        if raw_heatmap.shape != (orig_h, orig_w):
+            raw_heatmap_native = cv2.resize(
+                raw_heatmap,
+                (orig_w, orig_h),
+                interpolation=cv2.INTER_LINEAR,
+            )
+        else:
+            raw_heatmap_native = raw_heatmap
+
+        # Generate lung mask from segmenter directly on native image
         lung_mask = self.segmenter.predict_mask(image_np)
-        if lung_mask.shape != raw_heatmap.shape:
+        if lung_mask.shape != (orig_h, orig_w):
             lung_mask = cv2.resize(
                 lung_mask.astype(np.uint8),
-                (raw_heatmap.shape[1], raw_heatmap.shape[0]),
+                (orig_w, orig_h),
                 interpolation=cv2.INTER_NEAREST,
             )
 
-        # Build anatomical ROI mask
+        # Build anatomical ROI mask at native resolution
         if target_disease_name.lower() == "cardiomegaly":
             # For Cardiomegaly, include mediastinum / cardiac silhouette between lung fields
-            kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (45, 45))
+            k_close_size = max(15, int(round(min(orig_h, orig_w) * 0.08)))
+            if k_close_size % 2 == 0:
+                k_close_size += 1
+            kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k_close_size, k_close_size))
             closed_mask = cv2.morphologyEx(lung_mask.astype(np.uint8), cv2.MORPH_CLOSE, kernel_close)
-            kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+
+            k_dilate_size = max(7, int(round(min(orig_h, orig_w) * 0.03)))
+            if k_dilate_size % 2 == 0:
+                k_dilate_size += 1
+            kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k_dilate_size, k_dilate_size))
             effective_mask = cv2.dilate(closed_mask, kernel_dilate, iterations=1)
         else:
-            # Standard pulmonary pathology: lung mask dilated by 5px margin
-            kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+            # Standard pulmonary pathology: lung mask dilated slightly for pleural space
+            k_dilate_size = max(5, int(round(min(orig_h, orig_w) * 0.015)))
+            if k_dilate_size % 2 == 0:
+                k_dilate_size += 1
+            kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k_dilate_size, k_dilate_size))
             effective_mask = cv2.dilate(lung_mask.astype(np.uint8), kernel_dilate, iterations=1)
 
-        # Compute raw in-lung energy ratio
-        in_lung_ratio = self.audit_engine.compute_in_lung_ratio(raw_heatmap, effective_mask)
+        # Compute in-lung energy ratio using native resolution maps
+        in_lung_ratio = self.audit_engine.compute_in_lung_ratio(raw_heatmap_native, effective_mask)
 
         if clinical_grounding:
             mask_float = (effective_mask > 0).astype(np.float32)
-            grounded_heatmap = raw_heatmap * mask_float
-            h_max = float(grounded_heatmap.max())
-            h_min = float(grounded_heatmap.min())
-            if h_max > h_min:
-                grounded_heatmap = (grounded_heatmap - h_min) / (h_max - h_min)
+            grounded_heatmap = raw_heatmap_native * mask_float
+
+            # Clinical percentile normalization: highlight intra-lung focal hotspots warmly
+            in_lung_vals = grounded_heatmap[effective_mask > 0]
+            if in_lung_vals.size > 0 and float(in_lung_vals.max()) > 1e-6:
+                h_max = float(np.percentile(in_lung_vals, 99.5))
+                if h_max <= 1e-6:
+                    h_max = float(in_lung_vals.max())
+                grounded_heatmap = np.clip(grounded_heatmap / h_max, 0.0, 1.0)
             else:
                 grounded_heatmap = np.zeros_like(grounded_heatmap)
             final_heatmap = grounded_heatmap
             is_grounded = True
         else:
-            final_heatmap = raw_heatmap
+            final_heatmap = raw_heatmap_native
             is_grounded = False
 
         heatmap_uint8 = np.uint8(np.clip(final_heatmap * 255.0, 0, 255))
@@ -242,6 +268,8 @@ class LungRayService:
         if clinical_grounding:
             # Zero out background pixels so frontend screen-blend is 100% transparent outside lungs
             heatmap_color[effective_mask == 0] = 0
+
+            # Alpha blend within anatomical mask (both image_np and heatmap_color have identical shape)
             image_float = image_np.astype(np.float32)
             heat_color_float = heatmap_color.astype(np.float32)
             mask_3d = (effective_mask > 0)[:, :, None].astype(np.float32)

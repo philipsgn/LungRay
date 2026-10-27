@@ -122,6 +122,27 @@ def test_explain_endpoint_cardiomegaly_head_a(client: TestClient) -> None:
     assert payload["is_grounded"] is True
 
 
+def test_explain_high_resolution_non_square_image(client: TestClient) -> None:
+    # High-resolution non-square dimensions simulating real CXR (e.g. 768x920)
+    image_bytes = _make_image_bytes(size=(768, 920))
+    response = client.post(
+        "/api/v1/explain",
+        files={"file": ("hi_res.png", image_bytes, "image/png")},
+        data={
+            "target_head": "head_a",
+            "target_class": 3,
+            "target_disease_name": "Infiltration",
+            "clinical_grounding": "true",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["target_disease_name"] == "Infiltration"
+    assert payload["is_grounded"] is True
+    assert _is_base64_png(payload["heatmap_base64"])
+    assert _is_base64_png(payload["overlay_base64"])
+
+
 def test_audit_endpoint(client: TestClient) -> None:
     image_bytes = _make_image_bytes()
     response = client.post(
