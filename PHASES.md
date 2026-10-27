@@ -247,29 +247,33 @@
 ## 📌 PHASE 6: FULL-STACK MEDICAL PACS WEB DEMO (TUẦN 12–13) — [x] COMPLETED
 > **Mục tiêu**: Xây dựng hệ thống phần mềm hoàn chỉnh gồm FastAPI REST Backend nạp weights thực tế và Next.js 14 Medical PACS Viewer trực quan với trình khởi chạy Native 1-Click.
 
-### [x] Task 6.1: Xây dựng FastAPI Microservice Backend (COMPLETED & VERIFIED)
+### [x] Task 6.1: Xây dựng FastAPI Microservice Backend & Clinical Grounding Engine (COMPLETED & VERIFIED)
 - **Mô tả**: Viết backend phục vụ suy luận `app/backend/main.py`:
   - `POST /api/v1/predict`: Dự đoán 3-Head đồng thời (14 bệnh NIH, Lao phổi TB, COVIDx).
-  - `POST /api/v1/explain`: Sinh Grad-CAM heatmap và trả về ảnh Base64.
+  - `POST /api/v1/explain`: Sinh Grad-CAM heatmap có hỗ trợ tham số động `clinical_grounding` (bật/tắt lọc giải phẫu) và `target_disease_name` cho phép chỉ định giải thích từng bệnh lý cụ thể (14 bệnh Head A, Tuberculosis Head B, COVID-19 Head C). Tự động mở rộng giải phẫu trung thất cho `Cardiomegaly`.
   - `POST /api/v1/audit`: Kiểm toán rủi ro shortcut học thuộc theo phế trường phổi.
 - **Deliverable**: `app/backend/main.py`, `app/backend/schemas.py`, `app/backend/services.py`, `tests/test_api_backend.py`.
-- **DoD**: 100% tests passed (96/96 tests toàn repo), thời gian xử lý suy luận $\le 1.8$ giây, xử lý ngoại lệ an toàn (HTTP 422 cho ảnh hỏng).
+- **DoD**: 100% tests passed (98/98 tests toàn repo), thời gian xử lý suy luận $\le 1.8$ giây, xử lý ngoại lệ an toàn (HTTP 422 cho ảnh hỏng), triệt tiêu 100% nhiễu viền ngoài cho chế độ lâm sàng.
 - **Agent**: `FullstackDeployAgent` (CommandCode CLI Go thực thi, Antigravity Gatekeeper phê duyệt)
 
-### [x] Task 6.2: Xây dựng Giao diện Next.js Medical PACS Viewer (COMPLETED & VERIFIED)
+### [x] Task 6.2: Xây dựng Giao diện Next.js Medical PACS Viewer & Interactive XAI Dashboard (COMPLETED & VERIFIED)
 - **Mô tả**: Xây dựng ứng dụng Next.js tại `app/frontend/`:
   - Tải ảnh kéo thả (DICOM/PNG/JPG).
-  - Khung hiển thị ảnh y tế đa lớp (`HeatmapViewer` blend `original` + Grad-CAM `heatmap`).
-  - Dashboard thẻ kết quả chẩn đoán 3 Heads với mã màu lâm sàng và chỉ số Shortcut Audit.
-  - Thanh trượt điều chỉnh độ mờ (Alpha Slider) của Heatmap từ 0 đến 100% (mặc định 40%).
+  - Khung hiển thị ảnh y tế đa lớp (`HeatmapViewer` blend `original` + Grad-CAM `heatmap` qua `mixBlendMode: "screen"`, pixel ngoài lồng ngực trong suốt 100%).
+  - Dashboard tương tác: Click chọn trực tiếp từng bệnh lý trong 14 bệnh Head A, Head B (TB) hoặc Head C (COVID-19) để sinh heatmap Grad-CAM tức thời.
+  - Bộ công tắc chế độ kép: `🛡️ Clinical Grounded` (Chuẩn y tế không nhiễu viền) vs `🔍 Raw Attention` (Kiểm toán shortcut learning).
+  - Thanh trượt điều chỉnh độ mờ (Alpha Slider) của Heatmap từ 0 đến 100% (mặc định 45%).
 - **Deliverable**: Ứng dụng Next.js 14 App Router hoàn chỉnh tại `app/frontend/`.
-- **DoD**: `npm run build` thành công không lỗi TypeScript/ESLint, kết nối đồng bộ 4 endpoints của FastAPI backend, tương tác mượt mà.
+- **DoD**: `npm run build` thành công không lỗi TypeScript/ESLint, kết nối đồng bộ 4 endpoints của FastAPI backend, tương tác mượt mà theo thời gian thực.
 - **Agent**: `FullstackDeployAgent` (CommandCode CLI Go thực thi, Antigravity Gatekeeper phê duyệt)
 
-### [x] Task 6.3: Tối ưu hóa Khởi chạy Cục bộ 1-Click Native PACS (COMPLETED & VERIFIED)
-- **Mô tả**: Thay thế giải pháp Docker cồng kềnh ngốn bộ nhớ bằng script khởi chạy tự động hóa `scripts/start_local.ps1` tích hợp Smart HTTP Polling. Khởi động đồng thời FastAPI Backend (port 8000) và Next.js PACS Viewer (port 3000), tự động mở trình duyệt `http://localhost:3000` trong vòng 3–4 giây mà không phụ thuộc vào Docker daemon.
+### [x] Task 6.3: Tối ưu hóa Khởi chạy Cục bộ 1-Click Native PACS & Cache Sanitization (COMPLETED & VERIFIED)
+- **Mô tả**: Thay thế giải pháp Docker cồng kềnh ngốn bộ nhớ bằng script khởi chạy tự động hóa `scripts/start_local.ps1` tích hợp Smart HTTP Polling:
+  - Tự động nhận diện môi trường Python chứa PyTorch & FastAPI (`Python 3.10`).
+  - Tự động dọn sạch thư mục cache `.next` trước khi khởi động dev server nhằm ngăn chặn triệt để lỗi xung đột mã định danh webpack (`Error: Cannot find module './xxx.js'`).
+  - Khởi động đồng thời FastAPI Backend (port 8000) và Next.js PACS Viewer (port 3000), tự động mở trình duyệt `http://localhost:3000` trong vòng 3–4 giây.
 - **Deliverable**: `scripts/start_local.ps1`.
-- **DoD**: Khởi chạy thành công cả 2 dịch vụ bằng 1 lệnh duy nhất, kiểm thử tương tác PACS thời gian thực mượt mà.
+- **DoD**: Khởi chạy thành công cả 2 dịch vụ bằng 1 lệnh duy nhất, loại bỏ hoàn toàn lỗi webpack runtime, trải nghiệm PACS thời gian thực mượt mà.
 - **Agent**: `FullstackDeployAgent`
 
 ---

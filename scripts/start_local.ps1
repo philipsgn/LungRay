@@ -22,6 +22,10 @@ Write-Host "[1/3] Starting FastAPI Backend on http://localhost:8000..." -Foregro
 $BackendJob = Start-Process powershell -WorkingDirectory $WorkspaceRoot -ArgumentList "-NoExit", "-Command", "Set-Location -LiteralPath '$WorkspaceRoot'; Write-Host '--- LungRay FastAPI Backend (Port 8000) ---' -ForegroundColor Green; & '$pyExe' -m uvicorn app.backend.main:app --host 127.0.0.1 --port 8000 --reload" -PassThru
 
 Write-Host "[2/3] Starting Next.js PACS Viewer on http://localhost:3000..." -ForegroundColor Green
+$nextDir = Join-Path $FrontendDir ".next"
+if (Test-Path $nextDir) {
+    Remove-Item -Recurse -Force $nextDir -ErrorAction SilentlyContinue
+}
 $FrontendJob = Start-Process powershell -WorkingDirectory $FrontendDir -ArgumentList "-NoExit", "-Command", "Set-Location -LiteralPath '$FrontendDir'; Write-Host '--- LungRay Next.js PACS Viewer (Port 3000) ---' -ForegroundColor Cyan; npm run dev" -PassThru
 
 Write-Host "[3/3] Waiting 4 seconds for services to initialize..." -ForegroundColor Yellow
