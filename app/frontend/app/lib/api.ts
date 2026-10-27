@@ -38,12 +38,18 @@ export async function predictImage(file: File): Promise<PredictionResponse> {
 export async function explainImage(
   file: File,
   targetHead: string,
-  targetClass: number
+  targetClass: number,
+  clinicalGrounding: boolean = true,
+  targetDiseaseName: string = ""
 ): Promise<ExplainResponse> {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("target_head", targetHead);
   formData.append("target_class", String(targetClass));
+  formData.append("clinical_grounding", String(clinicalGrounding));
+  if (targetDiseaseName) {
+    formData.append("target_disease_name", targetDiseaseName);
+  }
   const response = await fetch(`${API_BASE}/api/v1/explain`, {
     method: "POST",
     body: formData,

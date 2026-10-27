@@ -26,6 +26,9 @@ export interface ExplainResponse {
   overlay_base64: string;
   target_head: string;
   target_class: number;
+  target_disease_name?: string;
+  in_lung_energy_ratio?: number;
+  is_grounded?: boolean;
 }
 
 export interface AuditResponse {

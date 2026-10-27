@@ -28,6 +28,9 @@ class ExplainResponse(BaseModel):
     overlay_base64: str = Field(..., description="Base64-encoded heatmap overlay PNG")
     target_head: str = Field(..., description="Head used for explanation")
     target_class: int = Field(..., description="Class index used for explanation")
+    target_disease_name: str = Field(default="", description="Name of the pathology explained")
+    in_lung_energy_ratio: float = Field(default=1.0, ge=0.0, le=1.0, description="Activation energy inside anatomy ratio [0, 1]")
+    is_grounded: bool = Field(default=True, description="Whether clinical anatomical grounding was applied")
 
 
 class AuditResponse(BaseModel):

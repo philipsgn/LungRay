@@ -60,6 +60,7 @@ class LungRayService:
         self.model = self._load_model()
         self.transform = get_val_transforms(img_size=self.img_size)
         self.segmenter = LungSegmenter()
+        self.audit_engine = ShortcutAuditEngine(self.segmenter)
         self._initialized = True
 
     def _load_thresholds(self) -> dict[str, Any]:
@@ -161,32 +162,105 @@ class LungRayService:
         pil_img.save(buffer, format=format)
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
-    def explain(self, image_bytes: bytes, target_head: str, target_class: int) -> dict[str, Any]:
+    def explain(
+        self,
+        image_bytes: bytes,
+        target_head: str,
+        target_class: int,
+        clinical_grounding: bool = True,
+        target_disease_name: str = "",
+    ) -> dict[str, Any]:
         tensor = self.preprocess(image_bytes)
 
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         image_np = np.array(image)
 
+        # Resolve disease name if not specified
+        if not target_disease_name:
+            if target_head == "head_a" and 0 <= target_class < len(NIH_14_DISEASES):
+                target_disease_name = NIH_14_DISEASES[target_class]
+            elif target_head == "head_b":
+                target_disease_name = "Tuberculosis"
+            elif target_head == "head_c":
+                target_disease_name = "COVID-19"
+            else:
+                target_disease_name = f"{target_head}_{target_class}"
+
         explainer = GradCAMExplainer(self.model)
         try:
-            heatmap = explainer.generate(
+            raw_heatmap = explainer.generate(
                 tensor,
                 head_name=target_head,
                 target_class_idx=target_class,
             )
-            overlay = explainer.overlay_heatmap(image_np, heatmap, alpha=0.4)
         finally:
             explainer.remove_hooks()
 
-        heatmap_uint8 = np.uint8(np.clip(heatmap * 255.0, 0, 255))
+        # Generate lung mask from segmenter
+        lung_mask = self.segmenter.predict_mask(image_np)
+        if lung_mask.shape != raw_heatmap.shape:
+            lung_mask = cv2.resize(
+                lung_mask.astype(np.uint8),
+                (raw_heatmap.shape[1], raw_heatmap.shape[0]),
+                interpolation=cv2.INTER_NEAREST,
+            )
+
+        # Build anatomical ROI mask
+        if target_disease_name.lower() == "cardiomegaly":
+            # For Cardiomegaly, include mediastinum / cardiac silhouette between lung fields
+            kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (45, 45))
+            closed_mask = cv2.morphologyEx(lung_mask.astype(np.uint8), cv2.MORPH_CLOSE, kernel_close)
+            kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+            effective_mask = cv2.dilate(closed_mask, kernel_dilate, iterations=1)
+        else:
+            # Standard pulmonary pathology: lung mask dilated by 5px margin
+            kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+            effective_mask = cv2.dilate(lung_mask.astype(np.uint8), kernel_dilate, iterations=1)
+
+        # Compute raw in-lung energy ratio
+        in_lung_ratio = self.audit_engine.compute_in_lung_ratio(raw_heatmap, effective_mask)
+
+        if clinical_grounding:
+            mask_float = (effective_mask > 0).astype(np.float32)
+            grounded_heatmap = raw_heatmap * mask_float
+            h_max = float(grounded_heatmap.max())
+            h_min = float(grounded_heatmap.min())
+            if h_max > h_min:
+                grounded_heatmap = (grounded_heatmap - h_min) / (h_max - h_min)
+            else:
+                grounded_heatmap = np.zeros_like(grounded_heatmap)
+            final_heatmap = grounded_heatmap
+            is_grounded = True
+        else:
+            final_heatmap = raw_heatmap
+            is_grounded = False
+
+        heatmap_uint8 = np.uint8(np.clip(final_heatmap * 255.0, 0, 255))
         heatmap_color = cv2.applyColorMap(heatmap_uint8, cv2.COLORMAP_JET)
         heatmap_color = cv2.cvtColor(heatmap_color, cv2.COLOR_BGR2RGB)
+
+        if clinical_grounding:
+            # Zero out background pixels so frontend screen-blend is 100% transparent outside lungs
+            heatmap_color[effective_mask == 0] = 0
+            image_float = image_np.astype(np.float32)
+            heat_color_float = heatmap_color.astype(np.float32)
+            mask_3d = (effective_mask > 0)[:, :, None].astype(np.float32)
+            overlay = np.where(
+                mask_3d > 0,
+                np.clip(image_float * (1.0 - 0.4) + heat_color_float * 0.4, 0, 255).astype(np.uint8),
+                image_np,
+            )
+        else:
+            overlay = explainer.overlay_heatmap(image_np, final_heatmap, alpha=0.4)
 
         return {
             "heatmap_base64": self._image_to_base64(heatmap_color),
             "overlay_base64": self._image_to_base64(overlay),
             "target_head": target_head,
             "target_class": target_class,
+            "target_disease_name": target_disease_name,
+            "in_lung_energy_ratio": round(float(in_lung_ratio), 4),
+            "is_grounded": is_grounded,
         }
 
     def audit(self, image_bytes: bytes) -> dict[str, Any]:

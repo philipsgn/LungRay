@@ -2,5 +2,11 @@
 $ErrorActionPreference = "Stop"
 $scriptPath = Join-Path $PSScriptRoot "verify.py"
 
-python "$scriptPath"
+$pyExe = "python"
+$py310 = "$env:LOCALAPPDATA\Programs\Python\Python310\python.exe"
+if (Test-Path $py310) {
+    $pyExe = $py310
+}
+
+& $pyExe "$scriptPath"
 exit $LASTEXITCODE

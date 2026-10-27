@@ -64,7 +64,7 @@ def test_predict_endpoint(client: TestClient) -> None:
     assert payload["inference_time_ms"] >= 0.0
 
 
-def test_explain_endpoint(client: TestClient) -> None:
+def test_explain_endpoint_default_grounded(client: TestClient) -> None:
     image_bytes = _make_image_bytes()
     response = client.post(
         "/api/v1/explain",
@@ -77,8 +77,49 @@ def test_explain_endpoint(client: TestClient) -> None:
     assert "overlay_base64" in payload
     assert payload["target_head"] == "head_c"
     assert payload["target_class"] == 0
+    assert payload["target_disease_name"] == "COVID-19"
+    assert payload["is_grounded"] is True
+    assert 0.0 <= payload["in_lung_energy_ratio"] <= 1.0
     assert _is_base64_png(payload["heatmap_base64"])
     assert _is_base64_png(payload["overlay_base64"])
+
+
+def test_explain_endpoint_raw_attention_mode(client: TestClient) -> None:
+    image_bytes = _make_image_bytes()
+    response = client.post(
+        "/api/v1/explain",
+        files={"file": ("cxr.png", image_bytes, "image/png")},
+        data={
+            "target_head": "head_c",
+            "target_class": 0,
+            "clinical_grounding": "false",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["is_grounded"] is False
+    assert payload["target_disease_name"] == "COVID-19"
+    assert 0.0 <= payload["in_lung_energy_ratio"] <= 1.0
+
+
+def test_explain_endpoint_cardiomegaly_head_a(client: TestClient) -> None:
+    image_bytes = _make_image_bytes()
+    response = client.post(
+        "/api/v1/explain",
+        files={"file": ("cxr.png", image_bytes, "image/png")},
+        data={
+            "target_head": "head_a",
+            "target_class": 1,
+            "target_disease_name": "Cardiomegaly",
+            "clinical_grounding": "true",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["target_head"] == "head_a"
+    assert payload["target_class"] == 1
+    assert payload["target_disease_name"] == "Cardiomegaly"
+    assert payload["is_grounded"] is True
 
 
 def test_audit_endpoint(client: TestClient) -> None:

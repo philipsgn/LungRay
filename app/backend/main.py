@@ -61,10 +61,18 @@ async def explain(
     file: UploadFile = File(...),
     target_head: str = Form(default="head_c"),
     target_class: int = Form(default=0),
+    clinical_grounding: bool = Form(default=True),
+    target_disease_name: str = Form(default=""),
 ) -> ExplainResponse:
     try:
         image_bytes = await file.read()
-        result = service.explain(image_bytes, target_head=target_head, target_class=target_class)
+        result = service.explain(
+            image_bytes,
+            target_head=target_head,
+            target_class=target_class,
+            clinical_grounding=clinical_grounding,
+            target_disease_name=target_disease_name,
+        )
         return ExplainResponse(**result)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
