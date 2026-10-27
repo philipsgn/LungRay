@@ -137,7 +137,7 @@ graph TD
 - **Artifacts đầu ra**:
   - `data/splits/patient_splits.csv`, `data/splits/covid_splits.csv`, `data/splits/tb_splits.csv`
   - `src/data/dataset.py`, `src/data/sampler.py`, `src/data/transforms.py`
-  - Unit test: `tests/test_data_leakage.py`
+  - Unit test: `tests/test_data_pipeline.py`
 
 ---
 
@@ -203,7 +203,7 @@ graph TD
 - **Bên nhận**: `ModelArchitectAgent`
 - **Điều kiện bàn giao (Hand-off Contract)**:
   - File `patient_splits.csv` và `covid_splits.csv` đã được tạo và lưu trữ cố định.
-  - Lệnh kiểm tra `pytest tests/test_data_leakage.py` chạy thành công không có lỗi.
+  - Lệnh kiểm tra `pytest tests/test_data_pipeline.py` chạy thành công không có lỗi.
   - `WeightedMultiTaskBatchSampler` đã sẵn sàng và được test thử nghiệm 1 epoch.
 
 ### Giao thức 2: Model Training $\to$ XAI & Evaluation (Gate 2 & 3)

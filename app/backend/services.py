@@ -54,7 +54,7 @@ class LungRayService:
             return
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.version = "v4.0"
+        self.version = "v7.0"
         self.img_size = 512
         self.thresholds = self._load_thresholds()
         self.model = self._load_model()

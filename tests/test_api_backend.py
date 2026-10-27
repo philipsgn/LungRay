@@ -39,7 +39,7 @@ def test_health_endpoint(client: TestClient) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "healthy"
-    assert payload["version"] == "v4.0"
+    assert payload["version"] == "v7.0"
     assert payload["device"] in ("cpu", "cuda")
 
 
