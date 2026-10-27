@@ -302,13 +302,15 @@ class GradCAMExplainer:
         if second is not None and third is not None:
             second = torch.nan_to_num(second, nan=0.0, posinf=0.0, neginf=0.0)
             third = torch.nan_to_num(third, nan=0.0, posinf=0.0, neginf=0.0)
+            if activation.dim() != 4:
+                return self._first_order_gradcam_plus_plus(activation, first, eps)
             denominator = 2.0 * second + torch.sum(
-                activation.detach() * third, dim=(1, 2), keepdim=True
+                activation.detach() * third, dim=(2, 3), keepdim=True
             )
             alpha = second / (denominator + eps)
             alpha = torch.where(first != 0.0, alpha, torch.zeros_like(alpha))
             alpha = torch.nan_to_num(alpha, nan=0.0, posinf=0.0, neginf=0.0)
-            weights = torch.sum(torch.relu(first) * alpha, dim=(1, 2))
+            weights = torch.sum(torch.relu(first) * alpha, dim=(2, 3))[0]
             cam = torch.relu(
                 torch.sum(weights[:, None, None] * activation[0].detach(), dim=0)
             )

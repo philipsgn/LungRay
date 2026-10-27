@@ -3,20 +3,65 @@ LungRay Loss Engine & Masked Multi-Task Loss (src/models/losses.py)
 ==================================================================
 Inviolable Constraint (Ràng buộc 1 & Task 3.2):
 - Masked Backpropagation: Each training sample belongs to exactly one dataset/task.
-- Head A samples (NIH): compute Loss A (BCE with pos_weight or Focal Loss)
-  -> updates Head A + Backbone.
+- Head A samples (NIH): compute Loss A (class-weighted BCE, Focal Loss, or
+  Asymmetric Loss) -> updates Head A + Backbone.
 - Head B samples (TB): compute Loss B (BCEWithLogitsLoss)
   -> updates Head B + Backbone.
-- Head C samples (COVID): compute Loss C (binary BCE/Focal or categorical CE)
+- Head C samples (COVID): compute Loss C (binary BCE/Focal/ASL or categorical CE)
   -> updates Head C + Backbone.
 - Zero Gradient Leakage: Head B and Head C receive ZERO gradients when
   processing NIH samples, and vice versa.
+
+Clinical imbalance strategy (TASK-013):
+- Head A holds 14 NIH pathologies with extreme prevalence skew (Hernia ~0.2%,
+  Infiltration ~17%). ``FocalLoss`` therefore accepts a dynamic per-class
+  ``pos_weight`` and per-class ``alpha``, while ``AsymmetricLoss`` (Ridnik et
+  al., 2021) hard-suppresses easy negatives via ``gamma_neg >> gamma_pos``.
+- All class weights are registered as module buffers so ``.to(device)`` keeps
+  them on the same device as the logits (critical for single-GPU Kaggle runs).
 """
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+_VALID_REDUCTIONS = {"mean", "sum", "none"}
+
+
+def _validate_reduction(reduction: str) -> str:
+    """Normalizes and validates a loss reduction mode."""
+    value = str(reduction).strip().lower()
+    if value not in _VALID_REDUCTIONS:
+        raise ValueError(
+            f"reduction must be 'mean', 'sum', or 'none', got {reduction!r}."
+        )
+    return value
+
+
+def _prepare_weight_tensor(
+    value: Union[float, Sequence[float], torch.Tensor],
+    name: str,
+) -> torch.Tensor:
+    """Converts a scalar/sequence weight into a validated 1-D float tensor."""
+    if isinstance(value, torch.Tensor):
+        tensor = value.detach().clone().to(dtype=torch.float32).reshape(-1)
+    elif isinstance(value, (int, float)) and not isinstance(value, bool):
+        tensor = torch.tensor([float(value)], dtype=torch.float32)
+    else:
+        try:
+            tensor = torch.as_tensor(value, dtype=torch.float32).reshape(-1)
+        except (TypeError, ValueError) as exc:
+            raise TypeError(
+                f"{name} must be a float, sequence of floats, or tensor."
+            ) from exc
+
+    if tensor.numel() == 0:
+        raise ValueError(f"{name} must not be empty.")
+    if not torch.isfinite(tensor).all() or (tensor < 0.0).any():
+        raise ValueError(f"{name} must contain finite, non-negative values.")
+    return tensor
 
 
 class FocalLoss(nn.Module):
@@ -24,29 +69,47 @@ class FocalLoss(nn.Module):
     Multi-label Focal Loss with class balancing and focusing parameters.
 
     FL(p_t) = -alpha_t * (1 - p_t)^gamma * log(p_t)
+
+    The class-balancing term ``alpha`` and the positive-class weight
+    ``pos_weight`` are broadcast over the class dimension, so a single
+    ``(num_classes,)`` vector can reflect the extreme prevalence skew of the
+    14 NIH pathologies (Hernia ~0.2% vs Infiltration ~17%).
+
+    Args:
+        alpha: Scalar in [0, 1] or per-class vector of length ``num_classes``.
+        gamma: Focusing parameter (>= 0).
+        reduction: ``'mean'``, ``'sum'``, or ``'none'``.
+        pos_weight: Optional scalar or per-class vector forwarded to
+            ``binary_cross_entropy_with_logits`` to up-weight positives.
     """
 
     def __init__(
         self,
-        alpha: float = 0.25,
+        alpha: Union[float, Sequence[float], torch.Tensor] = 0.25,
         gamma: float = 2.0,
         reduction: str = "mean",
+        pos_weight: Optional[Union[float, Sequence[float], torch.Tensor]] = None,
     ):
         super().__init__()
-        alpha = float(alpha)
         gamma = float(gamma)
-        if not 0.0 <= alpha <= 1.0:
-            raise ValueError(f"alpha must be in [0, 1], got {alpha!r}.")
         if gamma < 0.0:
             raise ValueError(f"gamma must be non-negative, got {gamma!r}.")
-        if reduction not in {"mean", "sum", "none"}:
+
+        alpha_tensor = _prepare_weight_tensor(alpha, "alpha")
+        if (alpha_tensor > 1.0).any():
             raise ValueError(
-                f"reduction must be 'mean', 'sum', or 'none', got {reduction!r}."
+                f"alpha must be in [0, 1], got {alpha_tensor.tolist()!r}."
             )
 
-        self.alpha = alpha
         self.gamma = gamma
-        self.reduction = reduction
+        self.reduction = _validate_reduction(reduction)
+        self.register_buffer("alpha", alpha_tensor)
+        if pos_weight is None:
+            self.register_buffer("pos_weight", None)
+        else:
+            self.register_buffer(
+                "pos_weight", _prepare_weight_tensor(pos_weight, "pos_weight")
+            )
 
     def forward(
         self,
@@ -63,16 +126,130 @@ class FocalLoss(nn.Module):
                 f"logits and targets must have identical shapes, got "
                 f"{tuple(logits.shape)} and {tuple(targets.shape)}."
             )
+        if logits.dim() < 1:
+            raise ValueError("logits must have at least one dimension.")
+        if logits.numel() == 0:
+            return logits.sum() if self.reduction != "none" else logits
+
+        num_classes = int(logits.shape[-1])
+        if self.alpha.numel() not in (1, num_classes):
+            raise ValueError(
+                f"alpha must contain 1 or {num_classes} values, got "
+                f"{self.alpha.numel()}."
+            )
+
+        pos_weight = self.pos_weight
+        if pos_weight is not None:
+            if pos_weight.numel() not in (1, num_classes):
+                raise ValueError(
+                    f"pos_weight must contain 1 or {num_classes} values, got "
+                    f"{pos_weight.numel()}."
+                )
+            pos_weight = pos_weight.to(device=logits.device, dtype=logits.dtype)
 
         targets = targets.to(device=logits.device, dtype=logits.dtype)
         bce_loss = F.binary_cross_entropy_with_logits(
-            logits, targets, reduction="none"
+            logits, targets, reduction="none", pos_weight=pos_weight
         )
+
         probs = torch.sigmoid(logits)
         p_t = probs * targets + (1.0 - probs) * (1.0 - targets)
-        alpha_t = self.alpha * targets + (1.0 - self.alpha) * (1.0 - targets)
-        focal_weight = alpha_t * torch.pow(1.0 - p_t, self.gamma)
+        alpha = self.alpha.to(device=logits.device, dtype=logits.dtype)
+        alpha_t = alpha * targets + (1.0 - alpha) * (1.0 - targets)
+        focal_weight = alpha_t * torch.pow((1.0 - p_t).clamp(min=0.0), self.gamma)
         loss = focal_weight * bce_loss
+
+        if self.reduction == "mean":
+            return loss.mean()
+        if self.reduction == "sum":
+            return loss.sum()
+        return loss
+
+
+class AsymmetricLoss(nn.Module):
+    """
+    Asymmetric Loss (ASL) for multi-label thoracic pathology classification.
+
+    ASL(p) = - y * (1 - p)^gamma_pos * log(p)
+             - (1 - y) * p_m^gamma_neg * log(1 - p_m),   p_m = max(p - clip, 0)
+
+    Rationale (Ridnik et al., CVPR 2021): the negative branch dominates
+    multi-label batches (e.g. 13 of 14 NIH labels are usually absent). A large
+    ``gamma_neg`` plus probability shifting ``clip`` drives the gradient of easy
+    negatives to exactly zero, freeing capacity for subtle infiltrates,
+    nodules, and hernias. ``gamma_pos`` stays small to avoid discarding rare
+    positive evidence.
+
+    Args:
+        gamma_neg: Focusing exponent for negatives (default 4.0).
+        gamma_pos: Focusing exponent for positives (default 1.0).
+        clip: Probability shift applied to negatives (default 0.05).
+        eps: Numerical stability epsilon for logarithms.
+        reduction: ``'mean'``, ``'sum'``, or ``'none'``.
+    """
+
+    def __init__(
+        self,
+        gamma_neg: float = 4.0,
+        gamma_pos: float = 1.0,
+        clip: float = 0.05,
+        eps: float = 1e-8,
+        reduction: str = "mean",
+    ):
+        super().__init__()
+        gamma_neg = float(gamma_neg)
+        gamma_pos = float(gamma_pos)
+        clip = float(clip)
+        eps = float(eps)
+
+        if gamma_neg < 0.0:
+            raise ValueError(
+                f"gamma_neg must be non-negative, got {gamma_neg!r}."
+            )
+        if gamma_pos < 0.0:
+            raise ValueError(
+                f"gamma_pos must be non-negative, got {gamma_pos!r}."
+            )
+        if not 0.0 <= clip < 1.0:
+            raise ValueError(f"clip must be in [0, 1), got {clip!r}.")
+        if eps <= 0.0:
+            raise ValueError(f"eps must be strictly positive, got {eps!r}.")
+
+        self.gamma_neg = gamma_neg
+        self.gamma_pos = gamma_pos
+        self.clip = clip
+        self.eps = eps
+        self.reduction = _validate_reduction(reduction)
+
+    def forward(
+        self,
+        logits: torch.Tensor,
+        targets: torch.Tensor,
+    ) -> torch.Tensor:
+        """Args mirror :class:`FocalLoss`: raw logits and binary targets."""
+        if logits.shape != targets.shape:
+            raise ValueError(
+                f"logits and targets must have identical shapes, got "
+                f"{tuple(logits.shape)} and {tuple(targets.shape)}."
+            )
+        if logits.numel() == 0:
+            return logits.sum() if self.reduction != "none" else logits
+
+        targets = targets.to(device=logits.device, dtype=logits.dtype)
+        probs = torch.sigmoid(logits)
+        probs_neg = (probs - self.clip).clamp(min=0.0)
+
+        pos_term = (
+            targets
+            * torch.log(probs.clamp(min=self.eps))
+            * torch.pow((1.0 - probs).clamp(min=0.0), self.gamma_pos)
+        )
+        neg_term = (
+            (1.0 - targets)
+            * torch.log((1.0 - probs_neg).clamp(min=self.eps))
+            * torch.pow(probs_neg, self.gamma_neg)
+        )
+        loss = -(pos_term + neg_term)
 
         if self.reduction == "mean":
             return loss.mean()
@@ -87,17 +264,30 @@ class MaskedMultiTaskLoss(nn.Module):
 
     Loss Formulation:
     L_total = w_A * L_A(NIH) + w_B * L_B(TB) + w_C * L_C(COVID)
+
+    Head criteria:
+    - Head A: ``'bce'`` (dynamic ``pos_weight``), ``'focal'`` (Focal Loss with
+      optional ``focal_pos_weight_a``), or ``'asl'`` (Asymmetric Loss).
+    - Head B: ``BCEWithLogitsLoss`` (threshold tau_B calibrated separately with
+      Youden's J statistic in ``src.utils.threshold_tuning``).
+    - Head C: ``'bce'`` (binary screening), ``'ce'`` (3-class COVIDx with
+      optional ``ce_weight_c`` class weights), ``'focal'``, or ``'asl'``.
     """
 
     def __init__(
         self,
         weights: Optional[Dict[str, float]] = None,
-        head_a_criterion: str = "bce",  # 'bce' or 'focal'
+        head_a_criterion: str = "bce",  # 'bce', 'focal', or 'asl'
         pos_weight_a: Optional[torch.Tensor] = None,
+        focal_pos_weight_a: Optional[Union[float, Sequence[float], torch.Tensor]] = None,
         focal_gamma: float = 2.0,
-        focal_alpha: float = 0.25,
-        head_c_criterion: str = "bce",  # 'bce', 'ce', or 'focal'
+        focal_alpha: Union[float, Sequence[float], torch.Tensor] = 0.25,
+        asl_gamma_neg: float = 4.0,
+        asl_gamma_pos: float = 1.0,
+        asl_clip: float = 0.05,
+        head_c_criterion: str = "bce",  # 'bce', 'ce', 'focal', or 'asl'
         pos_weight_c: Optional[Union[float, torch.Tensor]] = None,
+        ce_weight_c: Optional[Union[Sequence[float], torch.Tensor]] = None,
     ):
         super().__init__()
 
@@ -114,75 +304,98 @@ class MaskedMultiTaskLoss(nn.Module):
         self.weights = resolved_weights
 
         self.head_a_criterion_name = str(head_a_criterion).strip().lower()
-        if self.head_a_criterion_name not in {"bce", "focal"}:
+        if self.head_a_criterion_name not in {"bce", "focal", "asl"}:
             raise ValueError(
-                "head_a_criterion must be 'bce' or 'focal', got "
+                "head_a_criterion must be 'bce', 'focal', or 'asl', got "
                 f"{head_a_criterion!r}."
             )
 
         self.head_c_criterion_name = str(head_c_criterion).strip().lower()
-        if self.head_c_criterion_name not in {"bce", "ce", "focal"}:
+        if self.head_c_criterion_name not in {"bce", "ce", "focal", "asl"}:
             raise ValueError(
-                "head_c_criterion must be 'bce', 'ce', or 'focal', got "
+                "head_c_criterion must be 'bce', 'ce', 'focal', or 'asl', got "
                 f"{head_c_criterion!r}."
             )
 
-        if self.head_a_criterion_name == "focal" and pos_weight_a is not None:
+        if self.head_a_criterion_name != "bce" and pos_weight_a is not None:
             raise ValueError(
-                "pos_weight_a is only supported with head_a_criterion='bce'."
+                "pos_weight_a is only supported with head_a_criterion='bce'; "
+                "use focal_pos_weight_a for Focal Loss or Asymmetric Loss."
+            )
+        if self.head_a_criterion_name != "focal" and focal_pos_weight_a is not None:
+            raise ValueError(
+                "focal_pos_weight_a is only supported with "
+                "head_a_criterion='focal'."
             )
         if self.head_c_criterion_name != "bce" and pos_weight_c is not None:
             raise ValueError(
                 "pos_weight_c is only supported with head_c_criterion='bce'."
             )
+        if self.head_c_criterion_name != "ce" and ce_weight_c is not None:
+            raise ValueError(
+                "ce_weight_c is only supported with head_c_criterion='ce'."
+            )
 
         # Head A: 14 thoracic pathologies (multi-label).
-        if self.head_a_criterion_name == "focal":
-            self.pos_weight_a = None
+        self.criterion_a: Optional[nn.Module] = None
+        if self.head_a_criterion_name == "bce":
+            self.register_buffer(
+                "pos_weight_a",
+                self._prepare_pos_weight(
+                    pos_weight_a, name="pos_weight_a", allowed_numels=(1, 14)
+                ),
+            )
+        elif self.head_a_criterion_name == "focal":
+            self.register_buffer("pos_weight_a", None)
+            prepared_focal = (
+                _prepare_weight_tensor(focal_pos_weight_a, "focal_pos_weight_a")
+                if focal_pos_weight_a is not None
+                else None
+            )
             self.criterion_a = FocalLoss(
                 alpha=focal_alpha,
                 gamma=focal_gamma,
                 reduction="mean",
+                pos_weight=prepared_focal,
             )
         else:
-            prepared_a = self._prepare_pos_weight(
-                pos_weight_a, name="pos_weight_a", allowed_numels=(1, 14)
+            self.criterion_a = AsymmetricLoss(
+                gamma_neg=asl_gamma_neg,
+                gamma_pos=asl_gamma_pos,
+                clip=asl_clip,
+                reduction="mean",
             )
-            if prepared_a is not None:
-                self.register_buffer("pos_weight_a", prepared_a)
-                self.criterion_a = nn.BCEWithLogitsLoss(
-                    pos_weight=self.pos_weight_a
-                )
-            else:
-                self.pos_weight_a = None
-                self.criterion_a = nn.BCEWithLogitsLoss()
 
-        # Head B: TB screening (binary logit).
-        self.criterion_b = nn.BCEWithLogitsLoss()
-
-        # Head C: COVID-19 screening (binary BCE, categorical CE, or Focal).
+        # Head C: COVID-19 screening (binary BCE/Focal/ASL, or categorical CE).
+        self.criterion_c: Optional[nn.Module] = None
+        self.register_buffer("pos_weight_c", None)
+        self.register_buffer("ce_weight_c", None)
         if self.head_c_criterion_name == "ce":
-            self.pos_weight_c = None
-            self.criterion_c = nn.CrossEntropyLoss()
+            if ce_weight_c is not None:
+                self.register_buffer(
+                    "ce_weight_c",
+                    _prepare_weight_tensor(ce_weight_c, "ce_weight_c"),
+                )
         elif self.head_c_criterion_name == "focal":
-            self.pos_weight_c = None
             self.criterion_c = FocalLoss(
                 alpha=focal_alpha,
                 gamma=focal_gamma,
                 reduction="mean",
             )
-        else:
-            prepared_c = self._prepare_pos_weight(
-                pos_weight_c, name="pos_weight_c", allowed_numels=(1,)
+        elif self.head_c_criterion_name == "asl":
+            self.criterion_c = AsymmetricLoss(
+                gamma_neg=asl_gamma_neg,
+                gamma_pos=asl_gamma_pos,
+                clip=asl_clip,
+                reduction="mean",
             )
-            if prepared_c is not None:
-                self.register_buffer("pos_weight_c", prepared_c)
-                self.criterion_c = nn.BCEWithLogitsLoss(
-                    pos_weight=self.pos_weight_c
-                )
-            else:
-                self.pos_weight_c = None
-                self.criterion_c = nn.BCEWithLogitsLoss()
+        else:
+            self.register_buffer(
+                "pos_weight_c",
+                self._prepare_pos_weight(
+                    pos_weight_c, name="pos_weight_c", allowed_numels=(1,)
+                ),
+            )
 
     @staticmethod
     def _prepare_pos_weight(
@@ -194,7 +407,7 @@ class MaskedMultiTaskLoss(nn.Module):
         if value is None:
             return None
 
-        if isinstance(value, (int, float)):
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
             weight = float(value)
             if not torch.isfinite(torch.tensor(weight)) or weight < 0.0:
                 raise ValueError(
@@ -339,7 +552,12 @@ class MaskedMultiTaskLoss(nn.Module):
                     f"Head A target shape {tuple(y_a.shape)} does not match "
                     f"logits shape {tuple(logits_a.shape)}."
                 )
-            loss_a = self.criterion_a(logits_a, y_a)
+            if self.head_a_criterion_name == "bce":
+                loss_a = F.binary_cross_entropy_with_logits(
+                    logits_a, y_a, pos_weight=self.pos_weight_a
+                )
+            else:
+                loss_a = self.criterion_a(logits_a, y_a)
             weighted_losses.append(
                 self.weights.get("head_a", 1.0) * loss_a
             )
@@ -352,7 +570,7 @@ class MaskedMultiTaskLoss(nn.Module):
                 targets, "head_b", mask_b, batch_size, device
             ).float()
             y_b = self._match_binary_shape(logits_b, y_b, "Head B")
-            loss_b = self.criterion_b(logits_b, y_b)
+            loss_b = F.binary_cross_entropy_with_logits(logits_b, y_b)
             weighted_losses.append(
                 self.weights.get("head_b", 0.8) * loss_b
             )
@@ -365,15 +583,18 @@ class MaskedMultiTaskLoss(nn.Module):
                 targets, "head_c", mask_c, batch_size, device
             )
 
-            if isinstance(self.criterion_c, (nn.BCEWithLogitsLoss, FocalLoss)):
-                y_c = self._match_binary_shape(
-                    logits_c, y_c.float(), "Head C"
-                )
-            else:
+            if self.head_c_criterion_name == "ce":
                 if logits_c.dim() != 2:
                     raise ValueError(
                         "CrossEntropyLoss requires Head C logits of shape "
                         f"(B, C), got {tuple(logits_c.shape)}."
+                    )
+                if self.ce_weight_c is not None and (
+                    self.ce_weight_c.numel() != logits_c.shape[1]
+                ):
+                    raise ValueError(
+                        f"ce_weight_c must contain {logits_c.shape[1]} values, "
+                        f"got {self.ce_weight_c.numel()}."
                     )
                 y_c = y_c.long()
                 if y_c.dim() > 1 and y_c.size(-1) == 1:
@@ -383,8 +604,20 @@ class MaskedMultiTaskLoss(nn.Module):
                         "CrossEntropyLoss requires Head C targets of shape "
                         f"(B,), got {tuple(y_c.shape)}."
                     )
+                loss_c = F.cross_entropy(
+                    logits_c, y_c, weight=self.ce_weight_c
+                )
+            else:
+                y_c = self._match_binary_shape(
+                    logits_c, y_c.float(), "Head C"
+                )
+                if self.head_c_criterion_name == "bce":
+                    loss_c = F.binary_cross_entropy_with_logits(
+                        logits_c, y_c, pos_weight=self.pos_weight_c
+                    )
+                else:
+                    loss_c = self.criterion_c(logits_c, y_c)
 
-            loss_c = self.criterion_c(logits_c, y_c)
             weighted_losses.append(
                 self.weights.get("head_c", 0.8) * loss_c
             )

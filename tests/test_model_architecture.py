@@ -11,6 +11,9 @@ Tests:
 import pytest
 import torch
 import torch.nn as nn
+import albumentations as A
+
+from src.data.transforms import get_train_transforms, get_val_transforms
 from src.models.multi_task_net import MultiTaskChestXrayNet
 from src.models.losses import MaskedMultiTaskLoss, FocalLoss
 from src.models.trainer import MultiTaskTrainer, multitask_collate_fn
@@ -165,3 +168,106 @@ def test_trainer_dryrun_one_step(dummy_model, tmp_path):
     assert metrics["loss_a"] > 0.0
     assert metrics["loss_b"] > 0.0
     assert metrics["loss_c"] > 0.0
+
+
+def _small_model(**overrides):
+    """Builds a compact DenseNet-121 model for fast CPU architecture checks."""
+    kwargs = {
+        "backbone_name": "densenet121",
+        "pretrained": False,
+        "img_size": 128,
+        "dropout_rate": 0.2,
+        "num_classes_a": 14,
+        "num_classes_b": 1,
+        "num_classes_c": 1,
+    }
+    kwargs.update(overrides)
+    return MultiTaskChestXrayNet(**kwargs)
+
+
+def test_parameter_free_feature_norm_preserves_state_dict():
+    """The intermediate norm must not add keys, keeping legacy checkpoints loadable."""
+    model = _small_model()
+
+    assert isinstance(model.feature_norm, nn.LayerNorm)
+    assert len(list(model.feature_norm.parameters())) == 0
+    assert len(list(model.feature_norm.buffers())) == 0
+    assert not any(
+        key.startswith("feature_norm") for key in model.state_dict().keys()
+    )
+
+    model.eval()
+    with torch.no_grad():
+        outputs = model(torch.randn(2, 3, 128, 128))
+
+    assert outputs["head_a"].shape == (2, 14)
+    assert torch.isfinite(outputs["head_a"]).all()
+
+
+def test_forward_single_head_selection():
+    """task_id must evaluate exactly one head and reject unknown selectors."""
+    model = _small_model().eval()
+    x = torch.randn(2, 3, 128, 128)
+
+    for selector, expected in (
+        ("head_a", "head_a"),
+        ("b", "head_b"),
+        (2, "head_c"),
+    ):
+        outputs = model(x, task_id=selector)
+        assert set(outputs) == {expected}
+
+    with pytest.raises(ValueError, match="task_id"):
+        model(x, task_id="head_d")
+
+
+def test_three_class_head_c_softmax():
+    """A 3-class Head C must return a normalized Softmax distribution."""
+    model = _small_model(num_classes_c=3).eval()
+
+    with torch.no_grad():
+        probs = model.predict(torch.randn(2, 3, 128, 128))
+
+    assert probs["head_c"].shape == (2, 3)
+    assert torch.allclose(
+        probs["head_c"].sum(dim=-1), torch.ones(2), atol=1e-5
+    )
+
+
+def test_head_norm_variants_and_validation():
+    """LayerNorm, BatchNorm, and none must all preserve finite logits."""
+    for kind in ("layernorm", "batchnorm", "none"):
+        model = _small_model(head_norm=kind).eval()
+        with torch.no_grad():
+            outputs = model(torch.randn(2, 3, 128, 128))
+        assert torch.isfinite(outputs["head_b"]).all()
+
+    with pytest.raises(ValueError, match="head_norm"):
+        _small_model(head_norm="dropout")
+
+
+def test_train_transforms_forbid_vertical_flip():
+    """Thoracic anatomy must never be vertically flipped during training."""
+    train_tf = get_train_transforms(img_size=128)
+    train_names = [type(transform).__name__ for transform in train_tf.transforms]
+
+    assert "VerticalFlip" not in train_names
+    assert "HorizontalFlip" in train_names
+    assert "CLAHE" in train_names
+
+    affine = next(
+        transform
+        for transform in train_tf.transforms
+        if isinstance(transform, A.Affine)
+    )
+    assert tuple(affine.rotate) == (-7.0, 7.0)
+    assert affine.scale["x"] == (0.96, 1.04)
+    assert affine.translate_percent["x"] == (-0.04, 0.04)
+
+    val_names = [
+        type(transform).__name__ for transform in get_val_transforms(img_size=128).transforms
+    ]
+    assert "VerticalFlip" not in val_names
+
+    transformed = train_tf(image=torch.zeros(192, 256, 3).numpy().astype("uint8"))
+    assert transformed["image"].shape == (3, 128, 128)

@@ -8,11 +8,48 @@ Shared Encoder Backbone with 3 independent clinical classification heads:
 
 Supports DenseNet-121 (default CheXNet baseline), ResNet-50, and Vision Transformer (ViT).
 Standard input resolution: 512x512.
+
+Feature projection (TASK-013):
+    GAP -> LayerNorm/BatchNorm -> Dropout(p=0.2) -> task-specific Linear head.
+The normalization layer is deliberately parameter-free (``elementwise_affine=False``):
+an affine transform placed before a linear head is mathematically absorbable into
+that head, while keeping the state dict unchanged preserves compatibility with
+pre-existing ``best_model.pth`` checkpoints used by the FastAPI serving layer.
 """
-from typing import Dict, Optional, Tuple, Any
+from typing import Dict, Optional, Union
 import torch
 import torch.nn as nn
 from src.models.backbones import build_backbone
+
+
+_TASK_ID_ALIASES = {
+    0: "head_a",
+    1: "head_b",
+    2: "head_c",
+    "head_a": "head_a",
+    "head_b": "head_b",
+    "head_c": "head_c",
+    "a": "head_a",
+    "b": "head_b",
+    "c": "head_c",
+}
+
+
+def _build_head_norm(kind: str, feature_dim: int) -> nn.Module:
+    """Builds the parameter-free intermediate normalization layer."""
+    normalized = str(kind).strip().lower()
+    if normalized in {"layernorm", "layer_norm", "ln"}:
+        return nn.LayerNorm(feature_dim, elementwise_affine=False)
+    if normalized in {"batchnorm", "batch_norm", "bn"}:
+        return nn.BatchNorm1d(
+            feature_dim, affine=False, track_running_stats=False
+        )
+    if normalized in {"none", "identity"}:
+        return nn.Identity()
+    raise ValueError(
+        "head_norm must be 'layernorm', 'batchnorm', or 'none', got "
+        f"{kind!r}."
+    )
 
 
 class MultiTaskChestXrayNet(nn.Module):
@@ -24,11 +61,13 @@ class MultiTaskChestXrayNet(nn.Module):
               │
         Shared Backbone (DenseNet-121 / ResNet-50 / ViT)
               │
-        Feature Vector z (B, feature_dim) [GAP + Dropout(0.2)]
+        Feature Vector z (B, feature_dim) [GAP]
+              │
+        LayerNorm / BatchNorm (parameter-free) + Dropout(0.2)
          ┌────┼────┐
          │    │    │
        HeadA HeadB HeadC
-       (14)  (1)   (1)
+       (14)  (1)   (1 or 3)
     """
 
     def __init__(
@@ -40,6 +79,7 @@ class MultiTaskChestXrayNet(nn.Module):
         num_classes_a: int = 14,
         num_classes_b: int = 1,
         num_classes_c: int = 1,
+        head_norm: str = "layernorm",
     ):
         super().__init__()
         self.backbone_name = backbone_name.lower()
@@ -55,6 +95,8 @@ class MultiTaskChestXrayNet(nn.Module):
             img_size=img_size,
         )
 
+        self.head_norm_name = str(head_norm).strip().lower()
+        self.feature_norm = _build_head_norm(head_norm, self.feature_dim)
         self.dropout = nn.Dropout(p=dropout_rate)
 
         # 3 Independent Clinical Classification Heads
@@ -72,30 +114,42 @@ class MultiTaskChestXrayNet(nn.Module):
             features = torch.flatten(features, 1)
         return features
 
+    def projection(self, x: torch.Tensor) -> torch.Tensor:
+        """Returns the shared normalized + dropped-out feature representation."""
+        z = self.extract_features(x)
+        z = self.feature_norm(z)
+        return self.dropout(z)
+
     def forward(
         self,
         x: torch.Tensor,
-        task_id: Optional[str] = None
+        task_id: Optional[Union[str, int]] = None,
     ) -> Dict[str, torch.Tensor]:
         """
         Forward pass returning raw logits dictionary for numerical stability.
 
         Args:
             x: Input tensor of shape (B, 3, H, W).
-            task_id: Optional filter ('head_a', 'head_b', 'head_c'). If None, computes all 3.
+            task_id: Optional head selector ('head_a'/'head_b'/'head_c', 'a'/'b'/'c',
+                or 0/1/2). When given, only that head is evaluated to save FLOPs;
+                when None, all three heads are computed.
 
         Returns:
             Dictionary with keys 'head_a', 'head_b', 'head_c' containing raw logits.
-        """
-        z = self.extract_features(x)
-        z = self.dropout(z)
 
-        if task_id == "head_a":
-            return {"head_a": self.head_a(z)}
-        elif task_id == "head_b":
-            return {"head_b": self.head_b(z)}
-        elif task_id == "head_c":
-            return {"head_c": self.head_c(z)}
+        Raises:
+            ValueError: If ``task_id`` is not a recognized head selector.
+        """
+        z = self.projection(x)
+
+        if task_id is not None:
+            head_key = _TASK_ID_ALIASES.get(task_id)
+            if head_key is None:
+                raise ValueError(
+                    f"Unknown task_id {task_id!r}; expected one of "
+                    f"{sorted(_TASK_ID_ALIASES, key=str)!r}."
+                )
+            return {head_key: getattr(self, head_key)(z)}
 
         return {
             "head_a": self.head_a(z),

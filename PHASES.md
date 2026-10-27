@@ -170,6 +170,17 @@
 - **DoD**: Tích hợp hoàn chỉnh vào hàm mất mát đa nhiệm `MaskedMultiTaskLoss`, kiểm thử gradient độc lập pass 100%.
 - **Agent**: `ModelArchitectAgent`
 
+### [x] Task 4.1b: Tối Ưu Hóa Logic Toán Học & Mô Hình Đa Nhiệm Lồng Ngực (TASK-013) (COMPLETED & AUDITED)
+- **Mô tả**: Phối hợp Two-Tier Dual-Agent (Thiết kế bởi Antigravity Lead Architect, thực thi bởi CommandCode Go DeepSeek Engine):
+  - `src/models/losses.py`: `FocalLoss` nhận `pos_weight` và `alpha` động theo từng lớp (xử lý nhãn hiếm Hernia 0.2% / Infiltration 17%); bổ sung `AsymmetricLoss` (ASL: $\gamma_-=4.0, \gamma_+=1.0, clip=0.05$) triệt tiêu easy negatives; `MaskedMultiTaskLoss` hỗ trợ Head A `bce|focal|asl` và Head C `bce|ce|focal|asl`; toàn bộ class weights đăng ký dạng module buffer; bảo đảm Zero Gradient Leakage tuyệt đối.
+  - `src/models/multi_task_net.py`: Bổ sung LayerNorm parameter-free (`elementwise_affine=False`) giữ nguyên 100% khả năng nạp strict checkpoint cũ; `forward(x, task_id=...)` hỗ trợ tính toán chọn lọc head để tiết kiệm FLOPs; hỗ trợ Head C 3-class Softmax.
+  - `src/data/transforms.py`: Thiết lập biên độ biến đổi giải phẫu an toàn (xoay $\pm 7^\circ$, scale 0.96–1.04, translate 4%, CLAHE); cấm tuyệt đối lật dọc (`RandomVerticalFlip`).
+  - `kaggle/train_multitask_kaggle.py`: Kịch bản huấn luyện tối ưu hóa Kaggle GPU với AMP, Cosine Annealing, Early Stopping và hiệu chuẩn ngưỡng Youden's J.
+  - `src/explainability/grad_cam.py`: Chuẩn hóa giảm chiều 4D cho Grad-CAM++ bậc cao (`dim=(2, 3)`).
+- **Deliverable**: `src/models/losses.py`, `src/models/multi_task_net.py`, `src/data/transforms.py`, `kaggle/train_multitask_kaggle.py`, `tests/test_loss_functions.py`, `tests/test_model_architecture.py`.
+- **DoD**: 114/114 unit tests đạt 100% PASS trên `scripts/verify.ps1`, Ruff PASS, Compileall PASS.
+- **Agent**: `CommandCode Go (DeepSeek Engine)` & `Antigravity (Gatekeeper Audit)`
+
 ### [x] Task 4.2: Tinh chỉnh Mô hình theo Chiến lược 2 Giai đoạn (Two-Stage Fine-tuning) (COMPLETED & VERIFIED)
 - **Mô tả**: Thiết lập quy trình 2 giai đoạn: Giai đoạn 1 (Warmup): Đóng băng backbone, train 3 heads với $lr = 10^{-3}$; Giai đoạn 2 (Joint Fine-tuning): Mở khóa toàn bộ mạng, fine-tune với vi sai learning rate ($10^{-5}$ cho backbone và $10^{-4}$ cho heads).
 - **Deliverable**: Tích hợp trong `src/models/trainer.py` và `notebooks/02_multitask_baseline_training.ipynb`.

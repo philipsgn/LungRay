@@ -6,9 +6,11 @@ Defines clinically safe transformations using Albumentations.
 Rules & Inviolable Constraints:
 - Mandatory input spatial resolution: 512x512.
 - Interpolation: cv2.INTER_AREA for downsampling.
-- STRICTLY PROHIBITED: Vertical flip (violates thoracic anatomical gravity/structure).
-- Allowed augmentations: Horizontal flip (heart position accounted for in symmetric pathologies),
-  subtle rotation (+-10 degrees), subtle scaling (+-5%), subtle brightness/contrast.
+- STRICTLY PROHIBITED: Vertical flip (violates thoracic anatomical gravity/structure:
+  lung apices always superior, diaphragmatic domes always inferior).
+- Allowed augmentations: Horizontal flip, subtle rotation (+-7 degrees simulating a
+  supine/portable cassette tilt), subtle scale (0.96-1.04) and translation (4%),
+  subtle brightness/contrast, and CLAHE for lung-field contrast.
 - API compatibility: Albumentations 1.3.x through 2.x (no deprecated ``value=`` arguments).
 """
 import inspect
@@ -21,6 +23,11 @@ from albumentations.pytorch import ToTensorV2
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
+
+# Clinically safe geometric envelope (TASK-013).
+MAX_ROTATION_DEGREES = 7.0
+SCALE_RANGE = (0.96, 1.04)
+TRANSLATE_PERCENT = 0.04
 
 
 def _resolve_size(img_size: int = 512, image_size: Optional[int] = None) -> int:
@@ -35,9 +42,9 @@ def _affine_kwargs() -> dict:
     """Returns border-mode kwargs compatible with Albumentations 1.x and 2.x."""
     params = inspect.signature(A.Affine.__init__).parameters
     kwargs = {
-        "translate_percent": (-0.05, 0.05),
-        "scale": (0.95, 1.05),
-        "rotate": (-10, 10),
+        "translate_percent": (-TRANSLATE_PERCENT, TRANSLATE_PERCENT),
+        "scale": SCALE_RANGE,
+        "rotate": (-MAX_ROTATION_DEGREES, MAX_ROTATION_DEGREES),
         "p": 0.5,
     }
     if "border_mode" in params:
@@ -57,7 +64,7 @@ def get_train_transforms(
 
     - Medical Letterboxing: Preserves thoracic anatomical aspect ratio without distortion.
     - CLAHE: Balances contrast distribution across multi-center imaging machines.
-    - Safe Affine: Subtle +-10 deg rotation, +-5% shift/scale with constant border.
+    - Safe Affine: Subtle +-7 deg rotation, 0.96-1.04 scale, 4% translation, constant border.
     - STRICTLY PROHIBITED: Vertical flip (violates thoracic gravity & organ topology).
 
     Args:
