@@ -18,6 +18,21 @@ if (Test-Path $py310) {
     $pyExe = $py310
 }
 
+# Automatically free ports 3000 and 8000 from stale zombie instances
+$stalePorts = @(3000, 8000)
+foreach ($port in $stalePorts) {
+    $connections = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+    if ($connections) {
+        foreach ($conn in $connections) {
+            $procId = $conn.OwningProcess
+            if ($procId -gt 0 -and $procId -ne $PID) {
+                Write-Host "[INIT] Freeing occupied port $port (stopping stale process $procId)..." -ForegroundColor Yellow
+                Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+}
+
 Write-Host "[1/3] Starting FastAPI Backend on http://localhost:8000..." -ForegroundColor Green
 $BackendJob = Start-Process powershell -WorkingDirectory $WorkspaceRoot -ArgumentList "-NoExit", "-Command", "Set-Location -LiteralPath '$WorkspaceRoot'; Write-Host '--- LungRay FastAPI Backend (Port 8000) ---' -ForegroundColor Green; & '$pyExe' -m uvicorn app.backend.main:app --host 127.0.0.1 --port 8000 --reload" -PassThru
 
