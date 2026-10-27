@@ -2,5 +2,5 @@
 $ErrorActionPreference = "Stop"
 $scriptPath = Join-Path $PSScriptRoot "verify.py"
 
-python $scriptPath
+python "$scriptPath"
 exit $LASTEXITCODE
