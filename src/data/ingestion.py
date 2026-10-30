@@ -454,9 +454,9 @@ def make_patient_stratified_split(
     if len(train_patients) == 0:
         return df
 
+    train_frame = df.loc[train_mask]
     patient_labels = (
-        df.loc[train_mask]
-        .groupby(patient_col)[label_col]
+        train_frame.groupby(patient_col)[label_col]
         .max()
         .reindex(train_patients)
         .fillna(0)
@@ -468,12 +468,40 @@ def make_patient_stratified_split(
 
     val_patients: List[str] = []
     if n_val > 0:
+        stratify_labels = patient_labels.to_numpy()
+        if "data_source" in train_frame.columns:
+            patient_sources = (
+                train_frame.groupby(patient_col)["data_source"]
+                .agg(lambda values: values.astype(str).mode().iloc[0])
+                .reindex(train_patients)
+            )
+            source_label_strata = (
+                patient_sources.astype(str) + "::" + patient_labels.astype(str)
+            )
+            source_counts = source_label_strata.value_counts()
+            n_train = len(train_patients) - n_val
+            if (
+                not source_counts.empty
+                and source_counts.min() >= 2
+                and n_val >= len(source_counts)
+                and n_train >= len(source_counts)
+            ):
+                stratify_labels = source_label_strata.to_numpy()
+            else:
+                source_counts = patient_sources.value_counts()
+                if (
+                    not source_counts.empty
+                    and source_counts.min() >= 2
+                    and n_val >= len(source_counts)
+                    and n_train >= len(source_counts)
+                ):
+                    stratify_labels = patient_sources.to_numpy()
         try:
             train_pids, val_pids = train_test_split(
                 patient_labels.index.to_numpy(),
                 test_size=n_val,
                 random_state=seed,
-                stratify=patient_labels.to_numpy(),
+                stratify=stratify_labels,
             )
             val_patients = list(val_pids)
         except ValueError:
