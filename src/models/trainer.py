@@ -104,6 +104,13 @@ class MultiTaskTrainer:
         Executes a single forward-backward optimization step.
         """
         self.model.train()
+        # Frozen-backbone fine-tuning stages must also freeze BatchNorm
+        # running statistics; requires_grad=False alone does not do that.
+        backbone = getattr(self.model, "backbone", None)
+        if backbone is not None and not any(
+            parameter.requires_grad for parameter in backbone.parameters()
+        ):
+            backbone.eval()
         images = batch["images"].to(self.device)
         task_ids = batch["task_ids"].to(self.device)
         targets = batch["labels"]
@@ -459,6 +466,9 @@ class MultiTaskTrainer:
                 **val_metrics,
                 "lr": float(self.optimizer.param_groups[0]["lr"]),
             }
+            for group_index, param_group in enumerate(self.optimizer.param_groups):
+                group_name = str(param_group.get("name", f"group_{group_index}"))
+                record[f"lr_{group_name}"] = float(param_group["lr"])
             self.history.append(record)
             pd.DataFrame(self.history).to_csv(history_path, index=False)
 
