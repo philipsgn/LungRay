@@ -755,11 +755,18 @@
                             <td>1,783.9 ms</td>
                             <td>0.8640</td>
                         </tr>
+                        <tr style="background: rgba(4, 120, 87, 0.06); font-style: italic;">
+                            <td style="color: var(--accent-emerald);">Mô Hình 05 (In-Training Masking)</td>
+                            <td>6.97 M</td>
+                            <td>26.6 MB</td>
+                            <td>685.2 ms</td>
+                            <td>0.8592*</td>
+                        </tr>
                     </tbody>
                 </table>
 
                 <div class="academic-callout" style="font-size: 0.78rem; line-height: 1.45; color: var(--text-secondary); margin: 0;">
-                    <strong>Lý Luận Lựa Chọn Kỹ Thuật:</strong> DenseNet-121 đạt hiệu suất tham số cao nhất: AUROC đạt 0.8538 với chỉ 6.97 triệu tham số (nhẹ hơn ViT-B/16 tới 12.4 lần). Kích thước tệp 26.6MB cho phép chạy trực tiếp trên máy vi tính thông thường của bệnh viện tuyến huyện mà không cần card đồ họa đắt tiền.
+                    <strong>Lý Luận Lựa Chọn Kỹ Thuật & Lộ Trình Nghiên Cứu:</strong> DenseNet-121 đạt hiệu suất tham số cao nhất: AUROC đạt 0.8538 với chỉ 6.97 triệu tham số (nhẹ hơn ViT-B/16 tới 12.4 lần), tối ưu vận hành máy trạm tuyến huyện. Hệ thống đã mở rộng sẵn sàng hai kịch bản nâng cao: <em>Notebook 04</em> (Đột phá tự chú ý ViT-B/16 cho trung tâm y tế lớn) và <em>Notebook 05</em> (Anatomical In-Training Masking triệt tiêu shortcut learning từ nguồn, đưa In-Lung Activation đạt 92.45% ngay trong quá trình lan truyền ngược).
                 </div>
             </div>
         </div>

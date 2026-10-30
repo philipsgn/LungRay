@@ -390,12 +390,31 @@ def _read_covidx_manifest(txt_path: str, split_name: str) -> List[Dict[str, obje
             parts = line.strip().split()
             if len(parts) < 2 or parts[0].startswith("#"):
                 continue
-            if len(parts) >= 3:
+            data_source = "covidx_cxr4"
+            if len(parts) >= 4:
+                patient_id, raw_filename, raw_class, data_source = parts[0], parts[1], parts[2], parts[3]
+            elif len(parts) >= 3:
                 patient_id, raw_filename, raw_class = parts[0], parts[1], parts[2]
             else:
                 raw_filename, raw_class = parts[0], parts[1]
                 patient_id = os.path.splitext(os.path.basename(raw_filename))[0]
+
             filename = os.path.basename(raw_filename)
+            if data_source == "covidx_cxr4":
+                lower_name = filename.lower()
+                if "bimcv" in lower_name or "covid-19-ar" in lower_name:
+                    data_source = "bimcv"
+                elif "sirm" in lower_name:
+                    data_source = "sirm"
+                elif "cohen" in lower_name or "1-s2.0" in lower_name:
+                    data_source = "cohen"
+                elif "fig1" in lower_name:
+                    data_source = "fig1"
+                elif "ricord" in lower_name or "midrc" in lower_name:
+                    data_source = "ricord"
+                elif any(k in lower_name for k in ["pneumonia", "normal", "bacteria", "virus"]):
+                    data_source = "rsna"
+
             records.append(
                 {
                     "patient_id": str(patient_id),
@@ -403,6 +422,7 @@ def _read_covidx_manifest(txt_path: str, split_name: str) -> List[Dict[str, obje
                     "relative_path": raw_filename,
                     "Image Index": filename,
                     "label": _parse_covidx_class(raw_class),
+                    "data_source": str(data_source),
                     "split": split_name,
                 }
             )

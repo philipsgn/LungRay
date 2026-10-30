@@ -13,9 +13,6 @@ import torch
 import torch.nn as nn
 import timm
 
-# Set a safe default socket timeout (30s) to prevent indefinite hanging when internet is blocked or unstable
-socket.setdefaulttimeout(30.0)
-
 
 def _find_local_weights(model_name: str) -> Optional[str]:
     """
@@ -124,7 +121,13 @@ def build_backbone(
                 return m
             
             # Normal creation via timm (downloads if pretrained_flag is True)
-            return timm.create_model(arch_name, pretrained=pretrained_flag, num_classes=0)
+            old_timeout = socket.getdefaulttimeout()
+            try:
+                if pretrained_flag:
+                    socket.setdefaulttimeout(20.0)
+                return timm.create_model(arch_name, pretrained=pretrained_flag, num_classes=0)
+            finally:
+                socket.setdefaulttimeout(old_timeout)
         except Exception as err:
             if pretrained_flag:
                 print(f"[!] Warning: Failed to load pretrained weights for '{arch_name}' via timm.")

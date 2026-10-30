@@ -42,6 +42,18 @@
 - **Trả lời**:
   - Dựa trên quy luật cân bằng thông tin và chống "Đói tác vụ" (Task Starvation): NIH có 14 bệnh đa nhãn cực kỳ phức tạp cần dung lượng gradient lớn nhất (60%). COVIDx cần 25% để học vững biểu diễn viêm phổi do virus. TB là bài toán sàng lọc nhị phân có độ tương phản cao chỉ cần 15% là đủ hội tụ tối đa (thực tế AUROC đạt 1.0000).
 
+### Câu 6b: Tại sao Head B (Lao phổi) lại đạt AUROC tuyệt đối 1.0000? Liệu có rò rỉ dữ liệu hay mô hình học "quá dễ" không?
+- **Trả lời**:
+  - Nhóm khẳng định quy trình phân chia dữ liệu hoàn toàn không có Data Leakage ($Train \cap Test = \emptyset$).
+  - Điểm số 1.0000 phản ánh đặc tính của bộ dữ liệu Tuberculosis (TB) Database: Ảnh X-quang hang lao, thâm nhiễm đỉnh phổi trong tập dữ liệu này có độ phân tách hình thái rất rõ rệt so với ảnh đối chứng bình thường.
+  - Tuy nhiên, dưới góc nhìn nghiên cứu nghiêm túc, nhóm **thừa nhận đây là dấu hiệu của domain/dataset bias**. Để đưa vào lâm sàng, Head B cần được kiểm thử ngoại viện (External Validation) trên các ca lao tiềm ẩn hoặc đồng nhiễm HIV/Lao phức tạp hơn.
+
+### Câu 6c: Tại sao Head C lại cấu hình nhị phân (`num_classes_c=1`) với AUROC 0.7342 thay vì phân loại 3 lớp COVIDx?
+- **Trả lời**:
+  - Trong thực tế cấp cứu hô hấp (Triage Screening), mục tiêu cốt lõi của bác sĩ là nhanh chóng cách ly và phân luồng ca nghi nhiễm COVID-19 khỏi các bệnh nhân khác.
+  - Nhóm đã gom nhóm Normal và Other Pneumonia thành nhóm Không-COVID, cấu hình Head C dùng Sigmoid nhị phân nhằm tối ưu hóa độ nhạy phát hiện bệnh (Sensitivity) và đơn giản hóa ngưỡng cắt lâm sàng.
+  - Mức AUROC 0.7342 được xếp vào nhóm *Conditional Pass*: Đủ điều kiện sàng lọc cảnh báo sớm nhưng cần bác sĩ thẩm định lại qua RT-PCR hoặc CT ngực.
+
 ### Câu 7: Nhóm đã giải quyết vấn đề mất cân bằng lớp cực hạn trên Head A (Hernia chiếm 0.2%, Fibrosis chiếm 1.5%) như thế nào?
 - **Trả lời**:
   - Nhóm tích hợp `FocalLoss` ($\alpha=0.25, \gamma=2.0$): Tự động giảm trọng số của các mẫu âm tính dễ phân loại và tập trung gradient vào các ca bệnh hiếm khó phát hiện.
@@ -115,7 +127,7 @@
 ### Câu 19: Quy trình phối hợp Dual-Agent (Antigravity & CommandCode Go) trong dự án này đã đem lại giá trị gì?
 - **Trả lời**:
   - Antigravity đóng vai trò Chief Architect: Thiết kế kiến trúc tổng thể, hoạch định logic, xây dựng kịch bản kiểm thử và giám sát tiêu chuẩn khoa học.
-  - CommandCode Go đóng vai trò Tactical Engine: Viết mã nguồn kỹ thuật chuẩn xác, xử lý các hàm tối ưu hóa và đảm bảo 92/92 unit tests pass 100%. Mô hình giúp dự án đạt chất lượng Enterprise trong thời gian kỷ lục.
+  - CommandCode Go đóng vai trò Tactical Engine: Viết mã nguồn kỹ thuật chuẩn xác, xử lý các hàm tối ưu hóa và đảm bảo 114/114 unit tests pass 100%. Mô hình giúp dự án đạt chất lượng Enterprise trong thời gian kỷ lục.
 
 ### Câu 20: Hướng phát triển tiếp theo của đề tài để đưa vào ứng dụng thực tế tại bệnh viện Việt Nam là gì?
 - **Trả lời**:
