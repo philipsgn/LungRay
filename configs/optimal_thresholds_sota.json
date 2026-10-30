@@ -1,24 +1,28 @@
 {
+  "calibration_split": "validation",
+  "method": "youden_j",
   "head_a_nih_14": {
-    "Atelectasis": 0.4,
-    "Cardiomegaly": 0.41,
-    "Effusion": 0.42,
-    "Infiltration": 0.43,
-    "Mass": 0.44,
-    "Nodule": 0.45,
-    "Pneumonia": 0.46,
-    "Pneumothorax": 0.47,
-    "Consolidation": 0.48,
-    "Edema": 0.49,
-    "Emphysema": 0.5,
-    "Fibrosis": 0.51,
-    "Pleural_Thickening": 0.52,
-    "Hernia": 0.53
+    "Atelectasis": 0.4658,
+    "Cardiomegaly": 0.3509,
+    "Effusion": 0.4844,
+    "Infiltration": 0.5245,
+    "Mass": 0.4292,
+    "Nodule": 0.4394,
+    "Pneumonia": 0.3363,
+    "Pneumothorax": 0.4228,
+    "Consolidation": 0.38,
+    "Edema": 0.3473,
+    "Emphysema": 0.3519,
+    "Fibrosis": 0.32,
+    "Pleural_Thickening": 0.3908,
+    "Hernia": 0.1803
   },
   "head_b_tb": {
-    "threshold": 0.5
+    "threshold": 0.0229,
+    "youden_j": 1.0
   },
   "head_c_covid": {
-    "threshold": 0.45
+    "threshold": 0.4893,
+    "youden_j": 0.9305
   }
 }

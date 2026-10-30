@@ -1,35 +1,37 @@
 {
-  "version": "1.1.0",
+  "version": "2.0.0-sota",
   "method": "youden_j",
-  "updated_at": "2026-10-22T00:00:00Z",
-  "description": "Optimal decision thresholds for LungRay Multi-Task CADx (Phase 4 / Gate 3). Head A thresholds are per-pathology; Head B and Head C use a single binary threshold.",
-  "default_fallback_threshold": 0.50,
+  "updated_at": "2026-10-30T23:05:00Z",
+  "description": "SOTA decision thresholds for LungRay Multi-Task CADx (Asymmetric Loss + Two-stage Fine-tuning on Kaggle GPU).",
+  "default_fallback_threshold": 0.5,
   "head_a_nih_14": {
-    "Atelectasis": 0.35,
-    "Cardiomegaly": 0.42,
-    "Effusion": 0.38,
-    "Infiltration": 0.32,
-    "Mass": 0.28,
-    "Nodule": 0.26,
-    "Pneumonia": 0.22,
-    "Pneumothorax": 0.30,
-    "Consolidation": 0.31,
-    "Edema": 0.36,
-    "Emphysema": 0.45,
-    "Fibrosis": 0.24,
-    "Pleural_Thickening": 0.28,
-    "Hernia": 0.15
+    "Atelectasis": 0.4658,
+    "Cardiomegaly": 0.3509,
+    "Effusion": 0.4844,
+    "Infiltration": 0.5245,
+    "Mass": 0.4292,
+    "Nodule": 0.4394,
+    "Pneumonia": 0.3363,
+    "Pneumothorax": 0.4228,
+    "Consolidation": 0.38,
+    "Edema": 0.3473,
+    "Emphysema": 0.3519,
+    "Fibrosis": 0.32,
+    "Pleural_Thickening": 0.3908,
+    "Hernia": 0.1803
   },
   "head_b_tb": {
-    "threshold": 0.50,
+    "threshold": 0.0229,
     "positive_class": "Tuberculosis",
-    "negative_class": "Normal"
+    "negative_class": "Normal",
+    "youden_j": 1.0
   },
   "head_c_covid": {
-    "threshold": 0.50,
-    "baseline_empirical_threshold": 0.9930,
+    "threshold": 0.4893,
+    "baseline_empirical_threshold": 0.993,
     "pos_weight_c_recommended": 0.185,
     "positive_class": "COVID-19",
-    "negative_class": "Non-COVID/Normal"
+    "negative_class": "Non-COVID/Normal",
+    "youden_j": 0.9305
   }
 }
