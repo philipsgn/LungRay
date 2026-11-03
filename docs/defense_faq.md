@@ -169,3 +169,16 @@
 - **Trả lời**:
   - Trong thực hành lâm sàng, **"Không gây hại" (Primum non nocere)** là nguyên lý đạo đức tối thượng. Một hệ thống AI cố gắng trả xác suất cho một bức ảnh không hợp lệ (ảnh mờ, ảnh chụp sai tư thế hoặc ảnh ngoài lồng ngực) có nguy cơ dẫn tới chẩn đoán sai lầm nghiêm trọng (như bỏ sót tổn thương hoặc chỉ định can thiệp xâm lấn không cần thiết).
   - Cơ chế **Fail-Safe REJECT** thể hiện độ chín muồi về mặt công nghệ: AI biết ranh giới năng lực của mình, dũng cảm từ chối khi dữ liệu đầu vào không đủ độ tin cậy, và hướng dẫn nhân viên y tế chụp lại phim chuẩn. Đây chính là tiêu chuẩn phân biệt giữa một mô hình đồ án thông thường và một hệ thống y tế chuẩn mực Enterprise.
+
+### Câu 26: Tại sao mô hình không được khuyến nghị sử dụng trực tiếp cho bệnh nhi (Pediatric CXR) và hệ thống xử lý tình huống này như thế nào?
+- **Trả lời**:
+  - **Cơ sở giải phẫu & Sinh lý lồng ngực**: Giải phẫu lồng ngực trẻ nhỏ khác biệt cơ bản so with người lớn. Tỷ lệ tim/lồng ngực sinh lý ở trẻ nhỏ thường $> 0.55$ (hoàn toàn bình thường nhưng sẽ bị mô hình người lớn nhận diện nhầm là Bóng tim to / Cardiomegaly); xương sườn nằm ngang, góc sườn hoành nông, mô kẽ dày và thường có dị vật dây truyền/ống thở nhi khoa.
+  - **Phạm vi chỉ định lâm sàng**: 100% dữ liệu huấn luyện của LungRay (NIH 112K, COVIDx, Shenzhen) là phim người lớn ($\ge 18$ tuổi). Do đó, đề tài tuyên bố minh bạch: **Hệ thống chỉ định sử dụng độc quyền cho phim ngực thẳng PA người lớn (Adult Frontal CXRs)**.
+  - **Cơ chế phản ứng an toàn của hệ thống**: Khi tiếp nhận phim trẻ em, hiện tượng lệch pha nhân khẩu (Age Domain Shift) khiến tầng tích chập bị bão hòa năng lượng; nếu ép nhãn sai (như ép tìm COVID-19 trên ca viêm phổi vi khuẩn), Grad-CAM sẽ kích hoạt ngoài phổi (vùng xương đòn/cổ). Hệ thống lập tức phát hiện thông qua chỉ số kiểm toán phế trường $\text{In-lung ratio} < 80\%$ (báo động **`Audit FAIL`**) và kích hoạt cảnh báo OOD, ngăn chặn bác sĩ ra quyết định sai lầm.
+
+### Câu 27: Tại sao LungRay nâng cấp lên kiến trúc Multi-Scale Grad-CAM++ (fused DenseBlock3 32x32 + DenseBlock4 16x16) thay vì chỉ sử dụng tầng tích chập cuối cùng?
+- **Trả lời**:
+  - **Hạn chế của Grad-CAM một tầng đơn (Single-layer 16x16)**: Tầng tích chập cuối cùng `denseblock4` cho độ phân giải không gian rất thô ($16 \times 16$, tức mỗi ô pixel trên feature map tương ứng với diện tích thực $32 \times 32$ pixel trên ảnh gốc $512 \times 512$). Điều này khiến bản đồ nhiệt dễ bị loang rộng sang xương sườn và các mô giải phẫu lân cận.
+  - **Đột phá của Dung hợp Đa Tỷ lệ (Multi-Scale Fusion)**: Tầng `denseblock3` có độ phân giải $32 \times 32$ (gấp đôi độ mịn không gian), lưu giữ các đặc trưng ranh giới tổn thương sắc nét. Thuật toán `MultiScaleGradCAMPlusPlus` tính toán trọng số không gian phân tích độc lập cho cả hai tầng và dung hợp theo tỷ lệ chuẩn mực:
+    $$M_{\text{fused}} = 0.60 \cdot M_{\text{denseblock4}} + 0.40 \cdot \text{Resize}_{16 \to 32}(M_{\text{denseblock3}})$$
+  - **Hiệu quả thực tế**: Bản đồ nhiệt thu hẹp tiêu điểm, tăng độ tập trung vào ổ đông đặc phế nang, cho phép thuật toán trích xuất viền tổn thương **Iso-Contour** ôm khít vùng bệnh, trực tiếp cải thiện chỉ số Box-IoU định lượng trên cả hai tập đối chuẩn VinDr-CXR và RSNA Pneumonia.
