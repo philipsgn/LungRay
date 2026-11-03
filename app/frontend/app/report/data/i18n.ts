@@ -125,6 +125,8 @@ export interface I18nContent {
     tabConfusion: string;
     tabShortcut: string;
     tabOod: string;
+    tabArena: string;
+    tabFailSafe: string;
     leaderboardTitle: string;
     tableDisease: string;
     tableAuroc: string;
@@ -141,6 +143,15 @@ export interface I18nContent {
     oodTitle: string;
     oodDesc: string;
     retentionLabel: string;
+    arenaTitle: string;
+    arenaDesc: string;
+    failSafeTitle: string;
+    failSafeDesc: string;
+    tableModel: string;
+    tableParams: string;
+    tableLatency: string;
+    tableStatus: string;
+    tableClinicalRole: string;
   };
   footer: {
     copyright: string;
@@ -152,9 +163,9 @@ export interface I18nContent {
 export const I18N_DICTIONARY: Record<Language, I18nContent> = {
   en: {
     nav: {
-      backToPacs: "Back to PACS Viewer",
-      instituteName: "LungRay Healthcare AI Consortium",
-      reportTitle: "Clinical Monograph & System Verification Report",
+      backToPacs: "Workstation",
+      instituteName: "LungRay",
+      reportTitle: "Multi-Task Chest X-ray CADx",
       sectionNames: [
         "Clinical Context",
         "Problem Statement",
@@ -167,21 +178,21 @@ export const I18N_DICTIONARY: Record<Language, I18nContent> = {
       switchLanguage: "Language",
     },
     section0_hero: {
-      hudStatus: "Clinical Acceptance Grade: Production Ready (Gate 6 Approved)",
-      hudBadge: "Multi-Task CADx + WSOL Grounding",
-      mainTitle: "LungRay Interactive Data & Machine Learning Storytelling Experience",
+      hudStatus: "",
+      hudBadge: "",
+      mainTitle: "LungRay CADx & WSOL",
       subtitle:
-        "A unified 3-head deep learning architecture resolving clinical task fragmentation, spurious shortcut learning, and unverified visual heatmaps across 160,000+ multi-center chest radiographs.",
+        "Unified multi-task deep learning architecture evaluating 16 thoracic pathologies with quantitative anatomical attention grounding across 160,953 chest radiographs.",
       statAurocTitle: "0.8538",
       statAurocSub: "Composite Macro AUROC (0.4A + 0.3B + 0.3C)",
       statTbTitle: "1.0000",
-      statTbSub: "Active TB Screening AUROC",
+      statTbSub: "Active TB AUROC (Shenzhen Cohort)",
       statImagesTitle: "160,953",
       statImagesSub: "Multi-Center CXR Images",
       statLatencyTitle: "674 ms",
       statLatencySub: "Local CPU Inference Latency",
-      ctaExplore: "Launch Interactive Story &darr;",
-      ctaMethodology: "Launch PACS Viewer &rarr;",
+      ctaExplore: "Review Clinical Evidence &darr;",
+      ctaMethodology: "Launch PACS Diagnostic Viewer &rarr;",
     },
     section1_problem: {
       tag: "Clinical Problem Statement",
@@ -358,6 +369,8 @@ export const I18N_DICTIONARY: Record<Language, I18nContent> = {
       tabConfusion: "Head C Confusion Matrix",
       tabShortcut: "Shortcut Learning Audit",
       tabOod: "CheXpert OOD Generalization",
+      tabArena: "3-Model Architecture Arena",
+      tabFailSafe: "Fail-Safe OOD & Lockout",
       leaderboardTitle: "Macro AUROC: 0.8271 [0.8110 – 0.8432] across 14 Thoracic Diseases",
       tableDisease: "Pathology",
       tableAuroc: "LungRay AUROC",
@@ -377,19 +390,29 @@ export const I18N_DICTIONARY: Record<Language, I18nContent> = {
       oodDesc: "Zero-shot testing on an independent hospital without parameter updates.",
       retentionLabel:
         "Average Generalization Retention Rate: 94.75% (ΔAUC = +0.0447 ≤ 0.080 safety ceiling)",
+      arenaTitle: "Empirical Architecture Arena: Baseline vs SOTA ASL vs ViT-B/16",
+      arenaDesc:
+        "Comprehensive cross-architecture benchmark comparing accuracy, parameter efficiency, latency, and clinical deployment safety across 3 trained candidates.",
+      failSafeTitle: "Clinical Fail-Safe Layer & OOD Anomaly Rejection",
+      failSafeDesc:
+        "Dual-score safety gate (Helmholtz Free Energy + Shannon Entropy) with ICD-10 lockout preventing AI diagnostic hallucinations on anomalous radiographs.",
+      tableModel: "Architecture / Candidate",
+      tableParams: "Parameters & Footprint",
+      tableLatency: "Inference Latency",
+      tableStatus: "Production Decision",
+      tableClinicalRole: "Clinical Recommendation",
     },
     footer: {
-      copyright: "© 2026 LungRay Healthcare AI Research Consortium. All rights reserved.",
-      confidentiality:
-        "Pre-Clinical Validation & System Acceptance Monograph • Prepared for Defense Committee",
-      pageIndicator: "Interactive Section",
+      copyright: "© 2026 LungRay",
+      confidentiality: "Technical & Clinical Evaluation Report",
+      pageIndicator: "Section",
     },
   },
   vi: {
     nav: {
-      backToPacs: "Về Hệ Thống Đọc Phim PACS",
-      instituteName: "Viện Nghiên Cứu Trí Tuệ Nhân Tạo Y Tế LungRay",
-      reportTitle: "Báo Cáo Chuyên Khảo Lâm Sàng & Nghiệm Thu Hệ Thống",
+      backToPacs: "Trạm Đọc Phim",
+      instituteName: "LungRay",
+      reportTitle: "Phân Tích X-Quang Ngực Đa Nhiệm",
       sectionNames: [
         "Bối Cảnh Lâm Sàng",
         "Bối Cảnh Vấn Đề",
@@ -402,20 +425,20 @@ export const I18N_DICTIONARY: Record<Language, I18nContent> = {
       switchLanguage: "Ngôn ngữ",
     },
     section0_hero: {
-      hudStatus: "Trạng Thái Nghiệm Thu: Sẵn Sàng Vận Hành (Gate 6 Phê Duyệt)",
-      hudBadge: "Đa Nhiệm CADx + Định Vị WSOL",
-      mainTitle: "Trải Nghiệm Trực Quan Hóa Dữ Liệu & Học Máy Tương Tác LungRay",
+      hudStatus: "",
+      hudBadge: "",
+      mainTitle: "LungRay CADx & WSOL",
       subtitle:
-        "Kiến trúc học sâu 3 đầu hợp nhất giải quyết triệt để sự phân mảnh tác vụ, hiện tượng khai thác đặc trưng giả mạo và bản đồ nhiệt thiếu kiểm chứng trên hơn 160.000 phim X-quang đa trung tâm.",
+        "Hệ thống học sâu đa nhiệm đánh giá đồng thời 16 bệnh lý lồng ngực và định vị phế trường tổn thương trên 160.953 phim X-quang.",
       statAurocTitle: "0.8538",
       statAurocSub: "Điểm AUROC Đa Nhiệm Hợp Nhất (0.4A + 0.3B + 0.3C)",
       statTbTitle: "1.0000",
-      statTbSub: "AUROC Sàng Lọc Lao (TB)",
+      statTbSub: "AUROC Sàng Lọc Lao (Mẫu Shenzhen)",
       statImagesTitle: "160.953",
       statImagesSub: "Ảnh X-Quang Đa Trung Tâm",
       statLatencyTitle: "674 ms",
       statLatencySub: "Độ Trễ Suy Luận Trên CPU",
-      ctaExplore: "Khám Phá Dữ Liệu Tương Tác &darr;",
+      ctaExplore: "Xem Bằng Chứng Lâm Sàng &darr;",
       ctaMethodology: "Mở Trạm Đọc Phim PACS &rarr;",
     },
     section1_problem: {
@@ -593,6 +616,8 @@ export const I18N_DICTIONARY: Record<Language, I18nContent> = {
       tabConfusion: "Ma Trận Nhầm Lẫn Head C",
       tabShortcut: "Kiểm Toán Shortcut Learning",
       tabOod: "Khái Quát Hóa CheXpert OOD",
+      tabArena: "Đấu Trường Kiến Trúc 3 Mô Hình",
+      tabFailSafe: "Lớp Phòng Vệ Fail-Safe & OOD",
       leaderboardTitle: "Macro AUROC: 0.8271 [0.8110 – 0.8432] trên 14 Bệnh Lý Lồng Ngực",
       tableDisease: "Bệnh Lý",
       tableAuroc: "LungRay AUROC",
@@ -612,13 +637,22 @@ export const I18N_DICTIONARY: Record<Language, I18nContent> = {
       oodDesc: "Thử nghiệm ngoại suy không qua tinh chỉnh trọng số trên cơ sở y tế độc lập.",
       retentionLabel:
         "Tỷ Lệ Duy Trì Năng Lực Trung Bình: 94.75% (ΔAUC = +0.0447 ≤ ngưỡng an toàn 0.080)",
+      arenaTitle: "Đấu Trường Kiến Trúc Thực Nghiệm: Baseline vs SOTA ASL vs ViT-B/16",
+      arenaDesc:
+        "Đối chuẩn toàn diện 3 kiến trúc về độ chính xác, hiệu năng tham số, độ trễ và độ an toàn lâm sàng giữa 3 mô hình đã huấn luyện.",
+      failSafeTitle: "Lớp Phòng Vệ Lâm Sàng Fail-Safe & Từ Chối Dữ Liệu Bất Thường OOD",
+      failSafeDesc:
+        "Cổng an toàn 2 lớp (Năng Lượng Helmholtz + Entropy Shannon) kết hợp cơ chế khóa báo cáo ICD-10 triệt tiêu ảo tưởng chẩn đoán.",
+      tableModel: "Kiến Trúc / Ứng Viên",
+      tableParams: "Tham Số & Kích Thước",
+      tableLatency: "Độ Trễ Suy Luận",
+      tableStatus: "Quyết Định Triển Khai",
+      tableClinicalRole: "Khuyến Nghị Lâm Sàng",
     },
     footer: {
-      copyright:
-        "Bản quyền nghiên cứu © 2026 Viện Nghiên Cứu Trí Tuệ Nhân Tạo Y Tế LungRay. Đã đăng ký bản quyền.",
-      confidentiality:
-        "Chuyên Khảo Thẩm Định Tiền Lâm Sàng & Nghiệm Thu Hệ Thống • Tài Liệu Phục Vụ Hội Đồng Bảo Vệ",
-      pageIndicator: "Chương Tương Tác",
+      copyright: "© 2026 LungRay",
+      confidentiality: "Báo Cáo Đánh Giá Kỹ Thuật & Lâm Sàng",
+      pageIndicator: "Chương",
     },
   },
 };

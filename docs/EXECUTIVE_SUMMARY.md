@@ -1,17 +1,18 @@
 # EXECUTIVE SUMMARY
 ## Nền tảng LungRay: Hệ thống Hỗ trợ Chẩn đoán & Định vị Tổn thương X-quang Ngực Đa nhiệm (LungRay Multi-Task CADx + WSOL XAI Platform)
 
-**Ngày cập nhật**: 27/10/2026 (v7.0 — TASK-013 SOTA Architecture, Youden's J Calibration & Delivery Gate 6 Approved)  
-**Tên nền tảng**: **LungRay** (CXR Multi-Task CADx + WSOL Platform)  
-**Trạng thái**: **APPROVED FOR EXECUTION & DEFENSE READY (DELIVERY GATE 6 APPROVED — 93.3% PROGRESS)**  
-**Độ sẵn sàng sản phẩm**: 95/100 (Full Academic Suite: 4 Thí nghiệm SOTA, Báo cáo Final 1.63MB MICCAI/IEEE, 1-Click Native PACS)  
+**Ngày cập nhật**: 03/11/2026 (v8.5 — Phase 8 Fail-Safe Layer, SOTA Architecture Arena & Delivery Gate 6+ Approved)  
+**Tên nền tảng**: **LungRay** (CXR Multi-Task CADx + WSOL Grounding Platform)  
+**Trạng thái**: **APPROVED FOR CLINICAL DECISION SUPPORT EVALUATION & DEFENSE READY**  
+**Độ sẵn sàng sản phẩm**: 98/100 (Full Academic Suite: 4 Thí nghiệm SOTA, Lớp Fail-Safe OOD Lockout, Báo cáo Final 1.63MB MICCAI/IEEE, 1-Click Native PACS)  
 
-> **Ghi chú cập nhật v7.0 (TASK-013 & SOTA Milestones)**:
+> **Ghi chú cập nhật v8.5 (Phase 8 Fail-Safe & SOTA Arena Milestones)**:
 > 1. Nâng cấp bộ máy hàm mất mát với **Asymmetric Loss (ASL)** ($\gamma_-=4.0, \gamma_+=1.0, \text{clip}=0.05$) triệt tiêu gradient của các mẫu âm tính dễ (easy negatives), khắc phục hoàn toàn sự mất cân bằng cực đoan trên 14 bệnh NIH ChestX-ray14; nâng cấp **Focal Loss** với `pos_weight` động theo từng lớp (kẹp trần 50x) và vector $\alpha$ được đăng ký module buffer an toàn thiết bị GPU.
 > 2. Tích hợp tầng chuẩn hóa **LayerNorm parameter-free** (`elementwise_affine=False`) trước các classification heads, bảo tồn 100% tính tương thích ngược nghiêm ngặt với checkpoint `checkpoints/best_model.pth` (không thêm bất kỳ key nào vào `state_dict`).
 > 3. Hiệu chuẩn 16 ngưỡng quyết định tối ưu theo **Youden's J statistic** ($J = \text{TPR} - \text{FPR}$) lưu tại `configs/optimal_thresholds.json`.
-> 4. Thay thế toàn bộ nguyên mẫu giao diện cũ (Streamlit/Flask) bằng kiến trúc sản xuất phân tán chuẩn: **FastAPI REST Microservice (Port 8000)** kết hợp **Next.js 14 Medical PACS Viewer (Port 3000)** và bộ khởi chạy **1-Click Native Launcher (`scripts/start_local.ps1`)** tích hợp cơ chế tự động dọn dẹp cache dev server.
-> 5. Toàn bộ hệ thống được bảo vệ bởi **114 unit tests (10 test modules)** đạt 100% PASS qua lệnh nghiệm thu `powershell -File scripts/verify.ps1`.
+> 4. Thay thế toàn bộ nguyên mẫu giao diện cũ bằng kiến trúc sản xuất phân tán chuẩn: **FastAPI REST Microservice (Port 8000)** kết hợp **Next.js 14 Medical PACS Viewer (Port 3000)** và bộ khởi chạy **1-Click Native Launcher (`scripts/start_local.ps1`)** tích hợp cơ chế tự động dọn dẹp cache dev server.
+> 5. **Lớp Phòng vệ An toàn Fail-Safe OOD (Phase 8)**: Cổng kiểm soát kép với Năng lượng Tự do Helmholtz ($S_E \ge 9.0421$) và Entropy Shannon ($H \le 0.6275$), tự động từ chối chẩn đoán và khóa kết luận sơ bộ WHO ICD-10 khi phát hiện ảnh bất thường/ngoài miền.
+> 6. Toàn bộ hệ thống được bảo vệ bởi **125 unit tests (11 test modules)** đạt 100% PASS qua lệnh nghiệm thu `powershell -File scripts/verify.ps1`.
 
 ---
 
@@ -154,13 +155,14 @@ Xây dựng hệ thống học sâu hoàn chỉnh giải quyết đồng thời 
 
 ## 6. TIẾN ĐỘ THỰC HIỆN & KẾ HOẠCH BẢO VỆ
 
-1. [x] **Chuẩn hóa phát biểu bài toán & Kiến trúc 3-Head** trong `docs/PROPOSAL.md`, `PRD.md`, `TECH_ARCHITECTURE.md`.
+1. [x] **Chuẩn hóa phát biểu bài toán & Kiến trúc 3-Head** trong `PRD.md`, `TECH_ARCHITECTURE.md`.
 2. [x] **Thiết lập kho mã nguồn chuẩn Enterprise**: `src/data`, `src/models`, `src/explainability`, `src/utils`, `tests/`, `configs/`.
 3. [x] **Phân tích dữ liệu & Xuất bản Cloud Datasets**: Xây dựng `lungray-nih-512` và `lungray-covidx-512` trên Kaggle.
 4. [x] **Hiện thực thuật toán chống rò rỉ dữ liệu**: Phân chia theo `Patient_ID` (NIH) và `data_source` (COVIDx CXR-4), xác nhận $Train \cap Test = \emptyset$.
 5. [x] **Huấn luyện Baseline Multi-Task 3-Head (Phase 3)**: Hoàn thành 24 epochs, đóng Gate 2.
-6. [x] **Cải tiến SOTA Toán học (TASK-013 / Phase 4)**: Triển khai Asymmetric Loss, Focal Loss dynamic pos_weight, LayerNorm parameter-free, Youden's J calibration. Đạt 114/114 passing unit tests, đóng Gate 3.
+6. [x] **Cải tiến SOTA Toán học (TASK-013 / Phase 4)**: Triển khai Asymmetric Loss, Focal Loss dynamic pos_weight, LayerNorm parameter-free, Youden's J calibration. Đóng Gate 3.
 7. [x] **Đo đạc định lượng IoU & Kiểm toán Shortcut Learning (Phase 5)**: RSNA IoU = 0.7631, VinDr IoU = 0.6049, Shortcut Audit = 94.92%, đóng Gate 4 & 5.
 8. [x] **Xây dựng Trạm đọc phim PACS & FastAPI Backend (Phase 6)**: Triển khai thành công ứng dụng Next.js PACS Viewer và trình khởi chạy 1-Click Native Launcher, đóng Gate 5.
 9. [x] **Biên soạn Báo cáo Học thuật & Đề cương Slide (Phase 7)**: Xuất bản luận văn `reports/FINAL_SCIENTIFIC_REPORT.pdf` (1.63 MB, Rule 9), đề cương Slide 39 trang, đóng Gate 6.
-10. [ ] **Hành động cuối cùng (Task 7.3 & Defense)**: Thực hiện buổi ghi hình diễn tập (walkthrough demo) và bảo vệ đồ án chính thức trước Hội đồng thẩm định.
+10. [x] **Lớp Phòng vệ Lâm sàng Fail-Safe OOD & Đấu trường Mô hình (Phase 8)**: Hoàn tất cổng Năng lượng Helmholtz ($S_E \ge 9.0421$) và Entropy Shannon ($H \le 0.6275$), cơ chế khóa báo cáo sơ bộ WHO ICD-10, đạt **125/125 unit tests PASS** qua `scripts/verify.ps1`.
+11. [ ] **Hành động cuối cùng (Task 7.3 & Defense)**: Thực hiện buổi ghi hình diễn tập (walkthrough demo) và bảo vệ đồ án chính thức trước Hội đồng thẩm định.

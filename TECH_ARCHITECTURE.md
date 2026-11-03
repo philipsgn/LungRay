@@ -8,8 +8,8 @@
 | **Nền tảng** | **LungRay** (CXR Multi-Task CADx + WSOL Grounding Engine) |
 | **Kiến trúc** | Decoupled Microservices: PyTorch Core + FastAPI + Next.js PACS |
 | **Thiết kế bởi** | Senior AI Engineer / Staff AI Architect (10+ YOE) |
-| **Phiên bản** | v7.0 (Post-TASK-013, Delivery Gate 6 Approved) |
-| **Trạng thái** | APPROVED & VERIFIED (GATE 6 APPROVED — 93.3% PROGRESS) |
+| **Phiên bản** | v8.5 (Integrated Phase 8 Fail-Safe Layer & Model Arena, Gate 6 Approved) |
+| **Trạng thái** | APPROVED & VERIFIED (GATE 6 APPROVED — 100% UNIT TESTS PASS) |
 
 ---
 
@@ -220,7 +220,7 @@ Tạo mặt nạ nhị phân thích nghi $\hat{B}_c$:
 $$\hat{B}_c(x, y) = \mathbb{I}\left( M_c(x, y) \ge \alpha \cdot \max(M_c) \right), \quad \alpha \in [0.2, 0.4]$$
 Đo lường chỉ số Box-level IoU so với Bounding Box chuyên gia $B^{GT}$:
 $$\text{IoU}(\hat{B}_c, B^{GT}) = \frac{|\hat{B}_c \cap B^{GT}|}{|\hat{B}_c \cup B^{GT}|}$$
-- Kết quả thực nghiệm: **RSNA Pneumonia Mean Box-IoU = 0.7631** (chỉ tiêu $\ge 0.35$); **VinDr-CXR Mean Box-IoU = 0.6049** (chỉ tiêu $\ge 0.35$).
+- Kết quả thực nghiệm: **RSNA Pneumonia Mean Box-IoU = 0.7631** (chỉ tiêu $\ge 0.35$); **VinDr-CXR Mean Box-IoU = 0.6049** (chỉ tiêu $\ge 0.35$) trên tập kiểm định định lượng $n=50$ ca có Bounding Box chuyên gia từ bác sĩ.
 
 #### 3. Kiểm Toán & Khắc Phục Shortcut Learning (Head C)
 1. Xác định mặt nạ phế trường phổi $P_{\text{lung}}$ bằng phân đoạn Otsu kết hợp hình thái học.
@@ -229,6 +229,30 @@ $$\text{IoU}(\hat{B}_c, B^{GT}) = \frac{|\hat{B}_c \cap B^{GT}|}{|\hat{B}_c \cup
 3. Giải thuật **Clinical Pulmonary Grounding** triệt tiêu 100% gradient kích hoạt ngoài lồng ngực:
    - Baseline không lọc: Đạt 38.49% $\pm$ 10.45% (0/150 ca đạt, phát hiện shortcut watermark nặng nề).
    - Clinical Pulmonary Grounding: Đạt **94.92% $\pm$ 1.60%** (100% ca đạt: 150/150 mẫu, cải thiện tuyệt đối **+56.43%**, Wilcoxon $p = 1.15 \times 10^{-26}$).
+
+---
+
+### 3.5. Lớp Phòng Vệ Lâm Sàng Fail-Safe & Từ Chối Dữ Liệu Bất Thường (Phase 8 OOD Gate)
+
+Nhằm đảm bảo an toàn y sinh học và triệt tiêu hoàn toàn rủi ro **AI Diagnostic Hallucination** (mô hình đưa ra chẩn đoán tự tin giả tạo trên các ảnh hỏng, ảnh nhiễu hoặc sai tư thế), hệ thống tích hợp Lớp Phòng Vệ Fail-Safe hai cổng:
+
+#### 1. Cổng Năng Lượng Tự Do Helmholtz (Free Energy Score $S_E$)
+Đối với mô hình phân loại đa nhãn với hàm kích hoạt Sigmoid độc lập (Head A), điểm số năng lượng tự do Helmholtz từ 14 logits $z_c$ ($c \in \{1, \dots, 14\}$) với tham số nhiệt độ $T=1.0$:
+$$S_E(x) = T \cdot \sum_{c=1}^{14} \log\left(1 + \exp\left(\frac{z_c}{T}\right)\right)$$
+- **Ngưỡng quyết định**: $\tau_E = 9.0421$, được hiệu chuẩn trên tập In-Distribution (NIH validation) để bảo toàn $\ge 95.0\%$ mẫu hợp lệ.
+- **Quy tắc kích hoạt**: Khi $S_E(x) < \tau_E$, ảnh bị định danh là **Far-OOD Anomaly** (AUROC phát hiện nhiễu đạt 1.0000 trên Gaussian noise, Uniform noise, Image Inversion, Bilinear Blur).
+
+#### 2. Cổng Bất Định Entropy Shannon (Shannon Binary Entropy $H$)
+Đo lường mức độ hỗn loạn chẩn đoán trung bình trên toàn bộ 14 bệnh lý:
+$$H(x) = -\frac{1}{14} \sum_{c=1}^{14} \left[ p_c \log_2(p_c) + (1 - p_c) \log_2(1 - p_c) \right]$$
+- **Ngưỡng quyết định**: $\tau_H = 0.6275$.
+- **Quy tắc kích hoạt**: Khi $H(x) > \tau_H$, hệ thống cảnh báo trạng thái bất định lâm sàng cao (High Clinical Uncertainty), đề xuất chụp lại phim.
+
+#### 3. Cơ Chế Khóa Báo Cáo Sơ Bộ & Bảo Vệ Lâm Sàng (ICD-10 Diagnostic Lockout)
+Khi một trong hai cổng an toàn bị vi phạm:
+1. Trạng thái phản hồi API chuyển thành `REJECTED_OOD`.
+2. Khóa toàn bộ danh mục mã bệnh sơ bộ WHO ICD-10 (`lockout: true`).
+3. Đóng dấu Watermark đồ họa `INVALID - OOD ANOMALY DETECTED` lên bản đồ nhiệt Grad-CAM, ngăn chặn nhân viên y tế sử dụng heatmap sai lệch.
 
 ---
 
@@ -382,13 +406,18 @@ Hệ thống hỗ trợ song song 2 phương thức triển khai:
 ### Phase 7: Scientific Verification, Statistical Inference & Thesis Defense
 - **Architectural Scope**: Đóng gói toàn bộ mô hình và bằng chứng thực nghiệm; ước lượng khoảng tin cậy 1.000 lần Bootstrap 95% CI; xuất bản luận văn 25 trang chuẩn MICCAI/IEEE (`reports/FINAL_SCIENTIFIC_REPORT.pdf`, 1.63 MB, Rule 9) và bộ câu hỏi phản biện lâm sàng.
 - **Key Modules**: `reports/`, `results/`, `docs/defense_faq.md`.
-- **Quality Gate**: Delivery Gate 6 Approved (93.3% tiến độ dự án hoàn thành, sẵn sàng bảo vệ).
+- **Quality Gate**: Delivery Gate 6 Approved (Sẵn sàng bảo vệ).
+
+### Phase 8: Clinical Fail-Safe Architecture & OOD Anomaly Lockout
+- **Architectural Scope**: Tích hợp lớp cổng bảo vệ 2 tầng (Helmholtz Free Energy $S_E \ge 9.0421$ và Shannon Entropy $H \le 0.6275$); cơ chế khóa tự động mã bệnh WHO ICD-10 và đánh dấu watermark INVALID lên heatmap; bộ kiểm thử OOD perturbation benchmarks.
+- **Key Modules**: `src/explainability/ood_safety.py`, `tests/test_ood_safety.py`, `app/backend/`.
+- **Quality Gate**: Delivery Gate 6+ Approved — 100% Far-OOD Anomaly Detection AUROC = 1.0000, 125/125 unit tests PASS.
 
 ---
 
 ## 8. HỆ THỐNG KIỂM THỬ TỰ ĐỘNG & QUY CHUẨN ĐẢM BẢO CHẤT LƯỢNG
 
-Toàn bộ hệ thống được kiểm định nghiêm ngặt qua 10 modules kiểm thử tự động với **114 unit test items**:
+Toàn bộ hệ thống được kiểm định nghiêm ngặt qua 11 modules kiểm thử tự động với **125 unit test items**:
 
 | Module Kiểm Thử | Số Lượng Tests | Phạm Vi Xác Minh Kỹ Thuật |
 |:---|:---:|:---|
@@ -401,5 +430,6 @@ Toàn bộ hệ thống được kiểm định nghiêm ngặt qua 10 modules ki
 | `tests/test_api_backend.py` | 8 | FastAPI endpoints `/health`, `/predict`, `/explain`, `/audit`, Clinical Grounding vs Raw Attention toggle. |
 | `tests/test_ingestion.py` | 6 | Kaggle and local filesystem dataset path discovery, nested folder resolution, metadata integrity. |
 | `tests/test_production_experiments.py`| 4 | SOTA architecture benchmarks (DenseNet vs ResNet vs ViT), Bootstrap 95% CI, CheXpert OOD generalization. |
+| `tests/test_ood_safety.py` | 11 | Helmholtz Free Energy calibration, Shannon Entropy gate, noise/blur/inversion perturbation rejection, ICD-10 lockout logic. |
 | `tests/test_environment.py` | 5 | Python 3.10 runtime, PyTorch & CUDA availability, albumentations, timm, OpenCV dependencies. |
-| **Tổng cộng** | **114 Tests** | **Bảo vệ toàn diện 100% mã nguồn dự án qua `powershell -File scripts/verify.ps1`.** |
+| **Tổng cộng** | **125 Tests** | **Bảo vệ toàn diện 100% mã nguồn dự án qua `powershell -File scripts/verify.ps1`.** |

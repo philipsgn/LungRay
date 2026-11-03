@@ -31,15 +31,15 @@ export function BalancingSection({ dict, lang }: BalancingSectionProps) {
   return (
     <section
       id="section-3"
-      className="relative min-h-screen w-full snap-start bg-gradient-to-br from-[#F8FAFC] to-[#E0F2FE] flex flex-col justify-between p-6 sm:p-10 lg:p-16 overflow-hidden text-[#0B1E36]"
+      className="relative min-h-screen w-full snap-start bg-[#F8FAFC] border-b border-slate-200 flex flex-col justify-between p-6 sm:p-10 lg:p-16 overflow-hidden text-[#0F172A]"
     >
       <div className="w-full max-w-7xl mx-auto my-auto py-6">
         {/* Header */}
         <div className="max-w-3xl mb-6">
-          <div className="inline-block px-3.5 py-1 rounded-full bg-sky-100/80 border border-sky-300 text-sky-900 text-xs font-bold uppercase tracking-wider mb-2">
+          <div className="inline-block px-3 py-1 rounded bg-slate-100 border border-slate-300 text-slate-800 text-[11px] font-mono uppercase tracking-widest mb-3">
             {dict.section3_balancing.tag}
           </div>
-          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[#0B1E36]">
+          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[#0F172A]">
             {dict.section3_balancing.title}
           </h2>
           <p className="mt-2 text-slate-600 text-sm sm:text-base leading-relaxed">
@@ -50,11 +50,11 @@ export function BalancingSection({ dict, lang }: BalancingSectionProps) {
         {/* 2-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           {/* Left Column: Imbalance Transformation Card */}
-          <div className="lg:col-span-5 backdrop-blur-md bg-white/75 border border-slate-200/80 shadow-xl rounded-3xl p-6 flex flex-col justify-between">
+          <div className="lg:col-span-5 bg-white border border-slate-300 shadow-sm rounded-2xl p-6 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-base font-bold text-[#0B1E36] flex items-center gap-1.5">
-                  <Scale className="w-4 h-4 text-sky-600" />
+                <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wide font-mono flex items-center gap-1.5">
+                  <Scale className="w-4 h-4 text-slate-800" />
                   <span>{dict.section3_balancing.imbalanceTitle}</span>
                 </h3>
               </div>
@@ -63,25 +63,25 @@ export function BalancingSection({ dict, lang }: BalancingSectionProps) {
               </p>
 
               {/* View Switcher Toggle */}
-              <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 mb-4 text-xs font-semibold">
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-lg border border-slate-200 mb-4 text-xs font-mono">
                 <button
                   type="button"
                   onClick={() => setActiveView("raw")}
-                  className={`py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 ${
+                  className={`py-2 px-3 rounded transition-all text-center flex items-center justify-center gap-1.5 ${
                     activeView === "raw"
-                      ? "bg-white text-rose-800 shadow-sm font-bold"
+                      ? "bg-white text-rose-800 shadow-sm font-bold border border-slate-200"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-                  <span>{lang === "vi" ? "Tỷ Lệ Thô (16:2.3:1)" : "Raw Data (82% : 12% : 5%)"}</span>
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                  <span>{lang === "vi" ? "Tỷ Lệ Thô (16:2.3:1)" : "Raw (82%:12%:5%)"}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveView("balanced")}
-                  className={`py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 ${
+                  className={`py-2 px-3 rounded transition-all text-center flex items-center justify-center gap-1.5 ${
                     activeView === "balanced"
-                      ? "bg-[#0B1E36] text-white shadow-sm font-bold"
+                      ? "bg-[#0F172A] text-white shadow-sm font-bold"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
@@ -108,20 +108,21 @@ export function BalancingSection({ dict, lang }: BalancingSectionProps) {
                       <YAxis
                         type="category"
                         dataKey="name"
-                        tick={{ fontSize: 11, fill: "#0B1E36", fontWeight: 600 }}
+                        tick={{ fontSize: 11, fill: "#0F172A", fontWeight: 600 }}
                         width={80}
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: "#0B1E36",
-                          borderColor: "#1E293B",
-                          borderRadius: "12px",
+                          backgroundColor: "#0F172A",
+                          borderColor: "#334155",
+                          borderRadius: "8px",
                           color: "#fff",
                           fontSize: "12px",
+                          fontFamily: "monospace",
                         }}
                         formatter={(value) => [typeof value === "number" ? `${value.toFixed(1)}% of Batch` : String(value ?? ""), "Quota"]}
                       />
-                      <Bar dataKey="percentage" radius={[0, 8, 8, 0]}>
+                      <Bar dataKey="percentage" radius={[0, 4, 4, 0]}>
                         {chartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
@@ -133,31 +134,31 @@ export function BalancingSection({ dict, lang }: BalancingSectionProps) {
             </div>
 
             {/* Quota Callout */}
-            <div className="mt-4 p-3.5 rounded-2xl bg-sky-50/80 border border-sky-200/90 text-xs">
-              <div className="font-bold text-sky-950 flex items-center gap-1.5 mb-1">
-                <Layers className="w-4 h-4 text-sky-600" />
+            <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+              <div className="font-bold text-slate-900 flex items-center gap-1.5 mb-1">
+                <Layers className="w-4 h-4 text-slate-700" />
                 <span>
                   {activeView === "balanced"
                     ? lang === "vi"
-                      ? "Phân Bổ Batch Kích Thước 16: 10 NIH / 4 COVID / 2 TB"
+                      ? "Phân Bổ Batch 16: 10 NIH / 4 COVID / 2 TB"
                       : "Batch Size 16 Allocation: 10 NIH / 4 COVID / 2 TB"
                     : lang === "vi"
                     ? "Cảnh Báo Đói Tác Vụ: TB Chỉ Chiếm 0.8 Ảnh / Batch"
                     : "Task Starvation Alert: TB Head Starved at 0.8 Images/Batch"}
                 </span>
               </div>
-              <p className="text-slate-600 text-[11px] leading-relaxed">
+              <p className="text-slate-600 text-[11px] leading-relaxed font-mono">
                 {dict.section3_balancing.starvationWarning}
               </p>
             </div>
           </div>
 
           {/* Right Column: 5-Stage Interactive Pipeline Flowchart */}
-          <div className="lg:col-span-7 flex flex-col justify-between backdrop-blur-md bg-white/75 border border-slate-200/80 shadow-xl rounded-3xl p-6">
+          <div className="lg:col-span-7 flex flex-col justify-between bg-white border border-slate-300 shadow-sm rounded-2xl p-6">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-bold text-[#0B1E36] flex items-center gap-2">
-                  <Code2 className="w-4 h-4 text-sky-600" />
+                <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wide font-mono flex items-center gap-2">
+                  <Code2 className="w-4 h-4 text-slate-800" />
                   <span>{dict.section3_balancing.pipelineTitle}</span>
                 </h3>
                 <span className="text-xs text-slate-500 font-mono">
@@ -174,16 +175,16 @@ export function BalancingSection({ dict, lang }: BalancingSectionProps) {
                       key={s.step}
                       type="button"
                       onClick={() => setSelectedStepIndex(idx)}
-                      className={`p-2.5 rounded-2xl text-left transition-all border ${
+                      className={`p-2.5 rounded-lg text-left transition-all border ${
                         isSelected
-                          ? "bg-[#0B1E36] text-white border-[#0B1E36] shadow-md scale-102"
-                          : "bg-white/80 text-slate-700 border-slate-200 hover:bg-white hover:border-slate-300"
+                          ? "bg-[#0F172A] text-white border-[#0F172A] shadow-sm"
+                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <span
                           className={`text-xs font-mono font-bold ${
-                            isSelected ? "text-sky-300" : "text-sky-600"
+                            isSelected ? "text-sky-300" : "text-slate-800"
                           }`}
                         >
                           {s.step}
@@ -196,7 +197,7 @@ export function BalancingSection({ dict, lang }: BalancingSectionProps) {
                       </div>
                       <div className="text-[11px] font-bold truncate mt-1">{s.title[lang]}</div>
                       <div
-                        className={`text-[10px] truncate ${
+                        className={`text-[10px] font-mono truncate ${
                           isSelected ? "text-slate-300" : "text-slate-500"
                         }`}
                       >
@@ -208,12 +209,12 @@ export function BalancingSection({ dict, lang }: BalancingSectionProps) {
               </div>
 
               {/* Selected Step Detail Panel */}
-              <div className="p-4 rounded-2xl bg-white/90 border border-slate-200 shadow-sm">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <h4 className="text-sm font-extrabold text-[#0B1E36]">
+                  <h4 className="text-sm font-bold text-[#0F172A]">
                     {selectedStep.step}. {selectedStep.title[lang]}
                   </h4>
-                  <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
+                  <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-white text-slate-800 border border-slate-300">
                     {selectedStep.subtitle[lang]}
                   </span>
                 </div>
@@ -227,17 +228,17 @@ export function BalancingSection({ dict, lang }: BalancingSectionProps) {
                   {selectedStep.details.map((detail, dIdx) => (
                     <div
                       key={dIdx}
-                      className="p-2 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-700 flex items-start gap-1.5"
+                      className="p-2 rounded bg-white border border-slate-200 text-[11px] text-slate-700 flex items-start gap-1.5"
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1 shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-900 mt-1 shrink-0" />
                       <span>{detail[lang]}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Code Snippet Drawer */}
-                <div className="rounded-xl overflow-hidden border border-slate-800 shadow-inner bg-[#0B1E36]">
-                  <div className="px-3 py-1.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                <div className="rounded-lg overflow-hidden border border-slate-800 shadow-inner bg-[#0B131E]">
+                  <div className="px-3 py-1.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">
                     <span>PyTorch Pipeline Implementation</span>
                     <span className="text-sky-400 text-[10px]">Python 3.10</span>
                   </div>

@@ -15,8 +15,18 @@ import torch
 from PIL import Image
 
 from src.data.transforms import get_val_transforms
-from src.explainability import GradCAMExplainer, LungSegmenter, ShortcutAuditEngine
+from src.explainability import (
+    GradCAMExplainer,
+    LungSegmenter,
+    MultiScaleGradCAMPlusPlus,
+    ShortcutAuditEngine,
+    extract_adaptive_contour,
+    render_contour_overlay,
+)
 from src.models.multi_task_net import MultiTaskChestXrayNet
+from src.safety.ood_scores import compute_sigmoid_energy, compute_shannon_entropy
+from src.safety.reject_policy import SafetyPolicy
+from src.safety.report_generator import ClinicalReportGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +71,8 @@ class LungRayService:
         self.transform = get_val_transforms(img_size=self.img_size)
         self.segmenter = LungSegmenter()
         self.audit_engine = ShortcutAuditEngine(self.segmenter)
+        self.safety_policy = SafetyPolicy()
+        self.report_generator = ClinicalReportGenerator()
         self._initialized = True
 
     def _load_thresholds(self) -> dict[str, Any]:
@@ -122,9 +134,19 @@ class LungRayService:
 
         start = time.perf_counter()
         with torch.no_grad():
+            logits_dict = self.model(tensor)
             outputs = self.model.predict(tensor)
         elapsed_ms = (time.perf_counter() - start) * 1000.0
 
+        logits_a = logits_dict["head_a"]
+        prob_a_tensor = outputs["head_a"]
+
+        # 1. Fail-Safe OOD & Uncertainty Evaluation
+        energy_val = float(compute_sigmoid_energy(logits_a).item())
+        entropy_val = float(compute_shannon_entropy(prob_a_tensor).item())
+        safety_decision = self.safety_policy.evaluate(energy_val, entropy_val)
+
+        # 2. Extract Head A, B, C probabilities
         prob_a = outputs["head_a"][0].cpu().numpy()
         prob_b = float(outputs["head_b"][0].item())
         prob_c = float(outputs["head_c"][0].item())
@@ -133,18 +155,33 @@ class LungRayService:
 
         tb_threshold = self.thresholds.get("head_b_tb", {}).get("threshold", 0.5)
         covid_threshold = self.thresholds.get("head_c_covid", {}).get("threshold", 0.5)
+        head_a_thresholds = self.thresholds.get("head_a_nih_14", {})
+
+        head_b_res = {
+            "tb_probability": prob_b,
+            "is_positive": prob_b >= tb_threshold,
+        }
+        head_c_res = {
+            "covid_probability": prob_c,
+            "is_positive": prob_c >= covid_threshold,
+        }
+
+        # 3. Grounded Clinical Report (RAG-lite)
+        clinical_report = self.report_generator.generate(
+            predictions_a=head_a,
+            thresholds_a=head_a_thresholds,
+            head_b_result=head_b_res,
+            head_c_result=head_c_res,
+            safety_decision=safety_decision,
+        )
 
         return {
             "head_a_prediction": head_a,
-            "head_b_tb_screening": {
-                "tb_probability": prob_b,
-                "is_positive": prob_b >= tb_threshold,
-            },
-            "head_c_covidx": {
-                "covid_probability": prob_c,
-                "is_positive": prob_c >= covid_threshold,
-            },
+            "head_b_tb_screening": head_b_res,
+            "head_c_covidx": head_c_res,
             "inference_time_ms": round(elapsed_ms, 2),
+            "safety": safety_decision.to_dict(),
+            "report": clinical_report.to_dict(),
         }
 
     @staticmethod
@@ -170,6 +207,7 @@ class LungRayService:
         clinical_grounding: bool = True,
         target_disease_name: str = "",
     ) -> dict[str, Any]:
+        started_at = time.perf_counter()
         tensor = self.preprocess(image_bytes)
 
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
@@ -186,12 +224,30 @@ class LungRayService:
             else:
                 target_disease_name = f"{target_head}_{target_class}"
 
-        explainer = GradCAMExplainer(self.model)
+        # Compute forward pass probability and threshold for target pathology
+        with torch.no_grad():
+            outputs = self.model(tensor)
+            if target_head == "head_a":
+                target_prob = float(torch.sigmoid(outputs["head_a"])[0, target_class].item())
+                target_thresh = float(self.thresholds.get("head_a_nih_14", {}).get(target_disease_name, 0.45))
+            elif target_head == "head_b":
+                target_prob = float(torch.sigmoid(outputs["head_b"])[0, 0].item())
+                target_thresh = float(self.thresholds.get("head_b_tb", {}).get("threshold", 0.45))
+            elif target_head == "head_c":
+                target_prob = float(torch.softmax(outputs["head_c"], dim=-1)[0, 0].item())
+                target_thresh = float(self.thresholds.get("head_c_covid", {}).get("threshold", 0.70))
+            else:
+                target_prob = 1.0
+                target_thresh = 0.5
+        is_target_positive = bool(target_prob >= target_thresh)
+
+        explainer = MultiScaleGradCAMPlusPlus(self.model)
         try:
             raw_heatmap = explainer.generate(
                 tensor,
                 head_name=target_head,
                 target_class_idx=target_class,
+                fusion_weights=(0.4, 0.6),
             )
         finally:
             explainer.remove_hooks()
@@ -281,13 +337,56 @@ class LungRayService:
         else:
             overlay = explainer.overlay_heatmap(image_np, final_heatmap, alpha=0.4)
 
+        # Multi-scale lesion iso-contour extraction: only for confirmed positive
+        # targets under clinical grounding. The contour is constrained to the
+        # anatomical ROI mask (effective_mask) so it matches the in-lung audit.
+        # Negative targets return an empty contour to avoid drawing false lesions.
+        contour_b64 = ""
+        lesion_bounding_boxes: list[dict[str, Any]] = []
+        lesion_area_ratio = 0.0
+        if is_target_positive and clinical_grounding:
+            bin_mask, lesions, area_ratio = extract_adaptive_contour(
+                heatmap=final_heatmap,
+                lung_mask=effective_mask,
+                threshold_percentile=85.0,
+            )
+            contour_overlay = render_contour_overlay(
+                img_rgb=image_np,
+                bin_mask=bin_mask,
+                lesions=lesions,
+            )
+            contour_b64 = self._image_to_base64(contour_overlay)
+            lesion_bounding_boxes = lesions
+            lesion_area_ratio = float(area_ratio)
+
+        audit_pass = bool(in_lung_ratio >= 0.80)
+
+        elapsed_ms = (time.perf_counter() - started_at) * 1000.0
+        logger.info(
+            "explain head=%s class=%s positive=%s grounded=%s lesions=%d latency=%.1fms",
+            target_head,
+            target_class,
+            is_target_positive,
+            is_grounded,
+            len(lesion_bounding_boxes),
+            elapsed_ms,
+        )
+
         return {
             "heatmap_base64": self._image_to_base64(heatmap_color),
             "overlay_base64": self._image_to_base64(overlay),
+            "contour_base64": contour_b64,
+            "lesion_bounding_boxes": lesion_bounding_boxes,
+            "lesion_area_ratio": lesion_area_ratio,
+            "cam_resolution": "32x32 fused (denseblock3+denseblock4)",
             "target_head": target_head,
             "target_class": target_class,
             "target_disease_name": target_disease_name,
+            "target_probability": round(target_prob, 4),
+            "target_threshold": round(target_thresh, 4),
+            "is_target_positive": is_target_positive,
             "in_lung_energy_ratio": round(float(in_lung_ratio), 4),
+            "audit_pass": audit_pass,
             "is_grounded": is_grounded,
         }
 

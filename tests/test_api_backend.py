@@ -14,7 +14,8 @@ from app.backend.main import app
 
 @pytest.fixture(scope="module")
 def client():
-    return TestClient(app)
+    with TestClient(app) as c:
+        yield c
 
 
 def _make_image_bytes(size: tuple[int, int] = (512, 512)) -> bytes:
@@ -62,6 +63,11 @@ def test_predict_endpoint(client: TestClient) -> None:
     assert 0.0 <= payload["head_c_covidx"]["covid_probability"] <= 1.0
     assert isinstance(payload["head_c_covidx"]["is_positive"], bool)
     assert payload["inference_time_ms"] >= 0.0
+    assert "safety" in payload
+    assert payload["safety"]["decision"] in ("ACCEPT", "REJECT")
+    assert isinstance(payload["safety"]["is_safe"], bool)
+    assert "report" in payload
+    assert payload["report"]["status"] in ("GENERATED", "BLOCKED")
 
 
 def test_explain_endpoint_default_grounded(client: TestClient) -> None:
@@ -178,3 +184,52 @@ def test_corrupted_image_returns_422(client: TestClient) -> None:
         files={"file": ("bad.png", b"not-an-image", "image/png")},
     )
     assert response.status_code == 422
+
+
+def test_explain_multiscale_contour_contract(client: TestClient) -> None:
+    image_bytes = _make_image_bytes()
+    response = client.post(
+        "/api/v1/explain",
+        files={"file": ("cxr.png", image_bytes, "image/png")},
+        data={
+            "target_head": "head_c",
+            "target_class": 0,
+            "clinical_grounding": "true",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert isinstance(payload["contour_base64"], str)
+    assert isinstance(payload["lesion_bounding_boxes"], list)
+    assert isinstance(payload["lesion_area_ratio"], float)
+    assert "fused" in payload["cam_resolution"]
+
+    # For a confirmed positive target under grounding a rendered contour image
+    # must be present; negative targets must never draw a lesion contour.
+    if payload["is_target_positive"]:
+        assert payload["contour_base64"] != ""
+        assert _is_base64_png(payload["contour_base64"])
+    else:
+        assert payload["contour_base64"] == ""
+        assert payload["lesion_bounding_boxes"] == []
+        assert payload["lesion_area_ratio"] == 0.0
+
+
+def test_explain_raw_mode_has_no_contour(client: TestClient) -> None:
+    image_bytes = _make_image_bytes()
+    response = client.post(
+        "/api/v1/explain",
+        files={"file": ("cxr.png", image_bytes, "image/png")},
+        data={
+            "target_head": "head_c",
+            "target_class": 0,
+            "clinical_grounding": "false",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["is_grounded"] is False
+    assert payload["contour_base64"] == ""
+    assert payload["lesion_bounding_boxes"] == []
+    assert payload["lesion_area_ratio"] == 0.0

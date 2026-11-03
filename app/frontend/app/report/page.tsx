@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Language } from "./types";
 import { getDictionary } from "./data/i18n";
+import { useLungRayLanguage } from "../lib/i18n";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { NavigationDots } from "./components/NavigationDots";
 import { HeroSection } from "./components/HeroSection";
@@ -15,7 +15,7 @@ import { TrainingSection } from "./components/TrainingSection";
 import { BenchmarkSection } from "./components/BenchmarkSection";
 
 export default function ReportPage() {
-  const [lang, setLang] = useState<Language>("en");
+  const [lang, setLang] = useLungRayLanguage();
   const [currentSection, setCurrentSection] = useState<number>(0);
   const totalSections = 7;
 
@@ -92,9 +92,9 @@ export default function ReportPage() {
   }, [totalSections]);
 
   return (
-    <div className="w-full min-h-screen lg:h-screen lg:overflow-y-scroll lg:snap-y lg:snap-mandatory text-[#0B1E36] font-sans antialiased selection:bg-sky-200">
+    <div className="w-full min-h-screen lg:h-screen lg:overflow-y-scroll lg:snap-y lg:snap-mandatory text-[#0F172A] font-sans antialiased selection:bg-slate-200">
       {/* Top Clinical Bar */}
-      <header className="fixed top-0 left-0 right-0 h-12 bg-white/85 backdrop-blur-md border-b border-slate-200/70 z-40 flex items-center justify-between px-6 sm:px-8 text-xs shadow-xs">
+      <header className="sticky top-0 left-0 right-0 h-11 bg-white/95 backdrop-blur-md border-b border-slate-300 z-40 flex items-center justify-between px-6 sm:px-8 text-xs shadow-xs font-sans">
         <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
           <Link
             href="/"
@@ -104,7 +104,7 @@ export default function ReportPage() {
             <span>{dict.nav.backToPacs}</span>
           </Link>
           <span className="text-slate-300 hidden sm:inline">|</span>
-          <span className="font-extrabold text-[#0B1E36] tracking-wider uppercase text-[11px] truncate hidden md:inline">
+          <span className="font-bold text-[#0F172A] tracking-wider uppercase text-[11px] truncate hidden md:inline">
             {dict.nav.instituteName} &bull; {dict.nav.reportTitle}
           </span>
         </div>
@@ -113,18 +113,18 @@ export default function ReportPage() {
         <div className="w-24 shrink-0" />
       </header>
 
-      {/* Fixed Capsule Language Switcher at Top-Right */}
-      <LanguageSwitcher currentLang={lang} onLanguageChange={setLang} />
-
-      {/* Side Dot Navigation Rail */}
+      {/* Horizontal Chapter Navigation Rail */}
       <NavigationDots
         activeSection={currentSection}
         sectionNames={dict.nav.sectionNames}
         onSelectSection={scrollTo}
       />
 
+      {/* Fixed Capsule Language Switcher at Top-Right */}
+      <LanguageSwitcher currentLang={lang} onLanguageChange={setLang} />
+
       {/* 7 Modular Interactive Storytelling Sections */}
-      <main className="w-full pt-12 lg:pt-0">
+      <main className="w-full">
         <HeroSection dict={dict} lang={lang} onExploreClick={() => scrollTo(1)} />
         <ProblemSection dict={dict} lang={lang} />
         <DatasetSection dict={dict} lang={lang} />
@@ -134,10 +134,10 @@ export default function ReportPage() {
         <BenchmarkSection dict={dict} lang={lang} />
       </main>
 
-      {/* Minimal Academic Footer */}
-      <footer className="w-full py-4 px-6 sm:px-10 bg-[#0B1E36] text-white text-xs flex flex-wrap items-center justify-between gap-2 border-t border-slate-800">
+      {/* Minimal Academic Monograph Footer */}
+      <footer className="w-full py-4 px-6 sm:px-10 bg-[#0F172A] text-white text-xs flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 font-mono">
         <div className="text-slate-400">{dict.footer.copyright}</div>
-        <div className="text-slate-400 font-mono text-[11px]">
+        <div className="text-slate-400 text-[11px]">
           {dict.footer.confidentiality}
         </div>
       </footer>

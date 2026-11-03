@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0-production",
+  "method": "sigmoid_energy_entropy_hybrid",
+  "updated_at": "2026-11-02T18:00:00Z",
+  "calibration_target": "95% ID Retention on Adult Frontal CXR",
+  "energy_score": {
+    "threshold": 9.0421,
+    "direction": "higher_is_id",
+    "description": "Reject if S_E(x) < 9.0421"
+  },
+  "entropy_score": {
+    "threshold": 0.6275,
+    "direction": "lower_is_id",
+    "description": "Reject if H(x) > 0.6275"
+  },
+  "policy": "reject_if_energy_low_or_entropy_high"
+}

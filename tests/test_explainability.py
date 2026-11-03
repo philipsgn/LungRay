@@ -330,3 +330,64 @@ def test_audit_sample(dummy_model, synthetic_cxr):
         assert result["pass_80_percent"] == (result["in_lung_ratio"] >= 0.80)
     finally:
         explainer.remove_hooks()
+
+
+def test_multiscale_gradcam_plus_plus(dummy_model):
+    from src.explainability import MultiScaleGradCAMPlusPlus
+
+    features = dummy_model.backbone.features
+    baseline_fwd_3 = len(features.denseblock3._forward_hooks)
+    baseline_bwd_3 = len(features.denseblock3._backward_hooks)
+    baseline_fwd_4 = len(features.denseblock4._forward_hooks)
+
+    image_tensor = torch.randn(1, 3, 256, 256)
+    explainer = MultiScaleGradCAMPlusPlus(dummy_model)
+    try:
+        assert len(explainer.target_layers) >= 1
+        assert len(features.denseblock3._forward_hooks) == baseline_fwd_3 + 1
+        heatmap = explainer.generate(
+            image_tensor,
+            head_name="head_a",
+            target_class_idx=2,
+            fusion_weights=(0.4, 0.6),
+        )
+        assert heatmap.shape == (256, 256)
+        assert 0.0 <= float(heatmap.min()) <= float(heatmap.max()) <= 1.0
+        assert np.isfinite(heatmap).all()
+    finally:
+        explainer.remove_hooks()
+
+    # Teardown must release every hook: forward-only attachment, no residual
+    # forward hooks and no backward hooks ever registered on the target layers.
+    assert len(features.denseblock3._forward_hooks) == baseline_fwd_3
+    assert len(features.denseblock3._backward_hooks) == baseline_bwd_3
+    assert len(features.denseblock4._forward_hooks) == baseline_fwd_4
+    assert len(features.denseblock4._backward_hooks) == 0
+
+
+def test_extract_adaptive_contour_and_render():
+    from src.explainability import extract_adaptive_contour, render_contour_overlay
+
+    heatmap = np.zeros((128, 128), dtype=np.float32)
+    # Add a focal lesion hotspot
+    heatmap[40:70, 40:70] = 0.95
+    lung_mask = np.ones((128, 128), dtype=np.uint8)
+
+    bin_mask, lesions, area_ratio = extract_adaptive_contour(
+        heatmap=heatmap,
+        lung_mask=lung_mask,
+        threshold_percentile=80.0,
+        min_lesion_area=50,
+    )
+    assert bin_mask.shape == (128, 128)
+    assert len(lesions) >= 1
+    first_lesion = lesions[0]
+    assert "bbox" in first_lesion
+    assert "centroid" in first_lesion
+    assert first_lesion["area_pixels"] > 0
+    assert 0.0 < area_ratio <= 1.0
+
+    dummy_cxr = np.full((128, 128, 3), 120, dtype=np.uint8)
+    overlay = render_contour_overlay(dummy_cxr, bin_mask, lesions)
+    assert overlay.shape == (128, 128, 3)
+    assert overlay.dtype == np.uint8

@@ -20,11 +20,20 @@
 
 ### 3 Bước Tiền Kiểm Bắt Buộc Trước Mọi Yêu Cầu (Pre-flight Checklist):
 1. **Bước 1 — Quét tài liệu nền tảng tương ứng với nghiệp vụ (Context Scanning)**:
-   - *Luôn đọc trước*: [docs/EXECUTIVE_SUMMARY.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/docs/EXECUTIVE_SUMMARY.md) và [PRD.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/PRD.md) để nắm chuẩn xác Scope, các bài toán và 6 bộ dữ liệu đã chốt.
-   - *Khi liên quan đến Model/Loss/Inference/Pipeline*: Đọc [TECH_ARCHITECTURE.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/TECH_ARCHITECTURE.md).
-   - *Khi liên quan đến Kế hoạch/Phân công/Task*: Đọc [PHASES.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/PHASES.md) và [PLAN.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/PLAN.md).
-   - *Khi liên quan đến Quy chuẩn code/An toàn dữ liệu/Audit*: Đọc các rules trong thư mục `.agents/rules/`.
-2. **Bước 2 — Đối chiếu 8 Ràng Buộc Sống Còn của Nền tảng LungRay (The 8 Inviolable Constraints)**:
+   - *Hệ thống tài liệu chuẩn Single-Source-of-Truth (SSOT)*:
+     | Vị trí | Tệp tài liệu | Vai trò & Trách nhiệm tham chiếu |
+     |:---|:---|:---|
+     | **Root** | [PRD.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/PRD.md) | Đặc tả sản phẩm, yêu cầu chức năng, 3 Head, 6 bộ dữ liệu chuẩn y tế. |
+     | **Root** | [TECH_ARCHITECTURE.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/TECH_ARCHITECTURE.md) | Kiến trúc kỹ thuật, Shared Encoder, Masked Loss, WSOL, API FastAPI & Next.js. |
+     | **Root** | [PHASES.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/PHASES.md) | WBS 7 Phase, 31 Task chi tiết, theo dõi tiến độ và trạng thái thực thi thực tế (96.8%). |
+     | **Root** | [PLAN.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/PLAN.md) | Kế hoạch triển khai tổng thể v7.0, 6 Cổng kiểm soát chất lượng (Gates 1–6). |
+     | **Root** | [AGENTS.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/AGENTS.md) | Khung điều phối Multi-Agent, Rule 0 tiền kiểm, 9 Ràng buộc sống còn. |
+     | **docs/** | [docs/EXECUTIVE_SUMMARY.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/docs/EXECUTIVE_SUMMARY.md) | Báo cáo tóm tắt điều hành v7.0 (Scope, Quyết định kiến trúc & Kết quả). |
+     | **docs/** | [docs/defense_faq.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/docs/defense_faq.md) | 15 câu hỏi - đáp phản biện lâm sàng & kỹ thuật sống còn cho buổi bảo vệ luận án. |
+     | **docs/** | [docs/KAGGLE_EXECUTION_GUIDE.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/docs/KAGGLE_EXECUTION_GUIDE.md) | Hướng dẫn vận hành huấn luyện trên Kaggle GPU (Notebooks 02, 03, 04, 05). |
+     | **docs/** | [docs/literature_review.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/docs/literature_review.md) | Tổng quan 5 bài báo học thuật nền tảng (ChestX-ray14, CheXNet, Grad-CAM, Shortcut). |
+     | **.agents/** | [rules/](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/.agents/rules/) & [skills/](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/.agents/skills/) | Quy chuẩn lập trình, kiểm toán dữ liệu, chuẩn báo cáo đơn sắc và kỹ năng phối hợp. |
+2. **Bước 2 — Đối chiếu 9 Ràng Buộc Sống Còn của Nền tảng LungRay (The 9 Inviolable Constraints)**:
    - 🔴 **Ràng buộc 1 (Kiến trúc 3-Head)**: Dùng chung 1 backbone (DenseNet-121 / ResNet-50 / ViT) cho đồng thời: Head A (14 bệnh lồng ngực NIH), Head B (Sàng lọc Lao phổi TB), Head C (COVIDx CXR-4 3 lớp).
    - 🔴 **Ràng buộc 2 (Zero Data Leakage)**: Với NIH ChestX-ray14, **bắt buộc chia train/val/test theo `Patient_ID` (70/10/20)**. Tuyệt đối cấm chia ngẫu nhiên theo ảnh.
    - 🔴 **Ràng buộc 3 (Chống Shortcut Learning)**: Với COVIDx CXR-4 Benchmark, **bắt buộc phân tầng theo nguồn ảnh gốc (`data_source`) và kiểm soát theo `patient_id`**. Tuyệt đối cấm chia ngẫu nhiên.
@@ -64,8 +73,8 @@ graph TD
     
     subgraph GovernanceTier ["TIER 1: KIẾN TRÚC & KIỂM SOÁT CHẤT LƯỢNG (ANTIGRAVITY)"]
         AG["Antigravity IDE Agent\n(Chief AI Architect & Quality Gatekeeper)"]
-        Plan["Kế hoạch, Thiết kế & Handoff Spec"]
-        Gate["Kiểm duyệt Git Diff & 8 Ràng Buộc Sống Còn"]
+        Plan["Kế hoạch, Thiết kế & Master Prompt"]
+        Gate["Kiểm duyệt Git Diff & 9 Ràng Buộc Sống Còn"]
     end
 
     subgraph TacticalTier ["TIER 2: THỰC THI CHIẾN THUẬT (COMMANDCODE CLI GO)"]
@@ -78,7 +87,7 @@ graph TD
 
     User -->|Yêu cầu bài toán| AG
     AG --> Plan
-    Plan -->|docs/HANDOFF/<ID>.md| CC
+    Plan -->|Master Prompt & Phase Task| CC
     CC --> Code
     Code --> Test
     Test -->|Báo cáo hoàn thành & Result log| AG

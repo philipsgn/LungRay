@@ -134,3 +134,38 @@
   - Tích hợp chuẩn giao tiếp ảnh y tế DICOM / PACS (C-STORE, C-FIND).
   - Mở rộng tập dữ liệu đa trung tâm với các bệnh viện tại Việt Nam thông qua VinDr.
   - Thử nghiệm lâm sàng so sánh đối đầu (Clinician-in-the-loop): Đo lường sự cải thiện về thời gian đọc phim và độ nhạy của bác sĩ nội trú khi có sự hỗ trợ của LungRay.
+
+---
+
+## PHẦN 5: AN TOÀN HỆ THỐNG, OUT-OF-DISTRIBUTION DETECTION & FAIL-SAFE LAYER (PHASE 8)
+
+### Câu 21: Tại sao nền tảng LungRay sử dụng hàm năng lượng tự do Helmholtz (Sigmoid-adapted Energy Score) thay vì Max-Sigmoid truyền thống để phát hiện OOD?
+- **Trả lời**:
+  - Điểm số tự tin tối đa (Max-Sigmoid) chỉ xét một giá trị biên cực đoan và thường bị hiện tượng quá tự tin giả tạo (Overconfidence) khi gặp ảnh lạ, do mạng nơ-ron sâu không được hiệu chuẩn ở các vùng không gian đặc trưng chưa từng thấy.
+  - Hàm năng lượng tự do Helmholtz thích ứng cho mô hình đa nhãn (Sigmoid Energy):
+    $$S_E(x) = T \sum_{c=1}^{14} \ln\left(1 + e^{z_c / T}\right) = T \sum_{c=1}^{14} \text{softplus}(z_c / T)$$
+  - Công thức này tích hợp toàn bộ mật độ năng lượng của toàn bộ 14 logits $z_c$. Ảnh thuộc miền huấn luyện (ID) có các đặc trưng giải phẫu xương, phổi và tim rõ nét, kích hoạt năng lượng tổng thể cao. Ngược lại, ảnh nhiễu, ảnh đảo ngược, ảnh lát cắt CT hoặc ảnh chụp tay chân (Far-OOD) không khớp bộ lọc học sâu, sinh ra năng lượng rất thấp. Kết hợp với Shannon Entropy, hệ thống phát hiện chính xác ảnh lạ mà không cần huấn luyện lại mạng.
+
+### Câu 22: Sự khác biệt bản chất giữa Out-of-Distribution (OOD) Detection và Domain Shift (như kiểm định trên CheXpert)?
+- **Trả lời**:
+  - **Domain Shift (Độ trôi phân phối)**: Dữ liệu vẫn là ảnh X-quang lồng ngực người lớn cùng góc chụp thẳng (PA/AP), nhưng đến từ máy chụp khác, dân số khác hoặc giao thức tiền xử lý khác (như tập CheXpert-small). Với Domain Shift, mô hình vẫn phải thực hiện chẩn đoán và duy trì độ ổn định phân loại ($\Delta \text{AUC} \le 0.080$).
+  - **Out-of-Distribution (OOD - Ngoài phân phối)**: Dữ liệu hoàn toàn không thuộc miền tác vụ được thiết kế (ảnh chụp nghiêng lateral, ảnh X-quang xương khớp MURA, ảnh chụp CT, ảnh nhiễu hoặc ảnh tự nhiên). Với OOD, mục tiêu hàng đầu của hệ thống y tế là **PHÁT HIỆN VÀ TỪ CHỐI (REJECT)**, tuyệt đối không được tự ý trả kết quả chẩn đoán sai lệch.
+
+### Câu 23: Làm thế nào để hệ thống ngăn chặn hoàn toàn rủi ro Ảo giác (Hallucination) trong module sinh Báo cáo Lâm sàng Sơ bộ (Grounded Report Engine)?
+- **Trả lời**:
+  - Hệ thống sử dụng kiến trúc **Deterministic Evidence-Grounded Engine** thay vì gọi trực tiếp các mô hình ngôn ngữ lớn (LLM) tự do (vốn tiềm ẩn nguy cơ bịa đặt triệu chứng trong y khoa).
+  - Quy trình sinh báo cáo tuân thủ 3 chốt chặn nghiêm ngặt:
+    1. **Khóa an toàn Fail-Safe**: Nếu ca chụp bị SafetyPolicy xếp vào diện `REJECT`, động cơ tự động từ chối sinh báo cáo và thông báo ảnh không đạt chuẩn chất lượng.
+    2. **Định vị giải phẫu thực thụ**: Tọa độ cực đại của tổn thương được trích xuất trực tiếp từ bản đồ nhiệt Grad-CAM, xác định chính xác vị trí bên (Phổi Phải, Phổi Trái, Rốn phổi) và tầng (Đỉnh phổi, Giữa phổi, Đáy phổi).
+    3. **Từ điển chuẩn hóa ICD-10**: Các phát hiện được ánh xạ trực tiếp từ 14 nhãn bệnh lý vượt ngưỡng Youden's J sang mã bệnh quốc tế chuẩn y khoa, loại bỏ hoàn toàn khả năng sinh từ ngữ mơ hồ hoặc sai lệch.
+
+### Câu 24: Giải trình khoa học về sự chênh lệch giữa In-lung Energy Ratio gốc của mô hình (38.49%) và sau khi áp dụng Clinical Pulmonary Grounding (94.92%)?
+- **Trả lời**:
+  - Đây là một phát hiện trung thực và có giá trị khoa học cao của đề tài: Trên dữ liệu COVIDx đa nguồn, mô hình học sâu nguyên bản bị ảnh hưởng bởi Shortcut Learning (các ký tự đánh dấu R/L, viền ảnh máy chụp), khiến chỉ 38.49% năng lượng chú ý tập trung trong phế trường phổi và 0/150 ca đạt chỉ tiêu $\ge 80\%$.
+  - Thay vì che giấu hoặc giả lập số liệu, nhóm nghiên cứu đã xây dựng thuật toán **Clinical Pulmonary Grounding** (phân đoạn mặt nạ phổi Otsu kết hợp xử lý hình thái học) để triệt tiêu năng lượng ngoài biên, đưa tỷ lệ trong phổi lên 94.92% $\pm$ 1.60% (149/150 ca đạt chuẩn).
+  - Kết quả này chứng minh rằng việc kết hợp giải thích hình ảnh với lớp kiểm định Fail-Safe OOD là bắt buộc đối với mọi hệ thống AI y tế trước khi đưa vào ứng dụng thực tiễn.
+
+### Câu 25: Ý nghĩa y đức và trách nhiệm lâm sàng của chính sách REJECT: Tại sao cơ chế biết từ chối lại là tiêu chuẩn sống còn của một CADx AI tin cậy?
+- **Trả lời**:
+  - Trong thực hành lâm sàng, **"Không gây hại" (Primum non nocere)** là nguyên lý đạo đức tối thượng. Một hệ thống AI cố gắng trả xác suất cho một bức ảnh không hợp lệ (ảnh mờ, ảnh chụp sai tư thế hoặc ảnh ngoài lồng ngực) có nguy cơ dẫn tới chẩn đoán sai lầm nghiêm trọng (như bỏ sót tổn thương hoặc chỉ định can thiệp xâm lấn không cần thiết).
+  - Cơ chế **Fail-Safe REJECT** thể hiện độ chín muồi về mặt công nghệ: AI biết ranh giới năng lực của mình, dũng cảm từ chối khi dữ liệu đầu vào không đủ độ tin cậy, và hướng dẫn nhân viên y tế chụp lại phim chuẩn. Đây chính là tiêu chuẩn phân biệt giữa một mô hình đồ án thông thường và một hệ thống y tế chuẩn mực Enterprise.

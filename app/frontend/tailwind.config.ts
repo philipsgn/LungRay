@@ -13,7 +13,7 @@ const config: Config = {
         foreground: "var(--foreground)",
       },
       fontFamily: {
-        sans: ["Manrope", "sans-serif"],
+        sans: ["'Be Vietnam Pro'", "sans-serif"],
         mono: ["'JetBrains Mono'", "monospace"],
       },
     },

@@ -21,6 +21,35 @@ import torch.nn.functional as F
 TensorLike = Union[torch.Tensor, np.ndarray]
 
 
+def compute_gradcam_plus_plus_core(
+    activation: torch.Tensor,
+    first: torch.Tensor,
+    eps: float = 1e-8,
+) -> torch.Tensor:
+    """
+    Shared Grad-CAM++ analytic spatial weighting core.
+
+    Given a target activation map and its first-order gradient, computes the
+    Grad-CAM++ spatial alpha weights and returns the non-negative activation
+    map. Consumed by both :class:`GradCAMExplainer` (single-layer) and
+    :class:`MultiScaleGradCAMPlusPlus` (multi-layer fusion) so the analytic
+    weighting is identical everywhere.
+    """
+    first = torch.nan_to_num(first, nan=0.0, posinf=0.0, neginf=0.0)
+    spatial = activation[0].detach()
+    grad = first[0].detach()
+    grad_squared = grad * grad
+    grad_cubed = grad_squared * grad
+    sum_activations = torch.sum(spatial, dim=(1, 2), keepdim=True)
+    alpha = grad_squared / (
+        2.0 * grad_squared + sum_activations * grad_cubed + eps
+    )
+    alpha = torch.where(grad != 0.0, alpha, torch.zeros_like(alpha))
+    alpha = torch.nan_to_num(alpha, nan=0.0, posinf=0.0, neginf=0.0)
+    weights = torch.sum(torch.relu(grad) * alpha, dim=(1, 2))
+    return torch.relu(torch.sum(weights[:, None, None] * spatial, dim=0))
+
+
 class GradCAMExplainer:
     """
     Grad-CAM / Grad-CAM++ explainer with explicit hook lifecycle management.
@@ -347,18 +376,7 @@ class GradCAMExplainer:
         first: torch.Tensor,
         eps: float,
     ) -> torch.Tensor:
-        spatial = activation[0].detach()
-        grad = first[0].detach()
-        grad_squared = grad * grad
-        grad_cubed = grad_squared * grad
-        sum_activations = torch.sum(spatial, dim=(1, 2), keepdim=True)
-        alpha = grad_squared / (
-            2.0 * grad_squared + sum_activations * grad_cubed + eps
-        )
-        alpha = torch.where(grad != 0.0, alpha, torch.zeros_like(alpha))
-        alpha = torch.nan_to_num(alpha, nan=0.0, posinf=0.0, neginf=0.0)
-        weights = torch.sum(torch.relu(grad) * alpha, dim=(1, 2))
-        return torch.relu(torch.sum(weights[:, None, None] * spatial, dim=0))
+        return compute_gradcam_plus_plus_core(activation, first, eps)
 
     @staticmethod
     def _normalize_heatmap(heatmap: np.ndarray) -> np.ndarray:
@@ -371,8 +389,8 @@ class GradCAMExplainer:
         heatmap = (heatmap - minimum) / (maximum - minimum)
         return np.clip(heatmap, 0.0, 1.0).astype(np.float32, copy=False)
 
+    @staticmethod
     def overlay_heatmap(
-        self,
         img_rgb: np.ndarray,
         heatmap: np.ndarray,
         alpha: float = 0.4,
@@ -392,7 +410,7 @@ class GradCAMExplainer:
         """
         if not isinstance(alpha, (int, float)) or not 0.0 <= float(alpha) <= 1.0:
             raise ValueError("alpha must be a number in [0, 1].")
-        image = self._prepare_rgb_image(img_rgb)
+        image = GradCAMExplainer._prepare_rgb_image(img_rgb)
         heat = np.asarray(heatmap, dtype=np.float32)
         if heat.ndim != 2:
             raise ValueError("heatmap must be a two-dimensional array.")
@@ -433,3 +451,303 @@ class GradCAMExplainer:
         if np.issubdtype(image.dtype, np.integer):
             return np.uint8(np.clip(image, 0, 255))
         raise TypeError("img_rgb must be uint8, float, or integer.")
+
+
+class MultiScaleGradCAMPlusPlus:
+    """
+    Multi-Scale Grad-CAM++ with feature-level resolution fusion (DenseBlock 3 + 4).
+    Resolves spatial boundaries at 32x32 resolution instead of standard 16x16,
+    substantially reducing diffuse blur and tightly adhering to clinical lesion contours.
+    """
+
+    def __init__(
+        self,
+        model: nn.Module,
+        target_layers: Optional[list[nn.Module]] = None,
+    ) -> None:
+        if not isinstance(model, nn.Module):
+            raise TypeError("model must be an instance of torch.nn.Module.")
+
+        self.model = model
+        self.target_layers = target_layers or self._resolve_multi_scale_layers(model)
+        if not self.target_layers:
+            raise ValueError("Unable to resolve multi-scale convolutional target layers.")
+
+        self._activations: dict[int, Optional[torch.Tensor]] = {i: None for i in range(len(self.target_layers))}
+        self._handles: list[Any] = []
+
+        self._register_hooks()
+
+    @staticmethod
+    def _resolve_multi_scale_layers(model: nn.Module) -> list[nn.Module]:
+        layers: list[nn.Module] = []
+        # DenseNet architecture
+        if hasattr(model, "backbone") and hasattr(model.backbone, "features"):
+            features = model.backbone.features
+            if hasattr(features, "denseblock3") and hasattr(features, "denseblock4"):
+                return [features.denseblock3, features.denseblock4]
+        # ResNet architecture
+        if hasattr(model, "backbone"):
+            if hasattr(model.backbone, "layer3") and hasattr(model.backbone, "layer4"):
+                return [model.backbone.layer3, model.backbone.layer4]
+        # Fallback to single last layer
+        getter = getattr(model, "get_last_conv_layer", None)
+        if callable(getter):
+            last = getter()
+            if isinstance(last, nn.Module):
+                return [last]
+        return layers
+
+    def _register_hooks(self) -> None:
+        for idx, layer in enumerate(self.target_layers):
+            def make_fwd(i: int):
+                def hook(m: nn.Module, inp: Any, out: Any):
+                    del m, inp
+                    act = GradCAMExplainer._extract_tensor(out, f"forward output layer {i}")
+                    self._activations[i] = act
+                    if act.requires_grad:
+                        act.retain_grad()
+                return hook
+
+            h_fwd = layer.register_forward_hook(make_fwd(idx))
+            self._handles.append(h_fwd)
+
+    def remove_hooks(self) -> None:
+        for handle in self._handles:
+            handle.remove()
+        self._handles.clear()
+        self._activations.clear()
+
+    def __enter__(self) -> "MultiScaleGradCAMPlusPlus":
+        return self
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        self.remove_hooks()
+
+    @staticmethod
+    def _cam_from_activation_and_grad(activation: torch.Tensor, first: torch.Tensor) -> torch.Tensor:
+        """Computes Grad-CAM++ activation map using the shared analytical core."""
+        return compute_gradcam_plus_plus_core(activation, first)
+
+    @staticmethod
+    def overlay_heatmap(
+        img_rgb: np.ndarray,
+        heatmap: np.ndarray,
+        alpha: float = 0.4,
+        colormap: int = cv2.COLORMAP_JET,
+    ) -> np.ndarray:
+        """Blend a heatmap over an RGB image (shared implementation)."""
+        return GradCAMExplainer.overlay_heatmap(
+            img_rgb, heatmap, alpha=alpha, colormap=colormap
+        )
+
+    def generate(
+        self,
+        x: torch.Tensor,
+        head_name: str = "head_a",
+        target_class_idx: int = 0,
+        fusion_weights: Tuple[float, float] = (0.4, 0.6),
+    ) -> np.ndarray:
+        """
+        Generates fused multi-scale Grad-CAM++ heatmap.
+        Layer 0 (DenseBlock 3, 32x32) provides high spatial fidelity and fine boundaries.
+        Layer 1 (DenseBlock 4, 16x16) provides robust high-level semantic localization.
+        """
+        if not isinstance(x, torch.Tensor):
+            raise TypeError("x must be a torch.Tensor.")
+        if x.dim() == 3:
+            x = x.unsqueeze(0)
+        input_h, input_w = int(x.shape[-2]), int(x.shape[-1])
+
+        was_training = self.model.training
+        self.model.eval()
+
+        input_tensor = x.detach().clone().requires_grad_(True)
+        try:
+            outputs = self.model(input_tensor)
+            logits = GradCAMExplainer._select_head_logits(outputs, head_name)
+            score = GradCAMExplainer._select_target_score(logits, target_class_idx)
+
+            valid_acts = []
+            for idx in range(len(self.target_layers)):
+                act = self._activations.get(idx)
+                if act is not None and act.requires_grad:
+                    valid_acts.append(act)
+
+            if not valid_acts:
+                return np.zeros((input_h, input_w), dtype=np.float32)
+
+            # Single multi-tensor backward call computing gradients for all hooked layers
+            grads = torch.autograd.grad(
+                outputs=score,
+                inputs=valid_acts,
+                create_graph=False,
+                retain_graph=False,
+                only_inputs=True,
+                allow_unused=True,
+            )
+
+            cams: list[torch.Tensor] = []
+            for act, grad in zip(valid_acts, grads):
+                if grad is None:
+                    continue
+                cam_layer = self._cam_from_activation_and_grad(act, grad)
+                cam_interp = F.interpolate(
+                    cam_layer[None, None],
+                    size=(input_h, input_w),
+                    mode="bilinear",
+                    align_corners=False,
+                )[0, 0]
+                cam_interp = torch.nan_to_num(cam_interp, nan=0.0, posinf=0.0, neginf=0.0)
+                cam_interp = torch.relu(cam_interp)
+                cams.append(cam_interp)
+
+            if not cams:
+                return np.zeros((input_h, input_w), dtype=np.float32)
+
+            if len(cams) == 1:
+                fused = cams[0]
+            else:
+                w1, w2 = fusion_weights[:2]
+                fused = w1 * cams[0] + w2 * cams[1]
+
+            fused_np = fused.detach().cpu().numpy()
+            return GradCAMExplainer._normalize_heatmap(fused_np)
+        finally:
+            self._activations = {i: None for i in range(len(self.target_layers))}
+            self.model.train(was_training)
+
+
+def extract_adaptive_contour(
+    heatmap: np.ndarray,
+    lung_mask: Optional[np.ndarray] = None,
+    threshold_percentile: float = 85.0,
+    min_lesion_area: int = 120,
+) -> Tuple[np.ndarray, list[dict[str, Any]], float]:
+    """
+    Extracts clinical lesion boundaries and bounding boxes from high-resolution CAM.
+    Returns:
+        bin_mask: Binary mask with detected lesion regions.
+        lesions: List of detected lesion metadata (bbox, centroid, area, confidence).
+        total_lesion_area_ratio: Ratio of lesion area to total pulmonary field.
+    """
+    h, w = heatmap.shape[:2]
+    heat = np.nan_to_num(heatmap, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
+
+    if lung_mask is not None:
+        effective_mask = (lung_mask > 0).astype(np.float32)
+        if effective_mask.shape != (h, w):
+            effective_mask = cv2.resize(effective_mask, (w, h), interpolation=cv2.INTER_NEAREST)
+        heat_intra = heat * effective_mask
+        in_lung_pixels = int(np.sum(effective_mask > 0))
+    else:
+        heat_intra = heat
+        effective_mask = np.ones((h, w), dtype=np.float32)
+        in_lung_pixels = h * w
+
+    positive_vals = heat_intra[heat_intra > 0.05]
+    if positive_vals.size > 0:
+        thresh = float(np.percentile(positive_vals, threshold_percentile))
+        thresh = max(0.20, min(thresh, 0.85))
+    else:
+        thresh = 0.5
+
+    bin_mask = (heat_intra >= thresh).astype(np.uint8)
+
+    # Morphological clean up
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    bin_mask = cv2.morphologyEx(bin_mask, cv2.MORPH_CLOSE, kernel)
+    bin_mask = cv2.morphologyEx(bin_mask, cv2.MORPH_OPEN, kernel)
+
+    contours, _ = cv2.findContours(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    lesions: list[dict[str, Any]] = []
+    total_lesion_pixels = 0
+
+    for cnt in contours:
+        area = int(cv2.contourArea(cnt))
+        if area < min_lesion_area:
+            # Clear out tiny speckles in bin_mask
+            cv2.drawContours(bin_mask, [cnt], -1, 0, -1)
+            continue
+
+        total_lesion_pixels += area
+        x, y, bw, bh = cv2.boundingRect(cnt)
+        M = cv2.moments(cnt)
+        cx = int(round(M["m10"] / (M["m00"] + 1e-6)))
+        cy = int(round(M["m01"] / (M["m00"] + 1e-6)))
+
+        cnt_mask = np.zeros((h, w), dtype=np.uint8)
+        cv2.drawContours(cnt_mask, [cnt], -1, 1, -1)
+        mean_conf = float(np.mean(heat[cnt_mask > 0])) if np.sum(cnt_mask) > 0 else 0.0
+
+        lesions.append({
+            "bbox": {
+                "x": int(x),
+                "y": int(y),
+                "width": int(bw),
+                "height": int(bh),
+                "x2": int(x + bw),
+                "y2": int(y + bh),
+            },
+            "centroid": {"x": int(cx), "y": int(cy)},
+            "area_pixels": area,
+            "area_percent": round((area / float(max(1, in_lung_pixels))) * 100.0, 2),
+            "confidence": round(mean_conf, 4),
+        })
+
+    # Sort lesions by area descending
+    lesions.sort(key=lambda item: item["area_pixels"], reverse=True)
+    area_ratio = round(float(total_lesion_pixels) / float(max(1, in_lung_pixels)), 4)
+
+    return bin_mask, lesions, area_ratio
+
+
+def render_contour_overlay(
+    img_rgb: np.ndarray,
+    bin_mask: np.ndarray,
+    lesions: Optional[list[dict[str, Any]]] = None,
+    contour_color: Tuple[int, int, int] = (6, 182, 212),  # Bright Cyan
+    fill_opacity: float = 0.25,
+) -> np.ndarray:
+    """
+    Renders clinical lesion contours and bounding brackets directly on the radiograph.
+    """
+    img = GradCAMExplainer._prepare_rgb_image(img_rgb).copy()
+    h, w = img.shape[:2]
+
+    if bin_mask.shape != (h, w):
+        bin_mask = cv2.resize(bin_mask.astype(np.uint8), (w, h), interpolation=cv2.INTER_NEAREST)
+
+    contours, _ = cv2.findContours(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # 1. Subtle semi-transparent lesion tint
+    tint_layer = img.copy()
+    cv2.drawContours(tint_layer, contours, -1, contour_color, -1)
+    img = cv2.addWeighted(tint_layer, fill_opacity, img, 1.0 - fill_opacity, 0)
+
+    # 2. Crisp, anti-aliased iso-contour perimeter
+    cv2.drawContours(img, contours, -1, contour_color, 2, cv2.LINE_AA)
+
+    # 3. Corner brackets for detected lesions
+    if lesions:
+        for item in lesions:
+            b = item.get("bbox", {})
+            bx, by, bw, bh = b.get("x", 0), b.get("y", 0), b.get("width", 0), b.get("height", 0)
+            corner_len = max(8, min(16, int(round(min(bw, bh) * 0.25))))
+            bracket_color = (245, 158, 11)  # Amber Gold
+
+            # Top-left corner
+            cv2.line(img, (bx, by), (bx + corner_len, by), bracket_color, 2, cv2.LINE_AA)
+            cv2.line(img, (bx, by), (bx, by + corner_len), bracket_color, 2, cv2.LINE_AA)
+            # Top-right corner
+            cv2.line(img, (bx + bw, by), (bx + bw - corner_len, by), bracket_color, 2, cv2.LINE_AA)
+            cv2.line(img, (bx + bw, by), (bx + bw, by + corner_len), bracket_color, 2, cv2.LINE_AA)
+            # Bottom-left corner
+            cv2.line(img, (bx, by + bh), (bx + corner_len, by + bh), bracket_color, 2, cv2.LINE_AA)
+            cv2.line(img, (bx, by + bh), (bx, by + bh - corner_len), bracket_color, 2, cv2.LINE_AA)
+            # Bottom-right corner
+            cv2.line(img, (bx + bw, by + bh), (bx + bw - corner_len, by + bh), bracket_color, 2, cv2.LINE_AA)
+            cv2.line(img, (bx + bw, by + bh), (bx + bw, by + bh - corner_len), bracket_color, 2, cv2.LINE_AA)
+
+    return img

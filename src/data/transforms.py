@@ -14,8 +14,10 @@ Rules & Inviolable Constraints:
 - API compatibility: Albumentations 1.3.x through 2.x (no deprecated ``value=`` arguments).
 """
 import inspect
+import os
 from typing import Optional
 
+os.environ["NO_ALBUMENTATIONS_UPDATE"] = "1"
 import albumentations as A
 import cv2
 from albumentations.pytorch import ToTensorV2

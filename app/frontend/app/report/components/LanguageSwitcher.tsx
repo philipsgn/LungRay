@@ -15,33 +15,31 @@ export function LanguageSwitcher({
   return (
     <div
       aria-label="Language Switcher"
-      className="fixed top-6 right-6 z-50 backdrop-blur-md bg-white/80 border border-slate-200/90 shadow-lg rounded-full p-1.5 flex items-center gap-1 transition-all duration-200 hover:shadow-xl"
+      className="fixed top-2.5 right-6 z-50 bg-white/95 border border-slate-300 shadow-sm rounded-lg p-0.5 flex items-center gap-1 font-mono text-xs"
     >
       <button
         type="button"
         onClick={() => onLanguageChange("en")}
         aria-pressed={currentLang === "en"}
-        className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-1.5 ${
+        className={`px-2.5 py-1 rounded text-xs font-bold tracking-wider transition-all duration-150 ${
           currentLang === "en"
-            ? "bg-[#0B1E36] text-white shadow-sm"
-            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
+            ? "bg-[#0F172A] text-white shadow-sm"
+            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
         }`}
       >
-        <span>🇬🇧</span>
-        <span>EN</span>
+        EN
       </button>
       <button
         type="button"
         onClick={() => onLanguageChange("vi")}
         aria-pressed={currentLang === "vi"}
-        className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 flex items-center gap-1.5 ${
+        className={`px-2.5 py-1 rounded text-xs font-bold tracking-wider transition-all duration-150 ${
           currentLang === "vi"
-            ? "bg-[#0B1E36] text-white shadow-sm"
-            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
+            ? "bg-[#0F172A] text-white shadow-sm"
+            : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
         }`}
       >
-        <span>🇻🇳</span>
-        <span>VI</span>
+        VI
       </button>
     </div>
   );

@@ -36,7 +36,7 @@ const RADAR_DATA = [
   { subject: "Zero Leakage", nih: 100, tb: 90, covid: 95, vindr: 100, chexpert: 95 },
 ];
 
-const COLORS = ["#0284C7", "#059669", "#D97706", "#8B5CF6", "#EC4899", "#64748B"];
+const COLORS = ["#0284C7", "#059669", "#D97706", "#475569", "#DC2626", "#0F172A"];
 
 export function DatasetSection({ dict, lang }: DatasetSectionProps) {
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -57,16 +57,16 @@ export function DatasetSection({ dict, lang }: DatasetSectionProps) {
   return (
     <section
       id="section-2"
-      className="relative min-h-screen w-full snap-start bg-gradient-to-br from-[#ECFDF5] to-[#F0F9FF] flex flex-col justify-between p-6 sm:p-10 lg:p-16 overflow-hidden text-[#0B1E36]"
+      className="relative min-h-screen w-full snap-start bg-[#F8FAFC] border-b border-slate-200 flex flex-col justify-between p-6 sm:p-10 lg:p-16 overflow-hidden text-[#0F172A]"
     >
       <div className="w-full max-w-7xl mx-auto my-auto py-6">
         {/* Section Header */}
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div className="max-w-2xl">
-            <div className="inline-block px-3.5 py-1 rounded-full bg-emerald-100/80 border border-emerald-300 text-emerald-900 text-xs font-bold uppercase tracking-wider mb-2">
+            <div className="inline-block px-3 py-1 rounded bg-slate-100 border border-slate-300 text-slate-800 text-[11px] font-mono uppercase tracking-widest mb-3">
               {dict.section2_datasets.tag}
             </div>
-            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[#0B1E36]">
+            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-[#0F172A]">
               {dict.section2_datasets.title}
             </h2>
             <p className="mt-2 text-slate-600 text-sm sm:text-base leading-relaxed">
@@ -75,37 +75,37 @@ export function DatasetSection({ dict, lang }: DatasetSectionProps) {
           </div>
 
           {/* Chart View Mode Controls */}
-          <div className="flex items-center gap-1.5 bg-white/80 backdrop-blur-md p-1 rounded-xl border border-slate-200/90 shadow-sm text-xs font-semibold">
+          <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-300 shadow-sm text-xs font-mono">
             <button
               type="button"
               onClick={() => setChartType("bar")}
-              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded flex items-center gap-1.5 transition-all ${
                 chartType === "bar"
-                  ? "bg-[#0B1E36] text-white shadow-sm"
+                  ? "bg-[#0F172A] text-white shadow-sm"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
-              <span>{lang === "vi" ? "Cột" : "Bar"}</span>
+              <span>{lang === "vi" ? "Cột (Bar)" : "Bar"}</span>
             </button>
             <button
               type="button"
               onClick={() => setChartType("pie")}
-              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded flex items-center gap-1.5 transition-all ${
                 chartType === "pie"
-                  ? "bg-[#0B1E36] text-white shadow-sm"
+                  ? "bg-[#0F172A] text-white shadow-sm"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
               <PieIcon className="w-3.5 h-3.5" />
-              <span>{lang === "vi" ? "Tròn" : "Pie"}</span>
+              <span>{lang === "vi" ? "Tròn (Pie)" : "Pie"}</span>
             </button>
             <button
               type="button"
               onClick={() => setChartType("radar")}
-              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded flex items-center gap-1.5 transition-all ${
                 chartType === "radar"
-                  ? "bg-[#0B1E36] text-white shadow-sm"
+                  ? "bg-[#0F172A] text-white shadow-sm"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
@@ -118,9 +118,9 @@ export function DatasetSection({ dict, lang }: DatasetSectionProps) {
         {/* 2-Column Visual Explorer */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           {/* Left Column: Recharts Distribution Visualizer */}
-          <div className="lg:col-span-5 backdrop-blur-md bg-white/75 border border-slate-200/80 shadow-xl rounded-3xl p-6 flex flex-col justify-between">
+          <div className="lg:col-span-5 bg-white border border-slate-300 shadow-sm rounded-2xl p-6 flex flex-col justify-between">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-[#0B1E36]">
+              <h3 className="text-sm font-bold text-[#0F172A] uppercase tracking-wide font-mono">
                 {chartType === "radar"
                   ? lang === "vi"
                     ? "Đa Dạng Hóa Thuộc Tính Dữ Liệu"
@@ -129,7 +129,7 @@ export function DatasetSection({ dict, lang }: DatasetSectionProps) {
                   ? "Phân Bố Số Lượng Ảnh Đa Trung Tâm"
                   : "Multi-Center Cohort Distribution"}
               </h3>
-              <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-200">
+              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
                 160,953 CXRs
               </span>
             </div>
@@ -147,20 +147,21 @@ export function DatasetSection({ dict, lang }: DatasetSectionProps) {
                       <YAxis
                         type="category"
                         dataKey="name"
-                        tick={{ fontSize: 11, fill: "#0B1E36", fontWeight: 600 }}
+                        tick={{ fontSize: 11, fill: "#0F172A", fontWeight: 600 }}
                         width={90}
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: "#0B1E36",
-                          borderColor: "#1E293B",
-                          borderRadius: "12px",
+                          backgroundColor: "#0F172A",
+                          borderColor: "#334155",
+                          borderRadius: "8px",
                           color: "#fff",
                           fontSize: "12px",
+                          fontFamily: "monospace",
                         }}
                         formatter={(value) => [typeof value === "number" ? `${value.toLocaleString()} images` : String(value ?? ""), "Volume"]}
                       />
-                      <Bar dataKey="images" radius={[0, 8, 8, 0]}>
+                      <Bar dataKey="images" radius={[0, 4, 4, 0]}>
                         {chartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
@@ -188,11 +189,12 @@ export function DatasetSection({ dict, lang }: DatasetSectionProps) {
                       </Pie>
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: "#0B1E36",
-                          borderColor: "#1E293B",
-                          borderRadius: "12px",
+                          backgroundColor: "#0F172A",
+                          borderColor: "#334155",
+                          borderRadius: "8px",
                           color: "#fff",
                           fontSize: "12px",
+                          fontFamily: "monospace",
                         }}
                         formatter={(value) => [typeof value === "number" ? `${value.toLocaleString()} images` : String(value ?? ""), "Volume"]}
                       />
@@ -203,7 +205,7 @@ export function DatasetSection({ dict, lang }: DatasetSectionProps) {
                 {chartType === "radar" && (
                   <ResponsiveContainer width="100%" height="100%">
                     <RadarChart data={RADAR_DATA}>
-                      <PolarGrid stroke="#CBD5E1" />
+                      <PolarGrid stroke="#E2E8F0" />
                       <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "#475569" }} />
                       <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9 }} />
                       <Radar
@@ -211,21 +213,21 @@ export function DatasetSection({ dict, lang }: DatasetSectionProps) {
                         dataKey="nih"
                         stroke="#0284C7"
                         fill="#0284C7"
-                        fillOpacity={0.3}
+                        fillOpacity={0.25}
                       />
                       <Radar
                         name="VinDr"
                         dataKey="vindr"
-                        stroke="#8B5CF6"
-                        fill="#8B5CF6"
-                        fillOpacity={0.3}
+                        stroke="#475569"
+                        fill="#475569"
+                        fillOpacity={0.25}
                       />
                       <Radar
                         name="COVIDx"
                         dataKey="covid"
                         stroke="#D97706"
                         fill="#D97706"
-                        fillOpacity={0.3}
+                        fillOpacity={0.25}
                       />
                       <Tooltip />
                     </RadarChart>
@@ -235,9 +237,9 @@ export function DatasetSection({ dict, lang }: DatasetSectionProps) {
             </div>
 
             {/* Zero Leakage Callout Card */}
-            <div className="mt-4 p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 text-xs">
-              <div className="flex items-center gap-1.5 font-bold text-emerald-950 mb-1">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+              <div className="flex items-center gap-1.5 font-bold text-slate-900 mb-1">
+                <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
                 <span>{dict.section2_datasets.leakageDisciplineTitle}</span>
               </div>
               <p className="text-slate-600 leading-relaxed text-[11px]">
@@ -260,10 +262,10 @@ export function DatasetSection({ dict, lang }: DatasetSectionProps) {
                   key={chip.id}
                   type="button"
                   onClick={() => setActiveCategory(chip.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all ${
                     activeCategory === chip.id
-                      ? "bg-[#0B1E36] text-white shadow-md"
-                      : "bg-white/80 text-slate-700 border border-slate-200 hover:bg-white"
+                      ? "bg-[#0F172A] text-white shadow-sm"
+                      : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50"
                   }`}
                 >
                   {chip.label}
@@ -276,11 +278,11 @@ export function DatasetSection({ dict, lang }: DatasetSectionProps) {
               {filteredDatasets.map((ds) => (
                 <div
                   key={ds.id}
-                  className="backdrop-blur-md bg-white/80 border border-slate-200/80 shadow-md rounded-2xl p-4 hover:shadow-lg hover:border-slate-300 transition-all flex flex-col justify-between"
+                  className="bg-white border border-slate-300 shadow-sm rounded-xl p-4 hover:border-slate-400 transition-all flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between gap-1 mb-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-200">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
                         {ds.badge}
                       </span>
                       <span className="text-xs font-mono font-bold text-slate-900">
@@ -288,7 +290,7 @@ export function DatasetSection({ dict, lang }: DatasetSectionProps) {
                       </span>
                     </div>
 
-                    <h4 className="text-sm font-extrabold text-[#0B1E36]">{ds.name}</h4>
+                    <h4 className="text-sm font-bold text-[#0F172A]">{ds.name}</h4>
                     <p className="text-xs text-slate-600 mt-1 line-clamp-2">{ds.role[lang]}</p>
                   </div>
 
@@ -298,8 +300,8 @@ export function DatasetSection({ dict, lang }: DatasetSectionProps) {
                         ? `${ds.patients.toLocaleString()} pts`
                         : ds.patients}
                     </span>
-                    <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                      <Eye className="w-3 h-3 text-emerald-600" />
+                    <span className="text-emerald-800 font-semibold flex items-center gap-1">
+                      <Eye className="w-3 h-3 text-emerald-700" />
                       {ds.leakageRate}
                     </span>
                   </div>

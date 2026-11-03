@@ -117,6 +117,11 @@ export interface ModelComparisonSpec {
   headA: number;
   headB: number;
   headC: number;
+  lossFunctions?: string;
+  trainingStrategy: string;
+  statusBadge: BilingualText;
+  badgeColor: "emerald" | "sky" | "rose";
+  isProduction: boolean;
   clinicalFeasibility: BilingualText;
 }
 
@@ -148,6 +153,25 @@ export interface CheXpertOodItem {
   delta: number;
   retention: number;
   pass: boolean;
+  }
+
+export interface OodBenchmarkSpec {
+  perturbation: string;
+  perturbationVi: string;
+  oodType: "Far-OOD" | "Near-OOD";
+  energyAuroc: number;
+  entropyAuroc: number;
+  status: string;
+  statusVi: string;
+}
+
+export interface FailSafeLayerSpec {
+  energyThreshold: number;
+  entropyThreshold: number;
+  idRetentionPct: number;
+  lockoutPolicy: BilingualText;
+  icd10Coverage: number;
+  farOodAuroc: number;
 }
 
 export interface ErrorCaseItem {

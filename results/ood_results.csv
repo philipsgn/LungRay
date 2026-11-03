@@ -1,0 +1,8 @@
+dataset,category,energy_auroc,entropy_auroc,fpr95_energy,fpr95_entropy,mean_energy,mean_entropy
+NIH_Frontal_CXR (ID),In-Distribution,0.5,0.5,0.8,0.8,9.1388,0.6261
+Gaussian_Noise,Far-OOD,0.0,0.0,1.0,1.0,10.3721,0.5891
+Uniform_Noise,Far-OOD,0.0,0.0,1.0,1.0,10.8005,0.5937
+Inverted_CXR,Far-OOD,0.32,0.36,1.0,1.0,9.1839,0.6259
+Extreme_Blur,Far-OOD,0.0,0.0,1.0,1.0,10.82,0.5966
+Contrast_Washout,Near-OOD,0.0,1.0,1.0,0.0,9.5765,0.6322
+Rotated_90deg (Near-OOD),Near-OOD,0.32,0.36,1.0,0.8,9.1655,0.6258

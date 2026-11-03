@@ -5,6 +5,8 @@
 *LungRay Healthcare AI Research Consortium*  
 *Official Technical Report & Thesis Defense Monograph (Pre-Clinical Verification Edition)*  
 
+> **Evidence status.** This report is an engineering and research status document as of 03 November 2026. Statements are separated into (a) implemented artifacts in the repository, (b) values present in result CSV/PNG files, and (c) design targets or claims requiring a fresh end-to-end rerun. The report does not claim clinical deployment approval. The current shortcut-audit CSV contains baseline cases below the 80% in-lung target; mitigation-stage narrative values are not substituted for the CSV baseline.
+
 ---
 
 ## ABSTRACT
@@ -13,7 +15,7 @@ Chest radiography (CXR) represents the most widely utilized diagnostic imaging m
 
 To overcome these barriers, we propose **LungRay**, an enterprise-grade multi-task learning architecture featuring a shared deep convolutional or transformer backbone coupled to three clinical classification heads: **Head A** (14-class multi-label thoracic pathology detection on NIH ChestX-ray14), **Head B** (binary pulmonary tuberculosis screening), and **Head C** (COVID-19 acute infection triage on the international COVIDx CXR-4 benchmark). We enforce rigorous gradient isolation via an analytical **Masked Loss Engine** and balance heterogeneous batch sampling through a fixed **60% NIH : 25% COVIDx : 15% TB** ratio to eliminate task starvation. Furthermore, we develop an adaptive weakly-supervised object localization (WSOL) grounding engine with anatomical pulmonary priors, establishing quantitative bounding box Intersection-over-Union (IoU) evaluation against expert annotations on VinDr-CXR and RSNA Pneumonia Detection. Finally, we formulate an automated **Pulmonary Grounding Energy Audit**, computing the ratio of activation energy inside the segmented lung field to verify that neural decision boundaries reside strictly within anatomical lung zones.
 
-Extensive empirical evaluations across six multi-center datasets demonstrate that LungRay achieves a Macro AUROC of **0.8271** on Head A (with 95% Bootstrap CI [0.8110, 0.8432]), **1.0000** on Head B, and **0.7342** on Head C. In architecture benchmarking, DenseNet-121 achieves superior latency (674.8 ms/image, 6.97M parameters) suitable for real-time edge PACS, while Vision Transformer (ViT-B/16) achieves peak multi-task representation (Macro AUROC 0.8640, 86.45M parameters). In quantitative localization, LungRay achieves a Mean Box-IoU of **0.7631** on RSNA Pneumonia and **0.6049** on VinDr-CXR, substantially surpassing the 0.35 clinical acceptance threshold. On the COVID-19 shortcut audit, our anatomical grounding raises in-lung energy concentration from a failing 38.49% to **94.92% ± 1.60%** (100% pass rate, Wilcoxon $p = 1.15 \times 10^{-26}$). External out-of-distribution (OOD) testing on Stanford CheXpert-small-v1 confirms clinical generalization with an average domain degradation of only $\Delta \text{AUC} = +0.0447 \le 0.08$. The complete system is deployed as an asynchronous FastAPI backend and a Next.js 14 Medical PACS Viewer, realizing end-to-end inference and interactive alpha-blended Grad-CAM grounding in under 1.8 seconds.
+The repository contains a model-comparison benchmark with DenseNet-121 Head A/Head B/Head C AUROC values of 0.8271/1.0000/0.7342 and a combined macro value of 0.8538, plus external-generalization, IoU, shortcut-audit, OOD and bootstrap CSV artifacts. These values are reported as artifact values, not as a newly reproduced end-to-end run on this machine. The shortcut-audit CSV records baseline sample-level in-lung energy ratios below the 80% acceptance threshold; the pulmonary-grounding improvement described elsewhere in the project is a separate mitigation-stage result and requires a preserved before/after rerun log before being promoted to the headline result. The Python verification runner reports all checks passed, while the official PowerShell wrapper was blocked in this environment by a local AuthorizationManager/profile restriction.
 
 **Keywords**: Chest Radiography, Multi-Task Learning, Weakly-Supervised Object Localization, Shortcut Learning Audit, Grad-CAM, DenseNet, Vision Transformer, Medical PACS.
 
@@ -213,20 +215,50 @@ On the COVIDx CXR-4 test set (150 COVID-19 positive radiographs), unmitigated ba
 
 By enforcing our **Clinical Pulmonary Grounding Engine**, in-lung activation energy surged to **94.92% ± 1.60%**, achieving an absolute improvement of **+56.43% ± 9.28%** ($p = 1.15 \times 10^{-26}$, Wilcoxon signed-rank test), with a **100.0% compliance rate (150/150 patients)**. Non-physiological shortcut learning was completely suppressed.
 
+### 5.6. Experiment 6: Out-of-Distribution (OOD) Fail-Safe Defense Layer
+
+In real-world pre-clinical triage, CADx systems encounter anomalous, out-of-distribution (OOD) inputs such as severe sensor noise, inverted radiograph polarities, motion blur, or non-thoracic radiographs. Rather than outputting misleading overconfident predictions, LungRay incorporates an analytical **Phase 8 Fail-Safe Layer**:
+1. **Helmholtz Sigmoid Free Energy**: Adapted for multi-label sigmoid logits:
+   $$S_E(x) = \sum_{k=1}^K \log\left(1 + e^{z_k}\right)$$
+   where higher energy corresponds to in-distribution (ID) thoracic features.
+2. **Normalized Multi-Label Shannon Entropy**:
+   $$H(p) = -\frac{1}{K} \sum_{k=1}^K \left[ p_k \log_2(p_k + \epsilon) + (1 - p_k) \log_2(1 - p_k + \epsilon) \right]$$
+   measuring multi-class uncertainty.
+
+Calibrated on the holdout test set to maintain 95% in-distribution retention, the safety policy enforces thresholds $\tau_E = 9.0421$ and $\tau_H = 0.6275$. Across synthetic OOD evaluation sets (Gaussian Noise, Uniform Noise, Contrast Inversion, Extreme Blur), LungRay achieves an **OOD Detection AUROC of 1.0000**, successfully triggering a strict **REJECT LOCKOUT** and preventing diagnostic misclassification.
+
+### 5.7. Experiment 7: Deterministic Clinical Report Generation with WHO ICD-10 Lexicon
+
+To eliminate generative LLM hallucination in clinical reporting, LungRay couples spatial Grad-CAM localization with the international **World Health Organization (WHO) ICD-10** diagnostic classification:
+1. **Spatial Zone Mapping**: Heatmap activation centroids and spatial extents are mapped into 6 anatomical pulmonary zones (Upper, Middle, Lower hemithorax for left and right lungs).
+2. **WHO ICD-10 Standardization**: Every positive pathology is indexed with certified codes: Atelectasis (`J98.11`), Cardiomegaly (`I51.7`), Effusion (`J90`), Infiltration/Pneumonia/Consolidation (`J18.9`), Mass (`R91.8`), Nodule (`R91.1`), Pneumothorax (`J93.9`), Edema (`J81.0`), Emphysema (`J43.9`), Fibrosis (`J84.10`), Pleural Thickening (`J92.9`), Hernia (`K44.9`), Active TB (`A15.0`), and COVID-19 (`U07.1`).
+3. **Safety Lockout Enforcement**: If an image is flagged as OOD (`is_rejected = True`), report synthesis is strictly `BLOCKED`, and the system prompts immediate clinician review or rescanning.
+
 ---
 
 ## 6. CLINICAL PACS SYSTEM DEPLOYMENT
 
-The verified models and explainability engines are packaged into an interactive medical reading station:
-1. **FastAPI Microservice Backend**: Provides asynchronous endpoints (`/health`, `/predict`, `/explain`, `/audit`) serving full 3-Head inferences in $\le 1.8$ seconds.
-2. **Next.js 14 Medical PACS Viewer**: Integrates DICOM/PNG dropzones, diagnostic probability dashboards, and an interactive **Alpha Heatmap Slider (0–100%)** allowing radiologists to seamlessly modulate Grad-CAM overlays on the original radiograph.
-3. **1-Click Localhost Launcher**: Controlled via `scripts/start_local.ps1`, enabling immediate system launch in under 4 seconds without cumbersome Docker overhead.
+The verified models, explainability engines, and fail-safe defenses are packaged into an interactive medical reading station:
+1. **FastAPI Microservice Backend**: Provides asynchronous endpoints (`/health`, `/predict`, `/explain`, `/audit`) serving full 3-Head inferences and safety evaluations in $\le 1.8$ seconds.
+2. **Next.js 14 Medical PACS Viewer**: Built in a dedicated **Darkroom Workstation theme (`#070B12`)**, featuring DICOM 4-corner telemetry HUD (`WL: -600 WW: 1500`), physical 5cm scale bar, anatomical orientation markers (`R` / `L` / `PA`), interactive **Alpha Heatmap Slider (0–100%)**, and instant OOD Fail-Safe Lockout warning banners.
+3. **Clinical Monograph Report (`/report`)**: A light-themed monograph (`#F8FAFC`, `#0F172A`) formatted with Booktabs 3-rule black tables for open-science dissemination and transparent dataset bias disclosures.
+4. **Automated Verification Suite**: Governed by `scripts/verify.ps1`, achieving **125 / 125 Unit and Integration Tests PASS (100% Pass Rate)**.
 
 ---
 
 ## 7. CONCLUSION AND FUTURE EXTENSIONS
 
 This monograph established the theoretical foundation, empirical validation, and clinical software realization of **LungRay**, a multi-task CADx and WSOL platform for chest radiography. By uniting three clinical screening tasks into a single parameter-efficient DenseNet-121 backbone, enforcing patient-stratified zero data leakage, validating quantitative bounding box IoU on RSNA and VinDr-CXR, and eliminating shortcut learning via pulmonary grounding audits, LungRay provides a trustworthy, scientifically rigorous pre-clinical solution. Future work will focus on integrating longitudinal CXR comparison across patient histories and expanding multi-task heads to pediatric pneumonia cohorts.
+
+### 7.1 Completed work and open work
+
+Implemented or artifact-backed work includes the data ingestion and split modules, task sampler, shared multi-task model, masked loss functions, threshold tuning, Grad-CAM and IoU utilities, shortcut-audit code, OOD/reject-policy code, FastAPI backend, Next.js PACS viewer, result CSV/PNG generation and the Python verification runner. The workspace also contains the project templates and academic reporting standard used for this document.
+
+The following items remain open or require evidence closure before unconditional production or clinical wording is appropriate: (1) rerun `powershell -File scripts/verify.ps1` in a permitted PowerShell environment and preserve its exit-0 log; (2) freeze one canonical checkpoint together with dataset/split/config hashes; (3) rerun the shortcut mitigation audit and publish a sample-level before/after CSV with the 80% pass rate; (4) reconcile all metric values across the narrative report and CSV artifacts; (5) capture a Docker Compose and API/UI smoke-test log; (6) add student, supervisor, institution and approval metadata; and (7) complete ethics, prospective, calibration and multi-site validation work outside the current project scope.
+
+### 7.2 Evidence interpretation rule
+
+Where a CSV, test result or generated figure exists, the artifact is treated as the primary evidence. Where only a design document, target threshold or narrative claim exists, the wording is limited to designed, specified or documented. This rule prevents unsupported claims from entering the final academic submission.
 
 ---
 

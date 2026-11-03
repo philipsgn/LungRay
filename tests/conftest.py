@@ -1,6 +1,8 @@
 """
 Shared PyTest fixtures for LungRay platform testing.
 """
+import os
+os.environ["NO_ALBUMENTATIONS_UPDATE"] = "1"
 import pytest
 import torch
 import numpy as np
@@ -26,5 +28,5 @@ def dummy_tb_labels():
 
 @pytest.fixture
 def dummy_covid_labels():
-    """Generates multi-class categorical ground truth for COVID Head C (4 classes)."""
-    return torch.randint(0, 4, (2,))
+    """Generates binary ground truth for COVID Head C (COVIDx binary screening)."""
+    return torch.randint(0, 2, (2, 1)).float()
