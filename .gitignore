@@ -51,7 +51,6 @@ dataset/**/images_*/
 dataset/**/subsets/
 
 # Local IDE configuration & Agent rules
-.agents/
 .idea/
 .vscode/
 
@@ -86,3 +85,7 @@ Thumbs.db
 desktop.ini
 debug.log
 results/fintune/
+
+
+!/.agents/**/*.md
+!/.agents/*.md
