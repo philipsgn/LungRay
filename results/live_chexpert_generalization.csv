@@ -1,0 +1,6 @@
+Pathology,Head_A_Index,NIH_In_Distribution_AUC,CheXpert_Live_OOD_AUC,Delta_AUC,Retention_Rate_Pct,Clinical_Safety_Pass,Num_Positive_Cases,Total_Evaluated
+Atelectasis,0,0.8124,0.6051,0.2073,74.49,False,29,100
+Cardiomegaly,1,0.8973,0.6765,0.2208,75.39,False,32,100
+Effusion,2,0.8741,0.8313,0.0428,95.11,True,59,100
+Consolidation,8,0.7935,0.5594,0.2341,70.5,False,22,100
+Edema,9,0.8812,0.6387,0.2425,72.48,False,41,100

@@ -119,6 +119,15 @@ def test_safety_policy_reject_high_entropy():
     assert any("hỗn loạn" in r for r in decision.rejection_reasons)
 
 
+def test_safety_policy_reject_hyper_energy():
+    """Hyper-activated energy (e.g. S_E = 33.97 from pediatric scan) triggers REJECT."""
+    policy = SafetyPolicy(energy_threshold=9.04, energy_upper_threshold=22.0, entropy_threshold=0.62)
+    decision = policy.evaluate(energy_score=33.97, entropy_score=0.26)
+    assert decision.decision == "REJECT"
+    assert decision.is_safe is False
+    assert any("bão hòa" in r for r in decision.rejection_reasons)
+
+
 def test_anatomical_zone_extraction():
     """Heatmap peaks correctly map to lateral and vertical lung zones."""
     # Test Right Lung Upper Zone (peak in top-left: y=50, x=50 on 512x512)

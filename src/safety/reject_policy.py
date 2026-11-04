@@ -3,7 +3,7 @@ LungRay Fail-Safe Decision Policy (Reject Policy)
 ================================================
 Evaluates computed energy and entropy against calibrated clinical thresholds.
 Enforces the safety invariant:
-    REJECT if Energy < tau_E OR Entropy > tau_H.
+    REJECT if Energy < tau_E_low OR Energy > tau_E_high OR Entropy > tau_H.
 """
 from dataclasses import dataclass, field
 import json
@@ -13,9 +13,10 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-# Default empirical safety thresholds calibrated on NIH test holdout
-DEFAULT_ENERGY_THRESHOLD = 9.50
-DEFAULT_ENTROPY_THRESHOLD = 0.42
+# Empirical safety thresholds calibrated on Adult Frontal CXR (NIH holdout)
+DEFAULT_ENERGY_THRESHOLD = 9.0421
+DEFAULT_ENERGY_UPPER_THRESHOLD = 22.0
+DEFAULT_ENTROPY_THRESHOLD = 0.6275
 
 
 @dataclass
@@ -40,20 +41,25 @@ class SafetyDecision:
 class SafetyPolicy:
     """
     Evaluates OOD scores and enforces the clinical reject policy.
+    Dual-bounded energy + upper-bounded entropy for safe medical deployment.
     """
 
     def __init__(
         self,
         config_path: Optional[str] = None,
         energy_threshold: Optional[float] = None,
+        energy_upper_threshold: Optional[float] = None,
         entropy_threshold: Optional[float] = None,
     ):
         self.config_path = config_path or os.path.join("configs", "ood_thresholds.json")
         self.energy_threshold = DEFAULT_ENERGY_THRESHOLD
+        self.energy_upper_threshold = DEFAULT_ENERGY_UPPER_THRESHOLD
         self.entropy_threshold = DEFAULT_ENTROPY_THRESHOLD
         self._load_config()
         if energy_threshold is not None:
             self.energy_threshold = energy_threshold
+        if energy_upper_threshold is not None:
+            self.energy_upper_threshold = energy_upper_threshold
         if entropy_threshold is not None:
             self.entropy_threshold = entropy_threshold
 
@@ -63,22 +69,27 @@ class SafetyPolicy:
             try:
                 with open(self.config_path, "r", encoding="utf-8") as fh:
                     cfg = json.load(fh)
-                if "energy_score" in cfg and "threshold" in cfg["energy_score"]:
-                    self.energy_threshold = float(cfg["energy_score"]["threshold"])
+                if "energy_score" in cfg:
+                    if "threshold" in cfg["energy_score"]:
+                        self.energy_threshold = float(cfg["energy_score"]["threshold"])
+                    if "upper_threshold" in cfg["energy_score"]:
+                        self.energy_upper_threshold = float(cfg["energy_score"]["upper_threshold"])
                 if "entropy_score" in cfg and "threshold" in cfg["entropy_score"]:
                     self.entropy_threshold = float(cfg["entropy_score"]["threshold"])
                 logger.info(
-                    "Loaded OOD thresholds from %s (Energy: %.2f, Entropy: %.2f)",
+                    "Loaded OOD thresholds from %s (Energy: [%.2f, %.2f], Entropy: %.2f)",
                     self.config_path,
                     self.energy_threshold,
+                    self.energy_upper_threshold,
                     self.entropy_threshold,
                 )
             except Exception as exc:
                 logger.warning(
-                    "Failed to parse %s (%s); using defaults (Energy: %.2f, Entropy: %.2f)",
+                    "Failed to parse %s (%s); using defaults (Energy: [%.2f, %.2f], Entropy: %.2f)",
                     self.config_path,
                     exc,
                     self.energy_threshold,
+                    self.energy_upper_threshold,
                     self.entropy_threshold,
                 )
 
@@ -87,9 +98,11 @@ class SafetyPolicy:
         Evaluates energy and entropy against calibrated safety thresholds.
 
         Reject criteria:
-        1. Energy < tau_E: Image feature distribution deviates significantly from
+        1. Energy < tau_E_low: Image feature distribution deviates significantly from
            valid adult frontal CXR patterns (e.g. noise, inverted, lateral, CT, natural images).
-        2. Entropy > tau_H: Multi-label probability distribution exhibits excessive
+        2. Energy > tau_E_high: Extreme feature explosion / saturation anomaly (e.g. pediatric scan
+           evaluated on adult model triggering massive false co-activations across all heads).
+        3. Entropy > tau_H: Multi-label probability distribution exhibits excessive
            predictive ambiguity / conflict.
         """
         reasons: List[str] = []
@@ -98,6 +111,11 @@ class SafetyPolicy:
             reasons.append(
                 f"Điểm số năng lượng thấp ({energy_score:.2f} < {self.energy_threshold:.2f}): "
                 "Hình ảnh có dấu hiệu ngoài phân phối chuẩn (Out-of-Distribution/CXR không chuẩn tư thế)."
+            )
+        elif energy_score > self.energy_upper_threshold:
+            reasons.append(
+                f"Điểm số năng lượng bão hòa bất thường ({energy_score:.2f} > {self.energy_upper_threshold:.2f}): "
+                "Bão hòa đặc trưng cực hạn do lệch pha miền dữ liệu (Domain Shift / Phim nhi khoa hoặc cấu trúc ngoài phân phối người lớn)."
             )
 
         if entropy_score > self.entropy_threshold:
