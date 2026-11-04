@@ -72,3 +72,4 @@ sequenceDiagram
 - [ ] File `results/live_covid_shortcut_audit.csv` xác nhận 100% ca COVID đạt tiêu chuẩn In-Lung Energy $\ge 80\%$.
 - [ ] File `results/live_chexpert_generalization.csv` xác nhận Mean Top-5 AUC $\ge 0.80$.
 - [ ] Xuất bản báo cáo hoàn thiện `results/LIVE_EXTERNAL_BENCHMARK_REPORT.md`.
+

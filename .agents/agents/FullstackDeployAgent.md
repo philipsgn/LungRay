@@ -52,3 +52,4 @@ Chịu trách nhiệm đóng gói mô hình học sâu và động cơ Grad-CAM 
 | **PACS Frontend UI** | `app/frontend/app/page.tsx` | Next.js compile 0 lỗi (`tsc --noEmit`), ESLint 0 warning. |
 | **Docker Compose** | `docker-compose.yml` | Khởi chạy stack `backend:8000` và `frontend:3000` đồng bộ. |
 | **Kiểm Thử Backend** | `tests/test_api_backend.py` | Lệnh `pytest tests/test_api_backend.py` đạt **100% PASS**. |
+

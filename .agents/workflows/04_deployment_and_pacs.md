@@ -85,3 +85,4 @@ sequenceDiagram
 - [ ] ESLint đạt 0 lỗi và 0 warnings.
 - [ ] Lệnh kiểm thử `pytest tests/test_api_backend.py` đạt 100% PASS.
 - [ ] Kiểm thử Fail-Safe Lockout hoạt động chuẩn xác trên các mẫu ảnh dị tật/nhiễu.
+

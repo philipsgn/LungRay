@@ -72,3 +72,4 @@ Kỹ năng này hướng dẫn việc triển khai **Lớp bảo vệ an toàn 2
 - Khi `is_ood == True`:
   - Frontend hiển thị biểu ngữ đỏ (Red Safety Banner): *"CẢNH BÁO AN TOÀN LÂM SÀNG: Ảnh ngoài phân phối giải phẫu. Hệ thống từ chối đưa ra kết luận chẩn đoán."*
   - Nút bấm *"Xuất Báo Cáo Y Khoa (Export Report)"* bị khóa (Disabled) hoàn toàn để ngăn chặn việc đưa thông tin sai lệch vào hồ sơ bệnh án.
+

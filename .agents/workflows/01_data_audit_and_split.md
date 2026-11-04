@@ -80,3 +80,4 @@ sequenceDiagram
 - [ ] Lệnh kiểm thử `pytest tests/test_data_pipeline.py -v` đạt 100% PASS.
 - [ ] DataLoader chạy thử nghiệm 1 epoch không gặp lỗi `IndexError` hoặc rỗng batch.
 - [ ] Không phát sinh file rác mồ côi trong thư mục gốc.
+

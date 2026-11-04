@@ -56,3 +56,4 @@ Chịu trách nhiệm kiểm soát chất lượng kỹ thuật toàn diện c�
 | **Hồ Sơ FAQ Phản Biện** | `docs/defense_faq.md` | Đầy đủ 15 câu hỏi lâm sàng & kỹ thuật, lập luận sắc bén. |
 | **Bảng Thống Kê SOTA** | `results/model_comparison_table.csv` | Chứa đầy đủ thông số AUROC, FLOPs, Latency, Bootstrap CI. |
 | **Lệnh Kiểm Thử Toàn Diện**| `scripts/verify.ps1` | Chạy đạt kết quả **100% PASS (Exit code 0)**. |
+

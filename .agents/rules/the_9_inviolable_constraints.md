@@ -57,3 +57,4 @@
   - Bảng biểu theo chuẩn **Booktabs**: Chỉ dùng 3 đường kẻ ngang đen (`\toprule`, `\midrule`, `\bottomrule`), không kẻ dọc, không tô màu xen kẽ sặc sỡ.
   - Màu sắc: **Đơn sắc đen trắng (Grayscale / Monochrome)**; đồ thị khoa học chỉ dùng nét đứt, chấm nét hoặc thang độ xám rõ ràng.
   - Văn phong khoa học khách quan, trang trọng, trích dẫn chuẩn IEEE/Vancouver.
+

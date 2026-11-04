@@ -87,3 +87,4 @@ sequenceDiagram
 - [ ] Hồ sơ phản biện `docs/defense_faq.md` đầy đủ 15 câu hỏi lâm sàng & kỹ thuật.
 - [ ] Workspace sạch sẽ, không còn bất kỳ file rác mồ côi nào (Rule 8).
 - [ ] Phê duyệt Delivery Gate 6 chính thức từ Lead AI Orchestrator.
+

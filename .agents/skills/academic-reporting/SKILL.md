@@ -58,3 +58,4 @@ Kỹ năng này hướng dẫn việc tổng hợp số liệu thực nghiệm y
   - Dung lượng tệp: $\ge 1.0$ MB.
   - Số trang: 20–25 trang in chuẩn học thuật.
   - Bố cục trang bìa, mục lục, bảng số liệu, biểu đồ Grad-CAM định vị tổn thương và danh mục tài liệu tham khảo chuẩn IEEE.
+

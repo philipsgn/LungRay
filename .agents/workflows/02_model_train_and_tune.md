@@ -75,3 +75,4 @@ sequenceDiagram
 - [ ] Tập cấu hình `configs/optimal_thresholds.json` có đủ 14 ngưỡng bệnh tối ưu.
 - [ ] Macro AUROC trên tập Test đạt: Head A $\ge 0.80$, Head B $\ge 0.90$, Head C $\ge 0.70$.
 - [ ] Lệnh kiểm thử `pytest tests/test_model_architecture.py` đạt 100% PASS.
+

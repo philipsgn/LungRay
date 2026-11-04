@@ -51,3 +51,4 @@ Chịu trách nhiệm tuyệt đối về tính toàn vẹn, bảo mật và an 
 | **Chỉ mục Splits TB** | `data/splits/tb_splits.csv` | Chia tầng nhị phân cân bằng tỷ lệ. |
 | **Mã nguồn DataLoader** | `src/data/dataset.py`, `src/data/sampler.py` | Trả về batch đúng kích thước và cấu trúc mask. |
 | **Unit Test Verification**| `tests/test_data_pipeline.py` | Lệnh `pytest tests/test_data_pipeline.py` đạt **100% PASS**. |
+

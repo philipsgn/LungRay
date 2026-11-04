@@ -57,3 +57,4 @@ Chịu trách nhiệm thiết lập động cơ giải thích trực quan (Grad-
 | **Bảng Benchmark VinDr**| `results/live_vindr_iou_benchmark.csv` | Mean Box-IoU đạt ngưỡng lâm sàng $\ge 0.35$ trên các bệnh khu trú. |
 | **Báo cáo Kiểm toán COVID**| `results/live_covid_shortcut_audit.csv` | Tỷ lệ **In-Lung Energy Ratio $\ge 80.0\%$** (hoặc 100% khi có Grounding). |
 | **Báo cáo Tổng hợp XAI**| `results/LIVE_EXTERNAL_BENCHMARK_REPORT.md` | Báo cáo đầy đủ 3 bộ test ngoài: VinDr, CheXpert, COVIDx. |
+

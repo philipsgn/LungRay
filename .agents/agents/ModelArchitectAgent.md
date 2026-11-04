@@ -57,3 +57,4 @@ Chịu trách nhiệm thiết kế, tối ưu hóa và huấn luyện kiến tr�
 | **Trọng số Checkpoint** | `checkpoints/best_model.pth` | File checkpoint hợp lệ, nạp được vào mô hình ở chế độ `eval()`. |
 | **Cấu hình Ngưỡng** | `configs/optimal_thresholds.json` | 14 ngưỡng bệnh tối ưu được tính bằng Youden's J trên val set. |
 | **Chỉ số AUROC Target**| Validation Metric Summary | **Head A Macro AUC $\ge 0.80$**, **Head B AUC $\ge 0.90$**, **Head C AUC $\ge 0.70$**. |
+
