@@ -618,11 +618,27 @@ class MultiScaleGradCAMPlusPlus:
             self.model.train(was_training)
 
 
+DISEASE_PERCENTILE_MAP: dict[str, float] = {
+    "cardiomegaly": 62.0,       # Capture full cardiac silhouette
+    "effusion": 72.0,           # Fluid accumulation
+    "consolidation": 75.0,      # Lobar airspace
+    "infiltration": 78.0,       # Reticulonodular
+    "pneumothorax": 70.0,       # Apical radiolucency
+    "fibrosis": 78.0,           # Interstitial
+    "atelectasis": 76.0,        # Linear/segmental
+    "pleural_thickening": 72.0, # Pleural stripe
+    "nodule": 90.0,             # Focal small
+    "mass": 82.0,               # Focal large
+    "pneumonia": 75.0,          # Patchy infiltrate
+}
+
+
 def extract_adaptive_contour(
     heatmap: np.ndarray,
     lung_mask: Optional[np.ndarray] = None,
-    threshold_percentile: float = 85.0,
+    threshold_percentile: Optional[float] = None,
     min_lesion_area: int = 120,
+    disease_name: Optional[str] = None,
 ) -> Tuple[np.ndarray, list[dict[str, Any]], float]:
     """
     Extracts clinical lesion boundaries and bounding boxes from high-resolution CAM.
@@ -633,6 +649,13 @@ def extract_adaptive_contour(
     """
     h, w = heatmap.shape[:2]
     heat = np.nan_to_num(heatmap, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
+
+    # Resolve threshold percentile based on pathology geometry
+    if threshold_percentile is None:
+        if disease_name and disease_name.lower() in DISEASE_PERCENTILE_MAP:
+            threshold_percentile = DISEASE_PERCENTILE_MAP[disease_name.lower()]
+        else:
+            threshold_percentile = 85.0
 
     if lung_mask is not None:
         effective_mask = (lung_mask > 0).astype(np.float32)
@@ -648,7 +671,8 @@ def extract_adaptive_contour(
     positive_vals = heat_intra[heat_intra > 0.05]
     if positive_vals.size > 0:
         thresh = float(np.percentile(positive_vals, threshold_percentile))
-        thresh = max(0.20, min(thresh, 0.85))
+        min_clamp = 0.12 if (disease_name and disease_name.lower() == "cardiomegaly") else 0.20
+        thresh = max(min_clamp, min(thresh, 0.85))
     else:
         thresh = 0.5
 

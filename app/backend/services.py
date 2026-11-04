@@ -348,7 +348,7 @@ class LungRayService:
             bin_mask, lesions, area_ratio = extract_adaptive_contour(
                 heatmap=final_heatmap,
                 lung_mask=effective_mask,
-                threshold_percentile=85.0,
+                disease_name=target_disease_name,
             )
             contour_overlay = render_contour_overlay(
                 img_rgb=image_np,

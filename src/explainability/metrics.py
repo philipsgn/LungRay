@@ -151,10 +151,27 @@ def extract_bboxes_from_mask(
     return sorted_boxes
 
 
+DISEASE_ADAPTIVE_ALPHA: Dict[str, float] = {
+    "cardiomegaly": 0.20,       # Large cardiac silhouette, expand to capture whole heart
+    "effusion": 0.30,           # Fluid accumulation in costophrenic angles
+    "consolidation": 0.35,      # Lobar airspace filling
+    "infiltration": 0.38,       # Diffuse ill-defined bronchovascular markings
+    "pneumothorax": 0.25,       # Apical radiolucency & visceral pleural line
+    "fibrosis": 0.38,           # Reticular interstitial pattern
+    "atelectasis": 0.35,        # Linear/plate-like volume loss
+    "pleural_thickening": 0.25, # Pleural border stripe
+    "nodule": 0.65,             # Small focal lesion, tight bounding
+    "mass": 0.55,               # Circumscribed large lesion
+    "pneumonia": 0.35,          # Focal/segmental inflammatory infiltrate
+    "edema": 0.30,              # Bat-wing perihilar alveolar infiltrates
+}
+
+
 def adaptive_binarize(
     heatmap: np.ndarray,
     lung_mask: Optional[np.ndarray] = None,
-    alpha: float = 0.5,
+    alpha: Optional[float] = None,
+    disease_name: Optional[str] = None,
     method: str = "ratio",
 ) -> np.ndarray:
     """
@@ -165,12 +182,18 @@ def adaptive_binarize(
     Args:
         heatmap: 2D numpy array with values in [0.0, 1.0].
         lung_mask: Optional 2D binary array of lung parenchyma (values 0 or >0).
-        alpha: Adaptive threshold coefficient in [0.0, 1.0].
+        alpha: Adaptive threshold coefficient in [0.0, 1.0]. If None, resolved from disease_name.
+        disease_name: Optional pathology name to select optimal clinical threshold.
         method: 'ratio' (alpha * max) or 'otsu' (Otsu threshold on clean region).
 
     Returns:
         2D binary numpy array of shape matching heatmap (0 or 1).
     """
+    if alpha is None:
+        if disease_name:
+            alpha = DISEASE_ADAPTIVE_ALPHA.get(disease_name.lower(), 0.45)
+        else:
+            alpha = 0.45
     if heatmap.ndim != 2:
         raise ValueError(f"Heatmap must be 2D, got shape {heatmap.shape}")
 

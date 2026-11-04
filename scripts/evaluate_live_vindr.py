@@ -232,8 +232,8 @@ def run_live_vindr_benchmark(
                 gy2 = (b[3] / orig_h) * 512.0
                 gt_scaled.append([gx1, gy1, gx2, gy2])
 
-            # Adaptive Binarization & Box Extraction
-            bin_mask = adaptive_binarize(raw_heatmap, lung_mask=effective_mask, alpha=0.45)
+            # Adaptive Binarization & Box Extraction (Disease-Adaptive Thresholding)
+            bin_mask = adaptive_binarize(raw_heatmap, lung_mask=effective_mask, disease_name=nih_disease)
             pred_boxes = extract_bboxes_from_mask(bin_mask, min_area_ratio=0.005)
 
             # Compute IoU
