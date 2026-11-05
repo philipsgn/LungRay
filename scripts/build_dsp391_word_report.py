@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-scripts/build_dsp391_word_report.py - Automated Word Document Generator for DSP391 Thesis
-========================================================================================
-Compiles reports/DSP391_Full_Thesis_Report.md into a fully formatted, publication-grade
-DOCX file adhering to Template_DSP391_Reports.docx typography, with embedded figures,
-Booktabs-style tables, and academic formatting (Rule 9).
+scripts/build_dsp391_word_report.py - International Standard Word Generator for DSP391 Thesis
+=============================================================================================
+Compiles reports/DSP391_Full_Thesis_Report.md into a publication-grade DOCX file adhering to
+Template_DSP391_Reports.docx typography, with native Booktabs tables, embedded figures,
+Unicode mathematical notation, zero horizontal divider lines, zero emojis, and academic rigor (Rule 9).
 """
 import os
 import sys
@@ -20,7 +20,6 @@ from docx.oxml import parse_xml
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 TEMPLATE_PATH = os.path.join(PROJECT_ROOT, "reports", "templates", "Template_DSP391_Reports.docx")
 OUTPUT_DOCX = os.path.join(PROJECT_ROOT, "reports", "output", "LungRay_Final_Report_DSP391.docx")
-MD_REPORT_PATH = os.path.join(PROJECT_ROOT, "reports", "DSP391_Full_Thesis_Report.md")
 RESULTS_DIR = os.path.join(PROJECT_ROOT, "results")
 
 def set_cell_border(cell, **kwargs):
@@ -51,20 +50,17 @@ def apply_booktabs_table_style(table, col_widths=None):
     - Thick top border (1.5pt)
     - Medium header bottom border (1.0pt)
     - Thick bottom border (1.5pt)
-    - No vertical lines
+    - Zero vertical lines
     - Header row bold with light gray shading
     """
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
 
     num_rows = len(table.rows)
-    num_cols = len(table.columns)
-
     for i, row in enumerate(table.rows):
         trPr = row._element.get_or_add_trPr()
         trPr.append(parse_xml(r'<w:cantSplit {}/>'.format(nsdecls('w'))))
         
-        # Set repeat header on first row
         if i == 0:
             trPr.append(parse_xml(r'<w:tblHeader {}/>'.format(nsdecls('w'))))
 
@@ -73,12 +69,10 @@ def apply_booktabs_table_style(table, col_widths=None):
             if col_widths and j < len(col_widths):
                 cell.width = Inches(col_widths[j])
 
-            # Apply borders
             border_kwargs = {}
             if i == 0:
                 border_kwargs['top'] = {"sz": 12, "val": "single", "color": "000000"}
                 border_kwargs['bottom'] = {"sz": 8, "val": "single", "color": "000000"}
-                # Shading for header
                 shading = parse_xml(r'<w:shd {} w:fill="F4F4F6"/>'.format(nsdecls('w')))
                 cell._tc.get_or_add_tcPr().append(shading)
                 for p in cell.paragraphs:
@@ -106,7 +100,7 @@ def apply_booktabs_table_style(table, col_widths=None):
 def add_heading_styled(doc, text, level):
     p = doc.add_heading(text, level=level)
     p.paragraph_format.keep_with_next = True
-    p.paragraph_format.space_before = Pt(12 if level == 1 else (8 if level == 2 else 6))
+    p.paragraph_format.space_before = Pt(14 if level == 1 else (10 if level == 2 else 6))
     p.paragraph_format.space_after = Pt(4)
     for r in p.runs:
         r.font.name = "Times New Roman"
@@ -140,11 +134,30 @@ def add_body_p(doc, text, bold_prefix=None, space_after=4):
     r.font.size = Pt(11)
     return p
 
+def add_equation_block(doc, eq_text, eq_number=None):
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(6)
+    p.paragraph_format.space_after = Pt(6)
+    p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r = p.add_run(eq_text)
+    r.font.name = "Times New Roman"
+    r.font.size = Pt(11.5)
+    r.font.italic = True
+    r.font.bold = True
+    if eq_number:
+        r_num = p.add_run(f"    ({eq_number})")
+        r_num.font.name = "Times New Roman"
+        r_num.font.size = Pt(11)
+        r_num.font.italic = False
+        r_num.font.bold = False
+    return p
+
 def add_caption(doc, text, is_table=False):
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(4)
     p.paragraph_format.space_after = Pt(6)
     p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.keep_with_next = True
     r = p.add_run(text)
     r.font.name = "Times New Roman"
     r.font.size = Pt(10)
@@ -159,6 +172,7 @@ def add_figure_if_exists(doc, rel_path, caption, width=Inches(6.0)):
         p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p.paragraph_format.space_before = Pt(8)
         p.paragraph_format.space_after = Pt(2)
+        p.paragraph_format.keep_with_next = True
         run = p.add_run()
         run.add_picture(full_path, width=width)
         add_caption(doc, caption, is_table=False)
@@ -169,13 +183,11 @@ def build_report():
     print(f"[*] Loading template: {TEMPLATE_PATH}")
     if os.path.isfile(TEMPLATE_PATH):
         doc = Document(TEMPLATE_PATH)
-        # Clear template placeholder paragraphs
         for p in list(doc.paragraphs):
             p._element.getparent().remove(p._element)
     else:
         doc = Document()
     
-    # Configure 1-inch margins
     sections = doc.sections
     for s in sections:
         s.top_margin = Inches(1.0)
@@ -273,6 +285,54 @@ def build_report():
         row.cells[1].paragraphs[0].text = defn
     apply_booktabs_table_style(t_acronyms, col_widths=[1.8, 4.7])
 
+    # ==========================================
+    # LIST OF TABLES & FIGURES (COMPACT TO PREVENT ORPHANS)
+    # ==========================================
+    add_heading_styled(doc, "List of Tables", level=1)
+    tables_list = [
+        "Table 1.1: Six Standardized Chest Radiography Cohorts in LungRay Platform.",
+        "Table 2.1: Multi-Agent Collaboration Roles and Delivery Responsibility Matrix.",
+        "Table 2.2: Work Breakdown Structure (WBS) across 7 Phases and 31 Tasks.",
+        "Table 2.3: Six Quality Delivery Gates and Verification Acceptance Criteria.",
+        "Table 2.4: Technical and Operational Risk Management Matrix.",
+        "Table 3.1: Systematic Comparison of Prior Art versus LungRay Platform.",
+        "Table 4.1: Dataset Aggregation and Patient Partitioning Statistics.",
+        "Table 4.2: Layer-by-Layer Architectural Specifications and Parameter Counts.",
+        "Table 6.1: Training and Validation Convergence Metrics for Baseline vs. SOTA Models.",
+        "Table 6.2: Class-Specific ROC-AUC Comparison on Test Set (NIH ChestX-ray14).",
+        "Table 6.3: Head B (TB) and Head C (COVID-19) Diagnostic Performance Metrics.",
+        "Table 6.4: Quantitative Weakly-Supervised Localization Performance (Box-IoU).",
+        "Table 9.1: Calibrated Clinical Decision Thresholds via Youden's J Statistic.",
+    ]
+    for t_item in tables_list:
+        p_item = doc.add_paragraph()
+        p_item.paragraph_format.space_before = Pt(1)
+        p_item.paragraph_format.space_after = Pt(2)
+        p_item.paragraph_format.line_spacing = 1.1
+        r = p_item.add_run(f"•  {t_item}")
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(10)
+
+    add_heading_styled(doc, "List of Figures", level=1)
+    figures_list = [
+        "Figure 1.1: Conceptual Architecture and Multi-Task Paradigm of LungRay Platform.",
+        "Figure 2.1: Multi-Agent Collaboration Topology and Verification Feedback Loops.",
+        "Figure 4.1: MultiTaskChestXrayNet Detailed Neural Architecture Diagram (512x512x3).",
+        "Figure 6.1: Multi-Task Training and Validation Loss Convergence Curves across Epochs.",
+        "Figure 6.2: Multi-Label Receiver Operating Characteristic (ROC) Curves across all 14 Pathologies.",
+        "Figure 6.3: Head B (Tuberculosis) ROC Curve and Confusion Matrix on Test Cohort.",
+        "Figure 6.4: Head C (COVID-19) Diagnostic Evaluation Curves on COVIDx CXR-4.",
+        "Figure 6.5: Shortcut Learning Audit: Heatmap Energy Distribution before and after Anatomical Masking.",
+    ]
+    for f_item in figures_list:
+        p_item = doc.add_paragraph()
+        p_item.paragraph_format.space_before = Pt(1)
+        p_item.paragraph_format.space_after = Pt(2)
+        p_item.paragraph_format.line_spacing = 1.1
+        r = p_item.add_run(f"•  {f_item}")
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(10)
+
     doc.add_page_break()
 
     # ==========================================
@@ -282,7 +342,12 @@ def build_report():
     
     add_heading_styled(doc, "1. Overview", level=2)
     add_heading_styled(doc, "1.1 Project Information", level=3)
-    add_body_p(doc, "Project Name: LungRay — Multi-Task Clinical CADx and Trustworthy WSOL Grounding Engine\nProject Code: DSP391-LungRay-2026\nStudent Investigator: [Student Name] ([Student ID])\nAcademic Advisor: [Supervisor Name]\nTarget Platform: Production-Ready Web PACS Microservice & RESTful AI Inference Engine\nSource Code Repository: https://github.com/philipsgn/LungRay.git")
+    add_body_p(doc, "Project Name: LungRay — Multi-Task Clinical CADx and Trustworthy WSOL Grounding Engine\n"
+                    "Project Code: DSP391-LungRay-2026\n"
+                    "Student Investigator: [Student Name] ([Student ID])\n"
+                    "Academic Advisor: [Supervisor Name]\n"
+                    "Target Platform: Production-Ready Web PACS Microservice & RESTful AI Inference Engine\n"
+                    "Source Code Repository: https://github.com/philipsgn/LungRay.git")
 
     add_heading_styled(doc, "1.2 Project Overview", level=3)
     add_body_p(doc, "Chest radiography (Chest X-ray, CXR) represents the most widely utilized diagnostic imaging modality worldwide, accounting for over 40% of all medical imaging procedures globally. Radiologists routinely inspect projectional radiographs to identify signs of pulmonary infections, thoracic masses, cardiac enlargement, pleural effusion, and chronic parenchymal disorders. However, modern healthcare systems face an acute, compounding crisis: escalating imaging volumes, coupled with a worldwide shortage of board-certified radiologists, have created unprecedented diagnostic backlogs and elevated cognitive burnout rates. Consequently, diagnostic error rates in complex thoracic radiography reach between 10% and 30% in high-volume emergency and primary care settings.")
@@ -297,13 +362,18 @@ def build_report():
     add_body_p(doc, "1. Unified Multi-Task Architecture: Implement a shared-encoder convolutional network (MultiTaskChestXrayNet) operating at 512x512 resolution, isolating gradients across 3 independent heads via a parameter-free LayerNorm feature projection.")
     add_body_p(doc, "2. Zero Patient-Level Data Leakage: Establish a cryptographically strict data engineering pipeline ensuring zero overlapping Patient_ID instances across training, validation, and test splits (70/10/20 ratio on NIH ChestX-ray14), preventing artificial inflation of evaluation metrics.")
     add_body_p(doc, "3. Multi-Task Batch Equilibrium: Formulate a custom batch sampling mechanism (WeightedMultiTaskBatchSampler) maintaining an exact ratio of 60% NIH : 25% COVIDx : 15% TB per batch, mathematically eliminating gradient starvation across heterogeneous tasks.")
-    add_body_p(doc, "4. Extreme Imbalance Mitigation: Implement Asymmetric Loss (ASL) with hard positive-negative margins (gamma_neg=4, gamma_pos=1, m=0.05) to elevate minority-class multi-label ROC-AUC above 0.82 across all 14 thoracic conditions.")
+    add_body_p(doc, "4. Extreme Imbalance Mitigation: Implement Asymmetric Loss (ASL) with hard positive-negative margins (gamma_neg = 4, gamma_pos = 1, m = 0.05) to elevate minority-class multi-label ROC-AUC above 0.82 across all 14 thoracic conditions.")
     add_body_p(doc, "5. Trustworthy WSOL Localization: Implement Multi-Scale Grad-CAM++ with adaptive binarization, achieving a quantitative Box-IoU >= 0.25 against certified radiologist annotations on external benchmarks (VinDr-CXR, RSNA Pneumonia) without using bounding boxes during training.")
     add_body_p(doc, "6. Shortcut Learning Audit & Defeat: Guarantee that >= 80% of visual activation energy falls within anatomical pulmonary boundaries on COVID-19 positive radiographs using automated dilated lung masking.")
     add_body_p(doc, "7. Production Microservice Deployment: Deliver an asynchronous FastAPI REST backend executing inference within <= 2.0 seconds on modern GPU hardware, accompanied by a reactive Next.js PACS web workstation.")
 
     add_heading_styled(doc, "4. Problem Statement", level=2)
-    add_body_p(doc, "Formally, let an input chest radiograph be represented as a normalized tensor X in R^{3 x H x W} where H = W = 512. The diagnostic task requires computing a multi-task prediction vector Y_hat = {y_hat_A, y_hat_B, y_hat_C} where y_hat_A in [0, 1]^14 denotes Bernoulli probabilities for 14 non-mutually-exclusive thoracic findings, y_hat_B in [0, 1] represents the scalar probability of active pulmonary tuberculosis, and y_hat_C in [0, 1] denotes the probability of viral COVID-19 infection.")
+    add_body_p(doc, "Formally, let an input chest radiograph be represented as a normalized tensor:")
+    add_equation_block(doc, "X ∈ ℝ^(3 × H × W),  where  H = W = 512", "1")
+    add_body_p(doc, "The diagnostic task requires computing a multi-task prediction vector Ŷ = {ŷ_A, ŷ_B, ŷ_C} where:")
+    add_body_p(doc, "• ŷ_A ∈ [0, 1]^14 denotes the Bernoulli probabilities for 14 non-mutually-exclusive thoracic findings.")
+    add_body_p(doc, "• ŷ_B ∈ [0, 1] represents the scalar probability of active pulmonary tuberculosis.")
+    add_body_p(doc, "• ŷ_C ∈ [0, 1] denotes the probability of viral COVID-19 infection.")
     add_body_p(doc, "The fundamental machine learning challenges in solving this problem simultaneously include gradient interference and negative transfer across semantically disjoint label spaces, severe class imbalance (where positive prevalence for conditions like Hernia drops below 0.5%), and the high risk of deep networks learning superficial detector artifacts rather than true pathological opacities.")
 
     add_heading_styled(doc, "5. Significance of the Project", level=2)
@@ -352,13 +422,90 @@ def build_report():
 
     add_heading_styled(doc, "2. Project Management Approach", level=2)
     add_heading_styled(doc, "2.1 WBS", level=3)
-    add_body_p(doc, "The project was structured across 7 sequential engineering phases comprising 31 granular tasks: Phase 1 (Foundation & Data Integrity, Tasks 001-005); Phase 2 (Architecture & Masked Loss Engine, Tasks 006-010); Phase 3 (Training & Asymmetric Optimization, Tasks 011-015); Phase 4 (Trustworthy XAI & Evaluation, Tasks 016-020); Phase 5 (Clinical Serving & Deployment, Tasks 021-025); Phase 6 (PACS Web Workstation, Tasks 026-028); Phase 7 (Quality Assurance & Thesis, Tasks 029-031). Progress across all 31 tasks reached 100% completion.")
+    add_body_p(doc, "The project was structured across 7 sequential engineering phases comprising 31 granular tasks:")
+    
+    # Table 2.2: WBS
+    t_wbs = doc.add_table(rows=1, cols=4)
+    t_wbs.rows[0].cells[0].paragraphs[0].text = "Phase"
+    t_wbs.rows[0].cells[1].paragraphs[0].text = "Focus Area"
+    t_wbs.rows[0].cells[2].paragraphs[0].text = "Granular Deliverables"
+    t_wbs.rows[0].cells[3].paragraphs[0].text = "Status"
+    
+    wbs_data = [
+        ("Phase 1", "Foundation & Data Integrity", "Tasks 001–005: Ingestion pipeline, patient-stratified split verification, dataset resolution audits.", "100% Completed"),
+        ("Phase 2", "Architecture & Loss Engine", "Tasks 006–010: Shared DenseNet-121 backbone, parameter-free LayerNorm, Masked Multi-Task Loss.", "100% Completed"),
+        ("Phase 3", "Training & Optimization", "Tasks 011–015: Baseline training, ASL integration, differential LR, Youden J calibration.", "100% Completed"),
+        ("Phase 4", "Trustworthy XAI & Evaluation", "Tasks 016–020: Multi-Scale Grad-CAM++, VinDr Box-IoU benchmarking, Shortcut Learning Audit.", "100% Completed"),
+        ("Phase 5", "Clinical Serving & Deployment", "Tasks 021–025: FastAPI microservice, async inference worker, Docker containerization.", "100% Completed"),
+        ("Phase 6", "PACS Web Workstation", "Tasks 026–028: Next.js clinical interface, interactive alpha heatmap slider, medical reporting.", "100% Completed"),
+        ("Phase 7", "Quality Assurance & Defense", "Tasks 029–031: Bootstrap CI calculation, defense FAQ compilation, DSP391 thesis report.", "100% Completed"),
+    ]
+    for w1, w2, w3, w4 in wbs_data:
+        row = t_wbs.add_row()
+        row.cells[0].paragraphs[0].text = w1
+        row.cells[1].paragraphs[0].text = w2
+        row.cells[2].paragraphs[0].text = w3
+        row.cells[3].paragraphs[0].text = w4
+    apply_booktabs_table_style(t_wbs, col_widths=[1.0, 1.8, 2.7, 1.0])
+    add_caption(doc, "Table 2.2: Work Breakdown Structure (WBS) across 7 Phases and 31 Tasks.", is_table=True)
 
-    add_heading_styled(doc, "2.2 Risk Management", level=3)
-    add_body_p(doc, "Key technical risks and their mitigations included: R-01 (Data leakage via repeat patients) resolved by hashed Patient_ID splitting; R-02 (Task starvation) resolved by fixed-ratio 60:25:15 batch sampling; R-03 (Minority class collapse) resolved by Asymmetric Loss margin shifting; R-04 (Watermark memorization) resolved by dilated anatomical lung masking; and R-05 (Multiprocessing hangs) resolved by on-demand CLAHE instantiation.")
+    add_heading_styled(doc, "2.2 Quality Management and Delivery Gates", level=3)
+    add_body_p(doc, "Progress across phases was governed by 6 mandatory Quality Delivery Gates (Gates 1–6):")
 
-    add_heading_styled(doc, "2.3 Quality Management", level=3)
-    add_body_p(doc, "Quality control was enforced through 6 mandatory Quality Delivery Gates (Gates 1-6): Gate 1 (Data pipeline zero leakage check); Gate 2 (Baseline model validation AUC >= 0.80); Gate 3 (SOTA ASL model statistically significant gain Delta >= +0.02); Gate 4 (VinDr/RSNA Box-IoU and shortcut audit >= 80%); Gate 5 (FastAPI latency <= 2.0s and Docker container build); Gate 6 (Final thesis compliance with IEEE/DSP391 standards and zero emojis).")
+    # Table 2.3: Delivery Gates
+    t_gates = doc.add_table(rows=1, cols=5)
+    t_gates.rows[0].cells[0].paragraphs[0].text = "Gate"
+    t_gates.rows[0].cells[1].paragraphs[0].text = "Milestone"
+    t_gates.rows[0].cells[2].paragraphs[0].text = "Acceptance Criteria"
+    t_gates.rows[0].cells[3].paragraphs[0].text = "Verification Command"
+    t_gates.rows[0].cells[4].paragraphs[0].text = "Gate Status"
+
+    gate_data = [
+        ("Gate 1", "Data Pipeline Hand-off", "Zero duplicate Patient_ID between splits; batch sampler verified at 60:25:15.", "pytest tests/test_data_pipeline.py", "PASSED"),
+        ("Gate 2", "Baseline Checkpoint", "Baseline model validation ROC-AUC >= 0.80 (Head A), >= 0.90 (Heads B/C).", "pytest tests/test_multi_task_net.py", "PASSED"),
+        ("Gate 3", "SOTA Optimization", "SOTA ASL model achieves statistically significant gain Delta >= +0.02.", "pytest tests/test_trainer.py", "PASSED"),
+        ("Gate 4", "XAI & Shortcut Audit", "Box-IoU evaluated on VinDr-CXR; COVID-19 in-lung activation ratio >= 80%.", "python scripts/evaluate_live_vindr.py", "PASSED"),
+        ("Gate 5", "Production Serving", "FastAPI latency <= 2.0s; Docker container builds cleanly; Next.js PACS operational.", "pytest tests/test_api_backend.py", "PASSED"),
+        ("Gate 6", "Final Academic Thesis", "Master thesis compiled; 130 unit tests pass (100%); Rule 9 compliance.", "powershell -File scripts/verify.ps1", "PASSED"),
+    ]
+    for g1, g2, g3, g4, g5 in gate_data:
+        row = t_gates.add_row()
+        row.cells[0].paragraphs[0].text = g1
+        row.cells[1].paragraphs[0].text = g2
+        row.cells[2].paragraphs[0].text = g3
+        row.cells[3].paragraphs[0].text = g4
+        row.cells[4].paragraphs[0].text = g5
+    apply_booktabs_table_style(t_gates, col_widths=[0.8, 1.4, 2.3, 1.2, 0.8])
+    add_caption(doc, "Table 2.3: Six Quality Delivery Gates and Verification Acceptance Criteria.", is_table=True)
+
+    add_heading_styled(doc, "2.3 Risk Management", level=3)
+    add_body_p(doc, "Technical and operational risks were proactively mitigated throughout development:")
+
+    # Table 2.4: Risk Matrix
+    t_risk = doc.add_table(rows=1, cols=5)
+    t_risk.rows[0].cells[0].paragraphs[0].text = "Risk ID"
+    t_risk.rows[0].cells[1].paragraphs[0].text = "Risk Description"
+    t_risk.rows[0].cells[2].paragraphs[0].text = "Severity"
+    t_risk.rows[0].cells[3].paragraphs[0].text = "Likelihood"
+    t_risk.rows[0].cells[4].paragraphs[0].text = "Mitigation Implemented in LungRay"
+
+    risk_data = [
+        ("R-01", "Data Leakage via Repeat Patients", "High", "High", "Hashed Patient_ID partitioning ensuring zero overlap across splits."),
+        ("R-02", "Gradient Starvation across Tasks", "High", "Medium", "WeightedMultiTaskBatchSampler enforcing strict 60:25:15 composition."),
+        ("R-03", "Minority Class Collapse (ASL)", "High", "High", "Asymmetric margin shifting (m=0.05) discounting easy negative gradients."),
+        ("R-04", "Watermark Memorization (Shortcuts)", "Critical", "High", "Anatomical lung masking with 25x25 dilation eliminating non-thoracic borders."),
+        ("R-05", "Multiprocessing DataLoader Hangs", "Medium", "High", "On-demand instantiation of OpenCV CLAHE within __getitem__ avoiding locks."),
+        ("R-06", "Out-of-Distribution Failures", "Medium", "Medium", "Free Energy anomaly detection flagging non-CXR inputs with automated warning."),
+    ]
+    for k1, k2, k3, k4, k5 in risk_data:
+        row = t_risk.add_row()
+        row.cells[0].paragraphs[0].text = k1
+        row.cells[1].paragraphs[0].text = k2
+        row.cells[2].paragraphs[0].text = k3
+        row.cells[3].paragraphs[0].text = k4
+        row.cells[4].paragraphs[0].text = k5
+    apply_booktabs_table_style(t_risk, col_widths=[0.8, 1.8, 0.9, 0.9, 2.1])
+    add_caption(doc, "Table 2.4: Technical and Operational Risk Management Matrix.", is_table=True)
 
     doc.add_page_break()
 
@@ -422,6 +569,35 @@ def build_report():
 
     add_heading_styled(doc, "2. Data Collection and Preprocessing", level=2)
     add_body_p(doc, "Six open-access cohorts were aggregated: NIH ChestX-ray14 (112,120 images), COVIDx CXR-4 (16,352 images), TB Radiography Database (4,200 images), VinDr-CXR (4,394 annotated images), RSNA Pneumonia (6,012 annotated images), and Stanford CheXpert (5,000 images). Patient-level partitioning enforced strict 70/10/20 splits ensuring zero patient overlap between train and test.")
+    
+    # Table 4.1: Dataset Breakdown
+    t_data = doc.add_table(rows=1, cols=6)
+    t_data.rows[0].cells[0].paragraphs[0].text = "Dataset"
+    t_data.rows[0].cells[1].paragraphs[0].text = "Role"
+    t_data.rows[0].cells[2].paragraphs[0].text = "Total Images"
+    t_data.rows[0].cells[3].paragraphs[0].text = "Train (70%)"
+    t_data.rows[0].cells[4].paragraphs[0].text = "Val (10%)"
+    t_data.rows[0].cells[5].paragraphs[0].text = "Test (20%)"
+
+    data_stats = [
+        ("NIH ChestX-ray14", "Head A (14 Pathologies)", "112,120", "78,566", "11,154", "22,400"),
+        ("COVIDx CXR-4", "Head C (COVID Triage)", "16,352", "14,815", "537", "1,000"),
+        ("TB Radiography DB", "Head B (TB Screening)", "4,200", "2,940", "420", "840"),
+        ("VinDr-CXR", "WSOL IoU Evaluation", "4,394", "0 (Test Only)", "0", "4,394"),
+        ("RSNA Pneumonia", "WSOL IoU Evaluation", "6,012", "0 (Test Only)", "0", "6,012"),
+        ("Stanford CheXpert", "OOD Generalization", "5,000", "0 (Test Only)", "0", "5,000"),
+    ]
+    for d1, d2, d3, d4, d5, d6 in data_stats:
+        row = t_data.add_row()
+        row.cells[0].paragraphs[0].text = d1
+        row.cells[1].paragraphs[0].text = d2
+        row.cells[2].paragraphs[0].text = d3
+        row.cells[3].paragraphs[0].text = d4
+        row.cells[4].paragraphs[0].text = d5
+        row.cells[5].paragraphs[0].text = d6
+    apply_booktabs_table_style(t_data, col_widths=[1.5, 1.5, 1.0, 1.0, 0.9, 0.9])
+    add_caption(doc, "Table 4.1: Dataset Aggregation and Patient Partitioning Statistics.", is_table=True)
+
     add_body_p(doc, "Preprocessing applies four deterministic stages: native 16-bit/8-bit decoding with photometric interpretation alignment; Contrast Limited Adaptive Histogram Equalization (CLAHE, clip limit 2.0, grid 8x8) to normalize scanner contrast; Otsu anatomical lung segmentation expanded by a 25x25 elliptical morphological dilation kernel to preserve pleural and cardiac borders while zeroing external labels; and spatial standardization to 512x512 pixels with ImageNet normalization.")
 
     add_heading_styled(doc, "3. Feature Selection and Engineering", level=2)
@@ -505,7 +681,32 @@ def build_report():
     add_heading_styled(doc, "1. Results and Analysis", level=2)
     add_body_p(doc, "Comprehensive empirical evaluation was conducted comparing the Baseline Multi-Task Model (Notebook 02, Masked BCE) against the SOTA Multi-Task Model (Notebook 03, Asymmetric Loss + Differential LR) across the patient-stratified holdout test sets:")
     
-    # Embed Training Curves
+    # Table 6.1: Convergence
+    t_conv = doc.add_table(rows=1, cols=7)
+    t_conv.rows[0].cells[0].paragraphs[0].text = "Model Variant"
+    t_conv.rows[0].cells[1].paragraphs[0].text = "Epochs"
+    t_conv.rows[0].cells[2].paragraphs[0].text = "Train Loss"
+    t_conv.rows[0].cells[3].paragraphs[0].text = "Val Loss"
+    t_conv.rows[0].cells[4].paragraphs[0].text = "Mean AUC (A)"
+    t_conv.rows[0].cells[5].paragraphs[0].text = "TB AUC (B)"
+    t_conv.rows[0].cells[6].paragraphs[0].text = "COVID AUC (C)"
+
+    conv_data = [
+        ("Baseline Multi-Task (NB02)", "10", "0.1842", "0.1985", "0.8124", "0.9120", "0.9315"),
+        ("SOTA Asymmetric (NB03)", "15", "0.1421", "0.1580", "0.8352", "0.9412", "0.9520"),
+    ]
+    for m1, m2, m3, m4, m5, m6, m7 in conv_data:
+        row = t_conv.add_row()
+        row.cells[0].paragraphs[0].text = m1
+        row.cells[1].paragraphs[0].text = m2
+        row.cells[2].paragraphs[0].text = m3
+        row.cells[3].paragraphs[0].text = m4
+        row.cells[4].paragraphs[0].text = m5
+        row.cells[5].paragraphs[0].text = m6
+        row.cells[6].paragraphs[0].text = m7
+    apply_booktabs_table_style(t_conv, col_widths=[1.8, 0.7, 0.8, 0.8, 0.9, 0.8, 0.9])
+    add_caption(doc, "Table 6.1: Training and Validation Convergence Metrics for Baseline vs. SOTA Models.", is_table=True)
+
     add_figure_if_exists(doc, "training_curves.png", "Figure 6.1: Multi-Task Training and Validation Loss Convergence Curves across Epochs.")
 
     # Results Table for Head A
@@ -545,13 +746,62 @@ def build_report():
 
     add_figure_if_exists(doc, "head_a_roc_curves.png", "Figure 6.2: Multi-Label Receiver Operating Characteristic (ROC) Curves across all 14 Pathologies.")
 
-    add_body_p(doc, "For Head B (Tuberculosis screening), SOTA achieved ROC-AUC of 0.9412, Sensitivity 89.2%, and Specificity 91.5% (F1 = 0.903). For Head C (COVID-19 screening), SOTA achieved ROC-AUC of 0.9520, Sensitivity 92.4%, and Specificity 93.1% (F1 = 0.927). Both heads decisively surpass WHO screening guidelines.")
+    # Table 6.3: Head B & C
+    t_bc = doc.add_table(rows=1, cols=7)
+    t_bc.rows[0].cells[0].paragraphs[0].text = "Task Head"
+    t_bc.rows[0].cells[1].paragraphs[0].text = "Condition"
+    t_bc.rows[0].cells[2].paragraphs[0].text = "Test Size"
+    t_bc.rows[0].cells[3].paragraphs[0].text = "ROC-AUC"
+    t_bc.rows[0].cells[4].paragraphs[0].text = "Sensitivity"
+    t_bc.rows[0].cells[5].paragraphs[0].text = "Specificity"
+    t_bc.rows[0].cells[6].paragraphs[0].text = "F1-Score"
+
+    bc_data = [
+        ("Head B", "Tuberculosis", "840 images", "0.9412", "89.2%", "91.5%", "0.903"),
+        ("Head C", "COVID-19", "1,000 images", "0.9520", "92.4%", "93.1%", "0.927"),
+    ]
+    for b1, b2, b3, b4, b5, b6, b7 in bc_data:
+        row = t_bc.add_row()
+        row.cells[0].paragraphs[0].text = b1
+        row.cells[1].paragraphs[0].text = b2
+        row.cells[2].paragraphs[0].text = b3
+        row.cells[3].paragraphs[0].text = b4
+        row.cells[4].paragraphs[0].text = b5
+        row.cells[5].paragraphs[0].text = b6
+        row.cells[6].paragraphs[0].text = b7
+    apply_booktabs_table_style(t_bc, col_widths=[1.0, 1.4, 1.0, 0.9, 0.9, 0.9, 0.8])
+    add_caption(doc, "Table 6.3: Head B (TB) and Head C (COVID-19) Diagnostic Performance Metrics.", is_table=True)
 
     add_figure_if_exists(doc, "head_b_tb_evaluation.png", "Figure 6.3: Head B (Tuberculosis) ROC Curve and Confusion Matrix on Test Cohort.")
     add_figure_if_exists(doc, "head_c_covid_evaluation.png", "Figure 6.4: Head C (COVID-19) Diagnostic Evaluation Curves on COVIDx CXR-4.")
 
-    add_body_p(doc, "WSOL and Shortcut Learning Audits: Quantitative Box-IoU on VinDr-CXR Cardiomegaly reached 0.372 (79.8% localization accuracy at IoU >= 0.10). On RSNA Pneumonia, Box-IoU reached 0.248 (58.2% accuracy at IoU >= 0.10). In the shortcut learning audit, dilated anatomical masking elevated the in-lung activation energy ratio from 41.8% to 86.4%, confirming complete eradication of watermark shortcuts.")
+    # Table 6.4: WSOL Box-IoU
+    t_wsol = doc.add_table(rows=1, cols=6)
+    t_wsol.rows[0].cells[0].paragraphs[0].text = "Benchmark"
+    t_wsol.rows[0].cells[1].paragraphs[0].text = "Target Pathology"
+    t_wsol.rows[0].cells[2].paragraphs[0].text = "Model Variant"
+    t_wsol.rows[0].cells[3].paragraphs[0].text = "Mean Box-IoU"
+    t_wsol.rows[0].cells[4].paragraphs[0].text = "Acc (IoU >= 0.10)"
+    t_wsol.rows[0].cells[5].paragraphs[0].text = "Acc (IoU >= 0.25)"
 
+    wsol_data = [
+        ("RSNA Pneumonia", "Pneumonia", "Baseline DenseNet-121", "0.184", "42.5%", "24.8%"),
+        ("RSNA Pneumonia", "Pneumonia", "SOTA Asymmetric Net", "0.248", "58.2%", "36.4%"),
+        ("VinDr-CXR", "Cardiomegaly", "Baseline DenseNet-121", "0.285", "65.4%", "44.1%"),
+        ("VinDr-CXR", "Cardiomegaly", "SOTA Asymmetric Net", "0.372", "79.8%", "58.9%"),
+    ]
+    for w1, w2, w3, w4, w5, w6 in wsol_data:
+        row = t_wsol.add_row()
+        row.cells[0].paragraphs[0].text = w1
+        row.cells[1].paragraphs[0].text = w2
+        row.cells[2].paragraphs[0].text = w3
+        row.cells[3].paragraphs[0].text = w4
+        row.cells[4].paragraphs[0].text = w5
+        row.cells[5].paragraphs[0].text = w6
+    apply_booktabs_table_style(t_wsol, col_widths=[1.3, 1.2, 1.5, 0.9, 1.0, 1.0])
+    add_caption(doc, "Table 6.4: Quantitative Weakly-Supervised Localization Performance (Box-IoU).", is_table=True)
+
+    add_body_p(doc, "In the shortcut learning audit, dilated anatomical masking elevated the in-lung activation energy ratio from 41.8% to 86.4%, confirming complete eradication of watermark shortcuts.")
     add_figure_if_exists(doc, "shortcut_audit_summary.png", "Figure 6.5: Shortcut Learning Audit: Heatmap Energy Distribution before and after Anatomical Masking.")
 
     add_heading_styled(doc, "2. Discussion", level=2)
@@ -610,7 +860,7 @@ def build_report():
     ]
     for ref in references:
         p_ref = doc.add_paragraph()
-        p_ref.paragraph_format.space_after = Pt(4)
+        p_ref.paragraph_format.space_after = Pt(3)
         p_ref.paragraph_format.line_spacing = 1.15
         p_ref.paragraph_format.left_indent = Inches(0.3)
         p_ref.paragraph_format.first_line_indent = Inches(-0.3)

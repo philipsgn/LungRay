@@ -5,8 +5,6 @@
 **Department of Computer Science, FPT University**  
 *Ho Chi Minh City, November 2026*
 
----
-
 ### Project Metadata & Authorship
 - **Project Title**: LungRay: Multi-Task Clinical CADx and Trustworthy WSOL Grounding Engine
 - **Course Code**: DSP391 (Data Science Capstone Project)
@@ -16,8 +14,6 @@
 - **Repository**: `https://github.com/philipsgn/LungRay.git`
 - **Release Version**: v7.0 (Production-Grade Multi-Task CADx)
 
----
-
 ## ACKNOWLEDGEMENT
 
 We would like to express our deepest gratitude to our academic advisor, [Supervisor Name], for the continuous intellectual guidance, constructive critique, and rigorous methodological standards imparted throughout the execution of this capstone project. Their insights into statistical learning theory, medical image analysis, and deep convolutional architectures were instrumental in overcoming key engineering challenges, particularly regarding extreme class imbalance and data leakage mitigation.
@@ -25,8 +21,6 @@ We would like to express our deepest gratitude to our academic advisor, [Supervi
 We also extend our sincere appreciation to the Department of Artificial Intelligence and Data Science at FPT University for providing the requisite computational infrastructure and academic curriculum that formed the technical foundation of this research. Special thanks are extended to the open-science initiatives and medical research consortia—including the National Institutes of Health (NIH) Clinical Center, the Society for Imaging Informatics in Medicine (SIIM), the Radiological Society of North America (RSNA), VinBrain (VinDr-CXR), and the COVIDx open-access initiative—for curating and releasing high-fidelity, anonymized radiography datasets without which empirical validation in medical artificial intelligence would be impossible.
 
 Finally, we thank our families, peers, and colleagues for their unwavering patience, encouragement, and support during the extensive model training, debugging, and report drafting phases of this project.
-
----
 
 ## DEFINITION AND ACRONYMS
 
@@ -48,8 +42,6 @@ Finally, we thank our families, peers, and colleagues for their unwavering patie
 | **AMP** | Automatic Mixed Precision: Training acceleration utilizing FP16 arithmetic and FP32 dynamic scaling. |
 | **Youden's J** | Statistical statistic ($J = \text{Sensitivity} + \text{Specificity} - 1$) optimizing decision thresholds. |
 
----
-
 ## LIST OF TABLES
 
 - **Table 1.1**: Overview of the Six Standardized Chest Radiography Datasets in LungRay Platform.
@@ -70,8 +62,6 @@ Finally, we thank our families, peers, and colleagues for their unwavering patie
 - **Table 6.6**: Shortcut Learning Audit: In-Lung Activation Energy Ratio vs. Baseline Models.
 - **Table 9.1**: Optimal Clinical Decision Thresholds ($\tau_c$) Calibrated via Youden's J Statistic.
 
----
-
 ## LIST OF FIGURES
 
 - **Figure 1.1**: Conceptual Architecture and Multi-Task Paradigm of the LungRay CADx Platform.
@@ -88,8 +78,6 @@ Finally, we thank our families, peers, and colleagues for their unwavering patie
 - **Figure 6.3**: Confusion Matrices and Precision-Recall Profiles for Head B (TB) and Head C (COVID-19).
 - **Figure 6.4**: Grad-CAM Localization Visualizations against Certified Radiologist Ground-Truth Bounding Boxes.
 - **Figure 6.5**: Shortcut Learning Audit: Heatmap Energy Distribution before and after Anatomical Masking.
-
----
 
 # CHAPTER I: PROJECT INTRODUCTION
 
@@ -113,8 +101,6 @@ The **LungRay** platform addresses this fundamental clinical bottleneck. Rather 
 
 Furthermore, LungRay integrates an explainable AI (XAI) engine based on Multi-Scale Gradient-Weighted Class Activation Mapping (Grad-CAM++), rigorously evaluated under **Weakly-Supervised Object Localization (WSOL)** standards on real clinical bounding boxes from VinDr-CXR and RSNA Pneumonia, alongside an Out-of-Distribution (OOD) clinical safety lockout.
 
----
-
 ## 2. Project Background
 Chest X-ray interpretation requires an intricate cognitive synthesis of high-dynamic-range spatial information. Pathological findings often present subtle radiopacity gradients, ambiguous anatomical borders, and diffuse overlapping structures (such as cardiac contours superimposed on lower lobe consolidations). 
 
@@ -127,8 +113,6 @@ Recent advances in deep learning—particularly deep residual networks (ResNet) 
 
 LungRay is explicitly engineered to solve these three critical vulnerabilities within an integrated, end-to-end medical software system.
 
----
-
 ## 3. Project Objectives
 The overarching objective of the LungRay project is to develop, validate, and deploy a robust, multi-task CADx system that simultaneously maximizes diagnostic discrimination, prevents statistical data leakage, and provides mathematically grounded visual explanations. The concrete measurable objectives comprise:
 
@@ -140,8 +124,6 @@ The overarching objective of the LungRay project is to develop, validate, and de
 6. **Shortcut Learning Audit & Defeat**: Guarantee that $\ge 80\%$ of visual activation energy falls within anatomical pulmonary boundaries on COVID-19 positive radiographs using automated dilated lung masking.
 7. **Production Microservice Deployment**: Deliver an asynchronous FastAPI REST backend executing inference within $\le 2.0$ seconds on modern GPU hardware, accompanied by a reactive Next.js PACS web workstation.
 
----
-
 ## 4. Problem Statement
 Formally, let an input chest radiograph be represented as a normalized tensor $X \in \mathbb{R}^{3 \times H \times W}$ where $H = W = 512$. The diagnostic task requires computing a multi-task prediction vector $\hat{Y} = \{\hat{y}_A, \hat{y}_B, \hat{y}_C\}$ where:
 - $\hat{y}_A \in [0, 1]^{14}$ denotes the Bernoulli probabilities for 14 non-mutually-exclusive thoracic findings.
@@ -152,8 +134,6 @@ The fundamental machine learning challenges in solving this problem simultaneous
 - **Gradient Interference and Negative Transfer**: Updating network parameters with gradients from disparate loss functions can degrade shared feature representations when label spaces are semantically disjoint.
 - **Label Scarcity in Bounding Boxes**: Fully-supervised object detectors (e.g., Faster R-CNN, YOLO) require millions of manually annotated pixel coordinates from radiologists, which is economically and clinically infeasible at enterprise scale.
 - **Domain Shift across Hospital Scanners**: Radiographs acquired from portable computed radiography (CR) versus stationary digital radiography (DR) exhibit drastic variations in contrast, dynamic range, and high-frequency noise.
-
----
 
 ## 5. Significance of the Project
 The scientific and clinical significance of LungRay spans four dimensions:
@@ -167,8 +147,6 @@ The project proves that multi-task learning with asymmetric loss regularization 
 ### 5.3. Economic and Healthcare Resource Optimization
 By containerizing the entire inference pipeline into a lightweight Docker microservice with dynamic CPU/GPU fallback, LungRay can be deployed on low-cost edge servers in rural provincial hospitals without requiring continuous internet connectivity or multi-thousand-dollar GPU clusters.
 
----
-
 ## 6. Project Scope & Limitations
 
 ### 6.1. In-Scope Capabilities
@@ -181,8 +159,6 @@ By containerizing the entire inference pipeline into a lightweight Docker micros
 - **Pediatric Radiographs**: Anatomical proportions, ossification centers, and normal cardiothoracic ratios in neonates and young children differ significantly from adults; pediatric cohorts are excluded.
 - **Lateral Projection CXRs**: Only frontal views (PA/AP) are evaluated; lateral chest projections are beyond current scope.
 - **Definitive Treatment Prescription**: LungRay is strictly designed as an assistive diagnostic tool (Class IIa Medical Software); final clinical management decisions remain the sole legal responsibility of licensed medical practitioners.
-
----
 
 # CHAPTER II: PROJECT MANAGEMENT PLAN
 
@@ -217,6 +193,7 @@ graph TD
 ```
 
 *Table 2.1: Two-Tier Multi-Agent System Roles and Governance Hierarchy.*
+
 | Agent Persona | Primary Domain | Core Engineering Responsibilities | Key Artifacts |
 |:---|:---|:---|:---|
 | **Lead AI Architect** | Systems Engineering & QA | Overall roadmap, Gatekeeper validation, Rule enforcement | `PLAN.md`, `TECH_ARCHITECTURE.md` |
@@ -231,14 +208,13 @@ To maintain strict architectural coherence, cross-agent hand-offs were mediated 
 - No model training was permitted until `DataEngineerAgent` verified zero patient overlap using SHA-256 hashed patient splits (`tests/test_data_pipeline.py` 100% PASS).
 - No frontend deployment was initiated until `ModelArchitectAgent` and `XAIEvalAgent` produced a unified Torch checkpoint supporting `strict=True` loading with dual output (logits dictionary and Base64 heatmap payload).
 
----
-
 ## 2. Project Management Approach
 
 ### 2.1. Work Breakdown Structure (WBS)
 The project was structured across 7 sequential, rigorous engineering phases comprising 31 granular tasks:
 
 *Table 2.2: Work Breakdown Structure (WBS) across 7 Development Phases and 31 Tasks.*
+
 | Phase | Focus Area | Granular Engineering Deliverables | Progress Status |
 |:---|:---|:---|:---|
 | **Phase 1** | Foundation & Data Integrity | Tasks 001–005: Ingestion pipeline, patient-stratified split verification, dataset resolution audits. | 100% Completed |
@@ -253,18 +229,20 @@ The project was structured across 7 sequential, rigorous engineering phases comp
 Progress across phases was governed by 6 mandatory Quality Delivery Gates:
 
 *Table 2.3: Six Quality Delivery Gates and Verification Acceptance Criteria.*
+
 | Quality Gate | Checkpoint Milestone | Objective Acceptance Criteria | Verification Command | Gate Status |
 |:---|:---|:---|:---|:---|
-| **Gate 1** | Data Pipeline Hand-off | Zero duplicate `Patient_ID` between splits; multi-task batch sampler verified at 60:25:15. | `pytest tests/test_data_pipeline.py` | ✅ PASSED |
-| **Gate 2** | Baseline Model Checkpoint | Baseline model successfully trained; validation ROC-AUC $\ge 0.80$ (Head A), $\ge 0.90$ (Heads B/C). | `pytest tests/test_multi_task_net.py` | ✅ PASSED |
-| **Gate 3** | SOTA Asymmetric Optimization| SOTA ASL model achieves statistically significant AUC increase over baseline ($\Delta \ge +0.02$). | `pytest tests/test_trainer.py` | ✅ PASSED |
-| **Gate 4** | XAI & Shortcut Audit | Box-IoU evaluated on VinDr-CXR; COVID-19 in-lung activation ratio $\ge 80\%$. | `python scripts/evaluate_live_vindr.py`| ✅ PASSED |
-| **Gate 5** | Production Serving | FastAPI latency $\le 2.0$s; Docker container builds cleanly; Next.js renders PACS view. | `pytest tests/test_api_backend.py` | ✅ PASSED |
-| **Gate 6** | Final Academic Thesis | Master thesis and defense slides compiled; 100% unit tests pass; Rule 9 compliance. | `powershell -File scripts/verify.ps1` | ✅ PASSED |
+| **Gate 1** | Data Pipeline Hand-off | Zero duplicate `Patient_ID` between splits; multi-task batch sampler verified at 60:25:15. | `pytest tests/test_data_pipeline.py` |  PASSED |
+| **Gate 2** | Baseline Model Checkpoint | Baseline model successfully trained; validation ROC-AUC $\ge 0.80$ (Head A), $\ge 0.90$ (Heads B/C). | `pytest tests/test_multi_task_net.py` |  PASSED |
+| **Gate 3** | SOTA Asymmetric Optimization| SOTA ASL model achieves statistically significant AUC increase over baseline ($\Delta \ge +0.02$). | `pytest tests/test_trainer.py` |  PASSED |
+| **Gate 4** | XAI & Shortcut Audit | Box-IoU evaluated on VinDr-CXR; COVID-19 in-lung activation ratio $\ge 80\%$. | `python scripts/evaluate_live_vindr.py`|  PASSED |
+| **Gate 5** | Production Serving | FastAPI latency $\le 2.0$s; Docker container builds cleanly; Next.js renders PACS view. | `pytest tests/test_api_backend.py` |  PASSED |
+| **Gate 6** | Final Academic Thesis | Master thesis and defense slides compiled; 100% unit tests pass; Rule 9 compliance. | `powershell -File scripts/verify.ps1` |  PASSED |
 
 ### 2.3. Risk Management Matrix
 
 *Table 2.4: Technical and Operational Risk Management Matrix.*
+
 | Risk ID | Risk Description | Severity | Likelihood | Mitigation Strategy Implemented in LungRay |
 |:---|:---|:---|:---|:---|
 | **R-01** | Data Leakage via Repeat Patients | High | High | Hashed `Patient_ID` partitioning ensuring all radiographs of a patient exist in one split only. |
@@ -273,8 +251,6 @@ Progress across phases was governed by 6 mandatory Quality Delivery Gates:
 | **R-04** | Watermark Memorization (Shortcuts)| Critical | High | Anatomical lung masking with $25\times25$ dilation eliminating non-thoracic borders and letters. |
 | **R-05** | Multiprocessing DataLoader Hangs | Medium | High | On-demand instantiation of OpenCV CLAHE within `__getitem__` avoiding serialization locks. |
 | **R-06** | Out-of-Distribution Failures | Medium | Medium | Free Energy anomaly detection flagging non-CXR inputs with an automated clinical warning. |
-
----
 
 # CHAPTER III: EXISTING SYSTEMS & LITERATURE REVIEW
 
@@ -294,6 +270,7 @@ Subsequently, during the global pandemic, Wang et al. (2020) developed **COVID-N
 ## 4. Systematic Comparison of Existing Systems
 
 *Table 3.1: Systematic Comparison of Existing CXR Deep Learning Systems vs. LungRay.*
+
 | Feature / Dimension | CheXNet (Rajpurkar et al.) | COVID-Net (Wang et al.) | TB-Net (Pang et al.) | LungRay Platform (Ours) |
 |:---|:---|:---|:---|:---|
 | **Backbone Architecture** | DenseNet-121 (Single-Task) | Custom CNN (Single-Task)| ResNet-50 (Single-Task) | **MultiTaskChestXrayNet (3-Head)** |
@@ -311,8 +288,6 @@ Despite significant academic activity, current literature displays three persist
 2. **Absence of Quantitative WSOL Grounding**: Most CXR explainability papers display 3 to 5 cherry-picked Grad-CAM heatmaps without computing rigorous quantitative spatial metrics (e.g., Intersection over Union) against certified radiologist bounding boxes across thousands of external cases.
 3. **Neglect of Out-of-Distribution Safety**: Deployed CADx systems encounter invalid inputs daily (e.g., abdominal radiographs, pediatric scans, inverted exposures, lateral views). Existing architectures lack internal energy-based anomaly detection mechanisms to safely abort inference.
 
----
-
 # CHAPTER IV: METHODOLOGY
 
 ## 1. Research Questions & Hypotheses
@@ -322,14 +297,13 @@ This capstone research investigates four core research hypotheses:
 - **Hypothesis 3 ($H_3$)**: Enforcing anatomical lung masking with $25\times25$ morphological dilation will eradicate watermark shortcut learning on COVIDx CXR-4, elevating in-lung activation energy from $<50\%$ to $\ge 80\%$.
 - **Hypothesis 4 ($H_4$)**: Two-stage differential learning rate fine-tuning (unfreezing DenseBlocks 3 and 4) will optimize feature reuse, outperforming standard full-network retraining.
 
----
-
 ## 2. Data Collection and Preprocessing Pipeline
 
 ### 2.1. Dataset Aggregation
 LungRay aggregates six standardized radiography cohorts comprising over 150,000 images:
 
 *Table 4.1: Dataset Aggregation and Partitioning Statistics across Tasks.*
+
 | Dataset Identifier | Clinical Task Role | Total Cohort Size | Training Set ($70\%$) | Validation ($10\%$) | Test Set ($20\%$) | Patient ID Partitioning Rule |
 |:---|:---|:---|:---|:---|:---|:---|
 | **NIH ChestX-ray14** | Head A (14 Pathologies) | 112,120 images | 78,566 images | 11,154 images | 22,400 images | Grouped strictly by `Patient_ID` (Zero Leakage) |
@@ -348,8 +322,6 @@ Every radiograph undergoes a deterministic, four-stage medical preprocessing seq
    All pixels outside $M_{\text{dilated}}$ (including hospital labels, patient tags, and external detector borders) are clamped to zero.
 4. **Spatial Standardization**: Bilinear interpolation resizing to $512\times512\times3$ followed by ImageNet mean-variance normalization ($\mu = [0.485, 0.456, 0.406]$, $\sigma = [0.229, 0.224, 0.225]$).
 
----
-
 ## 3. Multi-Task Batch Sampling Strategy
 To train a single shared encoder across three distinct datasets with highly skewed sizes (NIH: 78k, COVIDx: 15k, TB: 3k), a standard random sampler would cause severe **Task Starvation**: Head B (TB) would only appear in 3% of training batches, causing its gradients to vanish.
 
@@ -359,8 +331,6 @@ We engineered the `WeightedMultiTaskBatchSampler`. For each training step, the s
 - $15\%$ samples ($1$ image) from TB Chest Radiography Database (Head B).
 
 This guarantees stable, continuous gradient backpropagation across all three heads throughout every epoch.
-
----
 
 ## 4. MultiTaskChestXrayNet Architecture & Parameter Breakdown
 
@@ -386,6 +356,7 @@ graph TD
 ```
 
 *Table 4.2: Complete Layer-by-Layer Architecture and Parameter Breakdown of DenseNet-121 MultiTaskChestXrayNet.*
+
 | Stage / Layer Name | Sub-Layers & Operations | Input Tensor Shape | Output Tensor Shape | Trainable Parameters | FLOPs ($512\times512$) |
 |:---|:---|:---|:---|:---|:---|
 | **Input** | Raw Radiograph Tensor | $(B, 3, 512, 512)$ | $(B, 3, 512, 512)$ | $0$ | $0$ |
@@ -407,8 +378,6 @@ graph TD
 | **Head C (COVIDx)** | $\text{Linear}(1024 \to 1)$ | $(B, 1024)$ | $(B, 1)$ | $1,025$ | $0.002\text{ M}$ |
 | **TOTALS** | **DenseNet-121 MultiTaskChestXrayNet** | **Input: 512x512** | **Output: 3-Head** | **6,973,350 params** | **7.00 GFLOPs** |
 
----
-
 ## 5. Mathematical Formulations of the Loss Engine
 
 ### 5.1. Masked Multi-Task Objective
@@ -427,8 +396,6 @@ where the shifted negative probability $p_{c,m} = \max(p_c - m, 0)$. In LungRay,
 Standard argmax or a fixed threshold of $0.5$ is clinically invalid in imbalanced settings. On the validation set, we calibrate individual disease thresholds $\tau_c \in (0, 1)$ by maximizing Youden's J statistic:
 $$\tau_c^* = \arg\max_\tau \left( \text{Sensitivity}_c(\tau) + \text{Specificity}_c(\tau) - 1 \right)$$
 These optimal thresholds $\tau^*$ are serialized to `configs/optimal_thresholds.json` and loaded during production inference.
-
----
 
 # CHAPTER V: SYSTEM DESIGN AND IMPLEMENTATION
 
@@ -467,14 +434,13 @@ To prevent the model from hallucinating diagnoses on corrupt files, abdominal sc
 $$E(x; T) = -T \cdot \log \sum_{c} \exp\left(\frac{f_c(x)}{T}\right)$$
 If the calculated Free Energy exceeds the empirically calibrated threshold $E_{\text{threshold}} = -4.2$, the system triggers an immediate **Fail-Safe Lockout**, refusing to display diagnostic probabilities and instructing the operator to verify the radiograph orientation and modality.
 
----
-
 # CHAPTER VI: RESULTS AND DISCUSSION
 
 ## 1. Training Convergence Analysis
 Both the Baseline Multi-Task Model (Notebook 02, trained with standard Masked BCE) and the SOTA Multi-Task Model (Notebook 03, trained with ASL and two-stage differential learning rates) were trained on Kaggle GPU hardware (NVIDIA Tesla T4, 16GB VRAM) under identical seed configurations ($seed=42$).
 
 *Table 6.1: Training and Validation Convergence Metrics for Baseline vs. SOTA Models.*
+
 | Model Variant | Epochs | Training Loss (Final) | Validation Loss (Final) | Mean AUC (Head A) | TB AUC (Head B) | COVID AUC (Head C) |
 |:---|:---|:---|:---|:---|:---|:---|
 | **Baseline Multi-Task (NB02)** | 10 Epochs | $0.1842$ | $0.1985$ | $0.8124$ | $0.9120$ | $0.9315$ |
@@ -482,12 +448,11 @@ Both the Baseline Multi-Task Model (Notebook 02, trained with standard Masked BC
 
 Convergence curves demonstrate that the Baseline model experiences premature plateauing around Epoch 6 due to negative gradient saturation on Head A. In contrast, the SOTA model with ASL maintains positive gradient flow throughout all 15 epochs, steadily reducing multi-label training loss while preventing overfitting via Cosine Annealing learning rate scheduling.
 
----
-
 ## 2. Head A Quantitative Evaluation (14 NIH Thoracic Pathologies)
 Evaluation was conducted on the holdout, patient-stratified test set ($N = 22,400$ images) ensuring zero identity overlap with training cohorts:
 
 *Table 6.2: Head A (14 NIH Pathologies) Class-Specific ROC-AUC Comparison on Test Set.*
+
 | Pathology Class | Positive Cases (Test) | Baseline Model (NB02) ROC-AUC | SOTA ASL Model (NB03) ROC-AUC | Absolute Gain ($\Delta$) | Clinical Significance |
 |:---|:---|:---|:---|:---|:---|
 | **Atelectasis** | $2,185$ ($9.75\%$) | $0.8042$ | **$0.8215$** | $+0.0173$ | Improved lung collapse detection |
@@ -508,11 +473,10 @@ Evaluation was conducted on the holdout, patient-stratified test set ($N = 22,40
 
 The empirical results decisively confirm **Hypothesis 2**: Asymmetric Loss achieved its greatest performance margins on the rarest conditions, registering a $+0.0470$ gain on Hernia (prevalence $0.20\%$) and $+0.0338$ on Pneumonia (prevalence $1.27\%$), proving that margin-shifted negative discounting successfully mitigates severe data imbalance.
 
----
-
 ## 3. Head B & Head C Quantitative Diagnostic Performance
 
 *Table 6.3: Head B (TB) and Head C (COVID-19) Independent Test Set Performance.*
+
 | Task Head | Evaluated Condition | Cohort Size (Test) | ROC-AUC | Sensitivity | Specificity | F1-Score | Youden Threshold ($\tau^*$) |
 |:---|:---|:---|:---|:---|:---|:---|:---|
 | **Head B** | Pulmonary Tuberculosis | $840$ images | **$0.9412$** | **$89.2\%$** | **$91.5\%$** | **$0.903$** | $\tau_B = 0.448$ |
@@ -520,14 +484,13 @@ The empirical results decisively confirm **Hypothesis 2**: Asymmetric Loss achie
 
 Both screening heads comfortably surpass the World Health Organization (WHO) target product profile for automated community triage (Sensitivity $\ge 90\%$, Specificity $\ge 70\%$).
 
----
-
 ## 4. Trustworthy WSOL Localization & Shortcut Learning Audit
 
 ### 4.1. WSOL Box-IoU Benchmark
 We evaluated the localization fidelity of Grad-CAM++ activation maps against certified expert bounding boxes from VinDr-CXR ($N = 4,394$) and RSNA Pneumonia ($N = 6,012$) under varying IoU thresholds:
 
 *Table 6.4: Quantitative Weakly-Supervised Localization Performance (Box-IoU).*
+
 | Benchmark Dataset | Target Pathology | Model Variant | Mean Box-IoU | Localization Accuracy (IoU $\ge 0.10$) | Localization Accuracy (IoU $\ge 0.25$) |
 |:---|:---|:---|:---|:---|:---|
 | **RSNA Pneumonia** | Pneumonia Consolidations| Baseline DenseNet-121 | $0.184$ | $42.5\%$ | $24.8\%$ |
@@ -539,8 +502,6 @@ We evaluated the localization fidelity of Grad-CAM++ activation maps against cer
 On the COVIDx CXR-4 test set, we quantified the ratio of Grad-CAM++ activation energy located strictly within the anatomical lung boundaries ($\text{Ratio} = \sum_{\text{lung}} \text{CAM} / \sum_{\text{total}} \text{CAM}$):
 - **Unmasked Baseline Model**: In-Lung Energy Ratio = **$41.8\%$** (Severe failure: over $58\%$ of gradient heat concentrated on hospital orientation letters "R"/"L" and detector edges).
 - **LungRay SOTA Model (with $25\times25$ Dilated Masking)**: In-Lung Energy Ratio = **$86.4\%$** (Confounding artifacts eradicated; attention strictly grounded within pulmonary parenchyma).
-
----
 
 # CHAPTER VII: CONCLUSION & FUTURE WORK
 
@@ -559,8 +520,6 @@ The LungRay capstone project establishes a complete, trustworthy, production-gra
 
 ## 3. Future Work: Phase 2 Attention-Regularized Fine-Tuning
 As explored in the ongoing research phase (Notebook 06: `06_attention_regularized_wsol_finetuning.ipynb`), future iterations will deploy the **Bi-Directional Attention Consistency Loss** ($\mathcal{L}_{\text{attn}}$), which penalizes CAM energy leakage outside certified lesion silhouettes and prevents CAM collapse on diffuse pathologies like Cardiomegaly. Further plans include conducting multi-center prospective clinical trials across provincial hospitals in Vietnam.
-
----
 
 # CHAPTER VIII: REFERENCES
 
@@ -585,12 +544,11 @@ As explored in the ongoing research phase (Notebook 06: `06_attention_regularize
 19. Larson, D. B., et al. (2021). Regulatory frameworks for artificial intelligence in healthcare. *Radiology*, 299(3), 500–510.
 20. World Health Organization. (2021). *Chest radiography in tuberculosis detection: summary of current WHO recommendations and guidance on programmatic approaches*. WHO Guidelines Approved by the Guidelines Review Committee.
 
----
-
 # CHAPTER IX: APPENDICES
 
 ### Appendix A: Optimal Clinical Decision Thresholds ($\tau^*$)
 *Table 9.1: Optimal Clinical Decision Thresholds ($\tau_c$) Calibrated via Youden's J Statistic.*
+
 | Pathology Index | Pathology Finding | Optimal Cutoff Threshold ($\tau_c^*$) | Sensitivity at $\tau^*$ | Specificity at $\tau^*$ |
 |:---|:---|:---|:---|:---|
 | 0 | Atelectasis | $0.578$ | $82.4\%$ | $81.5\%$ |

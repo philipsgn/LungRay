@@ -1,16 +1,15 @@
-r"""
-LungRay Final Scientific Report PDF Compiler (Rule 9 Compliant)
-================================================================
-Converts reports/FINAL_SCIENTIFIC_REPORT.md into a publication-grade
-monochrome PDF paper: reports/FINAL_SCIENTIFIC_REPORT.pdf (20-25 pages equivalent).
-
-Strict Rule 9 Adherence:
-- 100% no icons or emojis
-- Times New Roman typography (11pt body, 1.35 line-height, text-align: justify)
-- Booktabs 3-rule tables (\toprule, \midrule, \bottomrule)
-- Monochrome styling (black, white, grayscale)
-- Embedded high-resolution figures from results/
-- Headless Edge print-to-pdf engine
+#!/usr/bin/env python3
+"""
+scripts/generate_final_report_pdf.py - Publication-Grade Academic PDF Generator (Rule 9 Compliant)
+==================================================================================================
+Compiles reports/DSP391_Full_Thesis_Report.md into a formal, print-ready, monochrome PDF paper:
+reports/output/pdf/LungRay_Final_Report_DSP391.pdf adhering strictly to:
+- 100% no icons or emojis (Rule 9).
+- Times New Roman typography (11pt body, 1.25 line-height, justified).
+- Authentic Booktabs 3-rule tables (\\toprule, \\midrule, \\bottomrule, zero vertical lines).
+- Beautiful, fully-typeset mathematical formulas (zero raw LaTeX $ ... $ syntax).
+- Zero horizontal divider lines (no <hr> or ---).
+- Strict page-break governance (no orphan headers or table rows).
 """
 import base64
 import os
@@ -34,16 +33,133 @@ def image_to_base64_data_uri(image_path: Path) -> str:
     return f"data:image/png;base64,{encoded}"
 
 
+def render_academic_math(text: str) -> str:
+    """
+    Renders LaTeX math formulas into publication-grade HTML/Unicode typography.
+    Eradicates raw '$ ... $' syntax while preserving mathematical exactness.
+    """
+    # 1. Block Equations ($$ ... $$)
+    def _replace_block_eq(match):
+        eq = match.group(1).strip()
+        # Common block equations
+        if "L_{total}" in eq or "L_\\text{total}" in eq or "\\mathcal{L}_{\\text{total}}" in eq:
+            return (
+                '<div class="equation-block">'
+                '<span class="equation-text"><i>L</i><sub>total</sub> = '
+                '<span class="fraction"><span class="numerator">1</span><span class="denominator"><i>B</i></span></span> '
+                '&sum;<sub><i>i</i>=1</sub><sup><i>B</i></sup> &sum;<sub><i>k</i> &isin; {<i>A</i>, <i>B</i>, <i>C</i>}</sub> '
+                '&#x1D7D9;(<i>t</i><sub><i>i</i></sub> = <i>k</i>) &middot; &lambda;<sub><i>k</i></sub> &middot; '
+                '<i>L</i><sub><i>k</i></sub>(<i>&ycirc;</i><sub><i>i,k</i></sub>, <i>y</i><sub><i>i,k</i></sub>)</span>'
+                '<span class="equation-num">(2)</span>'
+                '</div>'
+            )
+        if "L_{ASL}" in eq or "\\mathcal{L}_{\\text{ASL}}" in eq:
+            return (
+                '<div class="equation-block">'
+                '<span class="equation-text"><i>L</i><sub>ASL</sub> = '
+                '&sum;<sub><i>c</i>=1</sub><sup>14</sup> &minus;<i>y</i><sub><i>c</i></sub> (1 &minus; <i>p</i><sub><i>c</i></sub>)<sup>&gamma;<sub>+</sub></sup> log(<i>p</i><sub><i>c</i></sub>) '
+                '&minus; (1 &minus; <i>y</i><sub><i>c</i></sub>) (<i>p</i><sub><i>c,m</i></sub>)<sup>&gamma;<sub>&minus;</sub></sup> log(1 &minus; <i>p</i><sub><i>c,m</i></sub>)</span>'
+                '<span class="equation-num">(3)</span>'
+                '</div>'
+            )
+        if "\\tau_c^*" in eq:
+            return (
+                '<div class="equation-block">'
+                '<span class="equation-text">&tau;<sub><i>c</i></sub><sup>*</sup> = '
+                'arg max<sub>&tau;</sub> [ Sensitivity<sub><i>c</i></sub>(&tau;) + Specificity<sub><i>c</i></sub>(&tau;) &minus; 1 ]</span>'
+                '<span class="equation-num">(4)</span>'
+                '</div>'
+            )
+        if "E(x; T)" in eq or "E(x;" in eq:
+            return (
+                '<div class="equation-block">'
+                '<span class="equation-text"><i>E</i>(<i>x</i>; <i>T</i>) = &minus;<i>T</i> &middot; '
+                'log &sum;<sub><i>c</i></sub> exp( <sup><i>f</i><sub><i>c</i></sub>(<i>x</i>)</sup>&frasl;<sub><i>T</i></sub> )</span>'
+                '<span class="equation-num">(5)</span>'
+                '</div>'
+            )
+        if "L_{leak}" in eq or "\\mathcal{L}_{leak}" in eq:
+            return (
+                '<div class="equation-block">'
+                '<span class="equation-text"><i>L</i><sub>leak</sub> = '
+                '<span class="fraction"><span class="numerator">1</span><span class="denominator"><i>B</i></span></span> '
+                '&sum;<sub><i>b</i></sub> max(0, (1 &minus; &delta;) &minus; '
+                '<sup>&sum; CAM<sub><i>ij</i></sub> <i>M</i><sub>gt,<i>ij</i></sub></sup>&frasl;<sub>&sum; CAM<sub><i>ij</i></sub> + &epsilon;</sub>)</span>'
+                '<span class="equation-num">(6)</span>'
+                '</div>'
+            )
+        if "L_{cov}" in eq or "\\mathcal{L}_{cov}" in eq:
+            return (
+                '<div class="equation-block">'
+                '<span class="equation-text"><i>L</i><sub>cov</sub> = '
+                '<span class="fraction"><span class="numerator">1</span><span class="denominator"><i>B</i></span></span> '
+                '&sum;<sub><i>b</i></sub> max(0, &tau;<sub><i>d</i></sub> &minus; '
+                '<sup>&sum; &sigma;(10(CAM<sub><i>ij</i></sub> &minus; &theta;)) <i>M</i><sub>gt,<i>ij</i></sub></sup>&frasl;<sub>&sum; <i>M</i><sub>gt,<i>ij</i></sub> + &epsilon;</sub>)</span>'
+                '<span class="equation-num">(7)</span>'
+                '</div>'
+            )
+        return f'<div class="equation-block"><span class="equation-text"><i>{eq}</i></span></div>'
+
+    text = re.sub(r'\$\$(.*?)\$\$', _replace_block_eq, text, flags=re.DOTALL)
+
+    # 2. Specific inline replacements
+    replacements = [
+        (r'\$X \\in \\mathbb\{R\}\^\{3 \\times H \\times W\}\$', '<i>X</i> &isin; &#8477;<sup>3 &times; <i>H</i> &times; <i>W</i></sup>'),
+        (r'\$H = W = 512\$', '<i>H</i> = <i>W</i> = 512'),
+        (r'\$\\hat\{Y\} = \\{\\hat\{y\}_A, \\hat\{y\}_B, \\hat\{y\}_C\\}\$', '<i>&Ycirc;</i> = {<i>&ycirc;</i><sub><i>A</i></sub>, <i>&ycirc;</i><sub><i>B</i></sub>, <i>&ycirc;</i><sub><i>C</i></sub>}'),
+        (r'\$\\hat\{y\}_A \\in \[0, 1\]\^\{14\}\$', '<i>&ycirc;</i><sub><i>A</i></sub> &isin; [0, 1]<sup>14</sup>'),
+        (r'\$\\hat\{y\}_B \\in \[0, 1\]\$', '<i>&ycirc;</i><sub><i>B</i></sub> &isin; [0, 1]'),
+        (r'\$\\hat\{y\}_C \\in \[0, 1\]\$', '<i>&ycirc;</i><sub><i>C</i></sub> &isin; [0, 1]'),
+        (r'\$\\tau_c\^\\*\$', '&tau;<sub><i>c</i></sub><sup>*</sup>'),
+        (r'\$\\tau_c\$', '&tau;<sub><i>c</i></sub>'),
+        (r'\$\\tau_B = 0\.448\$', '&tau;<sub><i>B</i></sub> = 0.448'),
+        (r'\$\\tau_C = 0\.512\$', '&tau;<sub><i>C</i></sub> = 0.512'),
+        (r'\$\\tau_d\$', '&tau;<sub><i>d</i></sub>'),
+        (r'\$\\ge 18\$', '&ge; 18'),
+        (r'\$\\ge 80\\%\$', '&ge; 80%'),
+        (r'\$\\ge 0\.80\$', '&ge; 0.80'),
+        (r'\$\\ge 0\.90\$', '&ge; 0.90'),
+        (r'\$\\le 2\.0\$s', '&le; 2.0s'),
+        (r'\$\\Delta \\ge \+0\.02\$', '&Delta; &ge; +0.02'),
+        (r'\$\\Delta\$', '&Delta;'),
+        (r'\$25 \\times 25\$', '25 &times; 25'),
+        (r'\$512 \\times 512 \\times 3\$', '512 &times; 512 &times; 3'),
+        (r'\$512 \\times 512\$', '512 &times; 512'),
+        (r'\$p < 0\.001\$', '<i>p</i> &lt; 0.001'),
+        (r'\$seed=42\$', '<i>seed</i> = 42'),
+        (r'\$\\gamma_-\$', '&gamma;<sub>&minus;</sub>'),
+        (r'\$\\gamma_\+\$', '&gamma;<sub>+</sub>'),
+        (r'\$m = 0\.05\$', '<i>m</i> = 0.05'),
+        (r'\$m \\ge 0\$', '<i>m</i> &ge; 0'),
+        (r'\$\\text\{CAM\} \\in \[0,1\]\^\{H\\times W\}\$', 'CAM &isin; [0, 1]<sup><i>H</i> &times; <i>W</i></sup>'),
+        (r'\$M_\{gt\} \\in \\\{0,1\\\}\^\{H\\times W\}\$', '<i>M</i><sub>gt</sub> &isin; {0, 1}<sup><i>H</i> &times; <i>W</i></sup>'),
+        (r'\$\\mathcal\{L\}_\{attn\}\$', '<i>L</i><sub>attn</sub>'),
+        (r'\$\\mathcal\{L\}_\{leak\}\$', '<i>L</i><sub>leak</sub>'),
+        (r'\$\\mathcal\{L\}_\{cov\}\$', '<i>L</i><sub>cov</sub>'),
+        (r'\$\\beta\$', '&beta;'),
+        (r'\$\\lambda_k\$', '&lambda;<sub><i>k</i></sub>'),
+        (r'\$\\lambda_A = 1\.0\$', '&lambda;<sub><i>A</i></sub> = 1.0'),
+        (r'\$\\lambda_B = 1\.0\$', '&lambda;<sub><i>B</i></sub> = 1.0'),
+        (r'\$\\lambda_C = 1\.0\$', '&lambda;<sub><i>C</i></sub> = 1.0'),
+        (r'\$\\epsilon\$', '&epsilon;'),
+        (r'\$\\theta\$', '&theta;'),
+        (r'\$\\sigma\$', '&sigma;'),
+        (r'\$\\mu\$', '&mu;'),
+    ]
+    for pattern, rep in replacements:
+        text = re.sub(pattern, rep, text)
+
+    # 3. Generic fallback for any remaining $variable$
+    text = re.sub(r'\$([A-Za-z0-9_+\-^*/]+)\$', r'<i>\1</i>', text)
+    return text
+
+
 def generate_final_pdf(
-    md_path: str = "reports/FINAL_SCIENTIFIC_REPORT.md",
-    pdf_path: str = "reports/output/pdf/LungRay_Final_Report.pdf",
-    arch_png: str = "results/figures/architecture_radar_comparison.png",
-    audit_png: str = "results/shortcut_audit_comparison.png",
+    md_path: str = "reports/DSP391_Full_Thesis_Report.md",
+    pdf_path: str = "reports/output/pdf/LungRay_Final_Report_DSP391.pdf",
 ):
     abs_md = WORKSPACE_ROOT / md_path
     abs_pdf = WORKSPACE_ROOT / pdf_path
-    abs_arch_png = WORKSPACE_ROOT / arch_png
-    abs_audit_png = WORKSPACE_ROOT / audit_png
     temp_html = WORKSPACE_ROOT / "reports" / "temp_final_report_render.html"
 
     if not abs_md.exists():
@@ -52,61 +168,40 @@ def generate_final_pdf(
     with open(abs_md, "r", encoding="utf-8") as f:
         md_text = f.read()
 
-    # Convert Markdown to HTML with tables extension
+    # Pre-render math formulas before markdown parsing
+    md_text = render_academic_math(md_text)
+
+    # Convert Markdown to HTML
     html_content = markdown.markdown(md_text, extensions=["tables", "fenced_code"])
 
-    # Prepare base64 images
-    arch_b64 = image_to_base64_data_uri(abs_arch_png)
-    audit_b64 = image_to_base64_data_uri(abs_audit_png)
+    # Prepare high-resolution base64 images
+    img_map = {
+        "training_curves.png": WORKSPACE_ROOT / "results" / "training_curves.png",
+        "head_a_roc_curves.png": WORKSPACE_ROOT / "results" / "head_a_roc_curves.png",
+        "head_b_tb_evaluation.png": WORKSPACE_ROOT / "results" / "head_b_tb_evaluation.png",
+        "head_c_covid_evaluation.png": WORKSPACE_ROOT / "results" / "head_c_covid_evaluation.png",
+        "shortcut_audit_summary.png": WORKSPACE_ROOT / "results" / "shortcut_audit_summary.png",
+    }
 
-    # Insert Figures into corresponding sections
-    figure1_html = f"""
-    <div class="figure-container">
-        <img src="{arch_b64}" alt="Figure 1: Architectural Comparison" style="max-width: 100%; border: 1px solid #000;" />
-        <p class="caption"><strong>Figure 1.</strong> Empirical Architectural Benchmark across DenseNet-121, ResNet-50, and ViT-B/16 on 512x512 chest radiographs, illustrating (a) Parameter complexity, (b) Inference latency per image, and (c) Multi-task macro AUROC.</p>
-    </div>
-    """
+    # Embed images in Chapter VI
+    fig_blocks = ""
+    for name, p in img_map.items():
+        if p.exists():
+            b64 = image_to_base64_data_uri(p)
+            label = name.replace(".png", "").replace("_", " ").title()
+            fig_blocks += (
+                f'<div class="figure-container">'
+                f'<img src="{b64}" alt="{label}" style="max-width: 90%; border: 1px solid #000;" />'
+                f'<p class="caption"><strong>Figure.</strong> {label} generated by the LungRay evaluation pipeline.</p>'
+                f'</div>'
+            )
 
-    figure2_html = f"""
-    <div class="figure-container">
-        <img src="{audit_b64}" alt="Figure 2: Pulmonary Grounding Shortcut Audit" style="max-width: 100%; border: 1px solid #000;" />
-        <p class="caption"><strong>Figure 2.</strong> In-Lung Activation Energy Distribution across 150 COVID-19 Test Cases under (1) Unmasked Baseline, (2) Input Masking Only, and (3) Clinical Pulmonary Grounding, demonstrating complete suppression of non-physiological shortcut confounders (p = 1.15e-26).</p>
-    </div>
-    """
-
-    extra_figures = ""
-    for label, rel_path, caption_text in [
-        ("Figure 3", "results/eda/07_real_cxr_samples_grid.png", "Real CXR sample grid generated by the project EDA workflow."),
-        ("Figure 4", "results/baseline/training_curves.png", "Baseline training curves generated by the project training workflow."),
-        ("Figure 5", "results/baseline/head_a_roc_curves.png", "Head A ROC curves generated by the baseline evaluation workflow."),
-    ]:
-        b64 = image_to_base64_data_uri(WORKSPACE_ROOT / rel_path)
-        extra_figures += f'<div class="figure-container"><img src="{b64}" alt="{label}" style="max-width: 100%; border: 1px solid #000;" /><p class="caption"><strong>{label}.</strong> {caption_text}</p></div>'
-
-    # Replace section markers or append figures
-    if "### 5.2. Experiment 2: Architectural Arena" in html_content:
-        html_content = html_content.replace(
-            "### 5.2. Experiment 2: Architectural Arena",
-            figure1_html + "\n### 5.2. Experiment 2: Architectural Arena"
-        )
-    else:
-        html_content += figure1_html
-
-    if "### 5.5. Experiment 5: Pulmonary Grounding Audit" in html_content:
-        html_content = html_content.replace(
-            "### 5.5. Experiment 5: Pulmonary Grounding Audit",
-            figure2_html + "\n### 5.5. Experiment 5: Pulmonary Grounding Audit"
-        )
-    else:
-        html_content += figure2_html
-    html_content += extra_figures
-
-    # Academic Monochrome CSS
+    # Academic Monochrome HTML/CSS (Rule 9 Compliant)
     full_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>LungRay Scientific Monograph</title>
+<title>LungRay DSP391 Final Graduation Thesis Report</title>
 <style>
     @page {{
         size: A4;
@@ -120,46 +215,69 @@ def generate_final_pdf(
     body {{
         font-family: 'Times New Roman', Times, serif;
         font-size: 11pt;
-        line-height: 1.35;
+        line-height: 1.25;
         color: #000000;
         background-color: #ffffff;
         text-align: justify;
         margin: 0;
         padding: 0;
     }}
+    /* Zero horizontal rules (Rule 9 & User Directive) */
+    hr {{
+        display: none !important;
+    }}
+    /* Page Break Hierarchy */
     h1 {{
-        font-size: 18pt;
+        page-break-before: always;
+        font-size: 16pt;
         text-align: center;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-top: 0;
+        padding-top: 10pt;
         margin-bottom: 12pt;
         line-height: 1.25;
         font-weight: bold;
+        page-break-after: avoid;
+    }}
+    /* Suppress page break on first heading */
+    body > h1:first-of-type {{
+        page-break-before: avoid;
     }}
     h2 {{
         font-size: 13pt;
         text-transform: uppercase;
         border-bottom: 1.5px solid #000000;
         padding-bottom: 2pt;
-        margin-top: 18pt;
-        margin-bottom: 8pt;
+        margin-top: 14pt;
+        margin-bottom: 6pt;
         font-weight: bold;
+        page-break-after: avoid;
     }}
     h3 {{
         font-size: 11.5pt;
-        margin-top: 12pt;
+        margin-top: 10pt;
         margin-bottom: 4pt;
         font-weight: bold;
         font-style: italic;
+        page-break-after: avoid;
     }}
     p {{
         margin-top: 0;
-        margin-bottom: 8pt;
+        margin-bottom: 6pt;
         text-indent: 1.5em;
     }}
-    p.no-indent, .figure-container p, .caption, table p, blockquote p {{
+    p.no-indent, .figure-container p, .caption, table p, blockquote p, ul p, ol p {{
         text-indent: 0;
+    }}
+    ul, ol {{
+        margin-top: 2pt;
+        margin-bottom: 6pt;
+        padding-left: 20pt;
+    }}
+    li {{
+        margin-bottom: 2pt;
+        line-height: 1.2;
     }}
     strong {{
         font-weight: bold;
@@ -167,57 +285,91 @@ def generate_final_pdf(
     em {{
         font-style: italic;
     }}
-    /* Booktabs table styling */
+    /* Authentic Booktabs Table Styling */
     table {{
         width: 100%;
         border-collapse: collapse;
-        margin-top: 12pt;
-        margin-bottom: 14pt;
+        margin-top: 8pt;
+        margin-bottom: 12pt;
         font-size: 9.5pt;
         line-height: 1.2;
+        page-break-inside: auto;
     }}
-    thead th {{
-        border-top: 2px solid #000000;
-        border-bottom: 1px solid #000000;
+    thead tr th {{
+        border-top: 1.5pt solid #000000;
+        border-bottom: 1.0pt solid #000000;
         padding: 5pt 4pt;
         text-align: left;
         font-weight: bold;
+        background-color: #f7f7f7;
     }}
-    tbody td {{
-        padding: 4pt 4pt;
+    tbody tr td {{
+        padding: 4.5pt 4pt;
         border-top: none;
         border-bottom: none;
     }}
     tbody tr:last-child td {{
-        border-bottom: 2px solid #000000;
-        font-weight: bold;
+        border-bottom: 1.5pt solid #000000;
+    }}
+    tr {{
+        page-break-inside: avoid;
+    }}
+    /* Mathematical Equation Styling */
+    .equation-block {{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 8pt 0;
+        font-size: 11pt;
+        font-style: italic;
+        position: relative;
+        text-align: center;
+    }}
+    .equation-text {{
+        margin: 0 auto;
+    }}
+    .equation-num {{
+        position: absolute;
+        right: 10pt;
+        font-style: normal;
+        font-size: 10.5pt;
+    }}
+    .fraction {{
+        display: inline-block;
+        vertical-align: middle;
+        text-align: center;
+        padding: 0 2pt;
+    }}
+    .numerator {{
+        display: block;
+        border-bottom: 1px solid #000;
+        padding-bottom: 1pt;
+    }}
+    .denominator {{
+        display: block;
+        padding-top: 1pt;
     }}
     .figure-container {{
         text-align: center;
-        margin: 16pt 0;
+        margin: 14pt 0;
         page-break-inside: avoid;
     }}
     .caption {{
         font-size: 9.5pt;
         text-align: justify;
-        margin-top: 6pt;
+        margin-top: 5pt;
         font-style: normal;
     }}
     pre, code {{
         font-family: 'Courier New', Courier, monospace;
         font-size: 8.5pt;
-        background-color: #f7f7f7;
+        background-color: #f9f9f9;
     }}
     pre {{
         border: 1px solid #cccccc;
         padding: 6pt;
         margin: 8pt 0;
         white-space: pre-wrap;
-    }}
-    hr {{
-        border: 0;
-        border-top: 1px solid #000000;
-        margin: 14pt 0;
     }}
 </style>
 </head>
@@ -229,9 +381,9 @@ def generate_final_pdf(
 
     with open(temp_html, "w", encoding="utf-8") as f:
         f.write(full_html)
-    print(f"[*] Generated HTML rendered report at: {temp_html}")
+    print(f"[*] Generated rendered HTML at: {temp_html}")
 
-    # Edge Path candidates on Windows
+    # Headless Edge candidates
     edge_paths = [
         r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
         r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
@@ -254,10 +406,9 @@ def generate_final_pdf(
     print(f"[*] Compiling publication-grade PDF via Headless Edge...")
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-
         if abs_pdf.exists() and abs_pdf.stat().st_size > 50000:
             size_kb = abs_pdf.stat().st_size / 1024
-            print(f"[OK] Successfully compiled: {abs_pdf} ({size_kb:.1f} KB)")
+            print(f"[OK] Successfully compiled PDF: {abs_pdf} ({size_kb:.1f} KB)")
             alt_pdf = WORKSPACE_ROOT / "reports" / "FINAL_SCIENTIFIC_REPORT.pdf"
             import shutil
             shutil.copyfile(abs_pdf, alt_pdf)
@@ -265,9 +416,11 @@ def generate_final_pdf(
         else:
             print(f"[!] Warning: PDF generation failed or empty. Stderr: {result.stderr}")
     finally:
-        # Clean up temporary HTML file (Rule 8: Lean Workspace)
         if temp_html.exists():
-            temp_html.unlink()
+            try:
+                temp_html.unlink()
+            except OSError:
+                pass
 
 
 if __name__ == "__main__":
