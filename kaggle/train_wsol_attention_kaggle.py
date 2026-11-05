@@ -60,7 +60,7 @@ if PROJECT_ROOT not in sys.path:
 
 import albumentations as A  # noqa: E402
 
-from src.data.ingestion import build_recursive_file_map  # noqa: E402
+from src.data.ingestion import build_recursive_file_map, load_covid_dataframe  # noqa: E402
 from src.data.sampler import WeightedMultiTaskBatchSampler  # noqa: E402
 from src.data.transforms import get_train_transforms, get_val_transforms  # noqa: E402
 from src.explainability import LungSegmenter  # noqa: E402
@@ -361,6 +361,28 @@ def build_nih_samples(
     return with_bbox + without_bbox
 
 
+def _binary_samples_from_frame(
+    frame: pd.DataFrame,
+    image_map: Dict[str, str],
+    split: str,
+    limit: int,
+    make_record: Any,
+) -> List[Dict[str, Any]]:
+    """Builds binary-task samples from an in-memory frame (CSV or manifest)."""
+    if frame is None or len(frame) == 0:
+        return []
+    if "split" in frame.columns:
+        frame = frame[frame["split"].astype(str) == split]
+    samples: List[Dict[str, Any]] = []
+    for _, row in frame.iterrows():
+        name = str(row.get("filename", row.get("Image Index", "")))
+        path = image_map.get(name) or image_map.get(os.path.basename(name))
+        if path is None:
+            continue
+        samples.append(make_record(row, path))
+    return _balanced_take(samples, limit, "binary_label")
+
+
 def _build_binary_samples(
     split_csv: str,
     image_map: Dict[str, str],
@@ -370,27 +392,23 @@ def _build_binary_samples(
 ) -> List[Dict[str, Any]]:
     if not os.path.exists(split_csv):
         return []
-    df = pd.read_csv(split_csv)
-    if "split" in df.columns:
-        df = df[df["split"] == split]
-    samples: List[Dict[str, Any]] = []
-    for _, row in df.iterrows():
-        path = image_map.get(str(row["Image Index"]))
-        if path is None:
-            continue
-        samples.append(make_record(row, path))
-    return _balanced_take(samples, limit, "binary_label")
+    return _binary_samples_from_frame(pd.read_csv(split_csv), image_map, split, limit, make_record)
 
 
 def build_covid_samples(
-    covid_csv: str,
+    covid_frame: pd.DataFrame,
     image_map: Dict[str, str],
     split: str,
     limit: int = 0,
 ) -> List[Dict[str, Any]]:
+    """Builds Head C samples from COVIDx CXR-4 manifests or the legacy split CSV."""
     def make(row: pd.Series, path: str) -> Dict[str, Any]:
-        class_name = str(row.get("class_name", row.get("diagnosis", "")))
-        label = 1.0 if class_name.strip().lower().startswith("covid") else 0.0
+        class_name = str(row.get("class_name", row.get("diagnosis", ""))).strip().lower()
+        if class_name:
+            label = 1.0 if class_name.startswith("covid") else 0.0
+        else:
+            value = pd.to_numeric(row.get("label", 0), errors="coerce")
+            label = 0.0 if pd.isna(value) else float(value)
         return {
             "task_id": TASK_COVID,
             "image_path": path,
@@ -401,7 +419,7 @@ def build_covid_samples(
             "disease_name": "COVID-19",
         }
 
-    return _build_binary_samples(covid_csv, image_map, split, limit, make)
+    return _binary_samples_from_frame(covid_frame, image_map, split, limit, make)
 
 
 def build_tb_samples(
@@ -436,14 +454,18 @@ def build_multitask_splits(
     splits_dir = args.splits_dir
     lim = args.limit_per_task
 
+    # Head C cohort: COVIDx CXR-4 uses train.txt/test.txt manifests, while the
+    # legacy COVID-19 Radiography cohort uses covid_splits.csv. Prefer manifests.
+    covid_frame = load_covid_dataframe(args.covid_image_dir, split_dirs=[splits_dir])
+
     train = {
         "nih": build_nih_samples(os.path.join(splits_dir, "patient_splits.csv"), nih_map, bbox_index, "train", lim),
-        "covid": build_covid_samples(os.path.join(splits_dir, "covid_splits.csv"), covid_map, "train", lim),
+        "covid": build_covid_samples(covid_frame, covid_map, "train", lim),
         "tb": build_tb_samples(os.path.join(splits_dir, "tb_splits.csv"), tb_map, "train", lim),
     }
     val = {
         "nih": build_nih_samples(os.path.join(splits_dir, "patient_splits.csv"), nih_map, bbox_index, "val", lim),
-        "covid": build_covid_samples(os.path.join(splits_dir, "covid_splits.csv"), covid_map, "val", lim),
+        "covid": build_covid_samples(covid_frame, covid_map, "val", lim),
         "tb": build_tb_samples(os.path.join(splits_dir, "tb_splits.csv"), tb_map, "val", lim),
     }
     return train, val
