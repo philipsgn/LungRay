@@ -152,6 +152,7 @@ def run_live_vindr_benchmark(
     n_samples: int = 100,
     out_csv: str = "results/live_vindr_iou_benchmark.csv",
     seed: int = 42,
+    weights_path: str = "checkpoints/best_model.pth",
 ) -> pd.DataFrame:
     if not os.path.exists(zip_path):
         raise FileNotFoundError(f"Không tìm thấy file zip VinDr tại {zip_path}")
@@ -159,7 +160,7 @@ def run_live_vindr_benchmark(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[*] Sử dụng thiết bị tính toán: {device}")
 
-    model = load_model("checkpoints/best_model.pth", device=device)
+    model = load_model(weights_path, device=device)
     explainer = MultiScaleGradCAMPlusPlus(model)
     segmenter = LungSegmenter()
     audit_engine = ShortcutAuditEngine(segmenter)
@@ -315,6 +316,12 @@ if __name__ == "__main__":
     parser.add_argument("--n-samples", type=int, default=100)
     parser.add_argument("--out-csv", type=str, default="results/live_vindr_iou_benchmark.csv")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--weights",
+        type=str,
+        default="checkpoints/best_model.pth",
+        help="Checkpoint to benchmark (e.g. checkpoints/best_wsol_finetune.pth).",
+    )
     args = parser.parse_args()
 
     run_live_vindr_benchmark(
@@ -322,5 +329,6 @@ if __name__ == "__main__":
         n_samples=args.n_samples,
         out_csv=args.out_csv,
         seed=args.seed,
+        weights_path=args.weights,
     )
 

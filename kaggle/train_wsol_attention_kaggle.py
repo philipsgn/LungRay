@@ -958,6 +958,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         backbone_name="densenet121", pretrained=False, img_size=args.img_size,
         num_classes_a=14, num_classes_b=1, num_classes_c=1,
     )
+    if not os.path.exists(args.checkpoint_in):
+        import glob
+        input_candidates = glob.glob("/kaggle/input/**/best_model.pth", recursive=True)
+        if input_candidates:
+            args.checkpoint_in = input_candidates[0]
+            print(f"[*] Discovered baseline checkpoint in Kaggle Input: {args.checkpoint_in}")
+
     if os.path.exists(args.checkpoint_in):
         print(f"[*] Loading pretrained baseline checkpoint: {args.checkpoint_in}")
         state = torch.load(args.checkpoint_in, map_location="cpu", weights_only=False)
