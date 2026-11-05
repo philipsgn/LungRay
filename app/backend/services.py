@@ -88,7 +88,7 @@ class LungRayService:
                 "head_c_covid": {"threshold": 0.5},
             }
 
-    def _load_model(self) -> MultiTaskChestXrayNet:
+    def _load_model(self, checkpoint_path: Optional[str] = None) -> MultiTaskChestXrayNet:
         model = MultiTaskChestXrayNet(
             backbone_name="densenet121",
             pretrained=False,
@@ -98,7 +98,15 @@ class LungRayService:
             num_classes_c=1,
         )
 
-        checkpoint_path = "checkpoints/best_model.pth"
+        if checkpoint_path is None:
+            checkpoint_path = os.getenv("CHECKPOINT_PATH")
+            if not checkpoint_path:
+                if os.path.exists("checkpoints/best_wsol_finetune.pth"):
+                    checkpoint_path = "checkpoints/best_wsol_finetune.pth"
+                else:
+                    checkpoint_path = "checkpoints/best_model.pth"
+
+        self.current_checkpoint = checkpoint_path
         if os.path.exists(checkpoint_path):
             logger.info("Loading checkpoint from %s", checkpoint_path)
             state = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
@@ -106,7 +114,7 @@ class LungRayService:
                 state = state["model_state_dict"]
             elif isinstance(state, dict) and "state_dict" in state:
                 state = state["state_dict"]
-            model.load_state_dict(state)
+            model.load_state_dict(state, strict=False)
         else:
             logger.warning(
                 "No checkpoint found at %s; using randomly-initialized weights.",

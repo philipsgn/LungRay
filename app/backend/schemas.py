@@ -9,6 +9,7 @@ class HealthResponse(BaseModel):
     device: str = Field(..., description="torch device used for inference")
     version: str = Field(..., description="API version")
     ood_failsafe_enabled: bool = Field(default=True, description="Whether OOD Fail-Safe policy is active")
+    active_checkpoint: str = Field(default="checkpoints/best_model.pth", description="Active checkpoint path")
 
 
 class SafetyDecisionSchema(BaseModel):

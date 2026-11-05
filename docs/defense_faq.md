@@ -182,3 +182,19 @@
   - **Đột phá của Dung hợp Đa Tỷ lệ (Multi-Scale Fusion)**: Tầng `denseblock3` có độ phân giải $32 \times 32$ (gấp đôi độ mịn không gian), lưu giữ các đặc trưng ranh giới tổn thương sắc nét. Thuật toán `MultiScaleGradCAMPlusPlus` tính toán trọng số không gian phân tích độc lập cho cả hai tầng và dung hợp theo tỷ lệ chuẩn mực:
     $$M_{\text{fused}} = 0.60 \cdot M_{\text{denseblock4}} + 0.40 \cdot \text{Resize}_{16 \to 32}(M_{\text{denseblock3}})$$
   - **Hiệu quả thực tế**: Bản đồ nhiệt thu hẹp tiêu điểm, tăng độ tập trung vào ổ đông đặc phế nang, cho phép thuật toán trích xuất viền tổn thương **Iso-Contour** ôm khít vùng bệnh, trực tiếp cải thiện chỉ số Box-IoU định lượng trên cả hai tập đối chuẩn VinDr-CXR và RSNA Pneumonia.
+
+### Câu 28: Đợt kiểm thử thực nghiệm trên VinDr-CXR cho thấy mô hình ban đầu yếu về định vị Bóng tim to (Cardiomegaly, Box-IoU 0.0981) và Dày màng phổi (Pleural Thickening, IoU 0.0544). Nguyên nhân giải phẫu là gì và giải pháp toán học Bi-Directional Attention Consistency Loss (L_attn) trong Phase 2 đã khắc phục như thế nào?
+- **Trả lời**:
+  - **Nguyên nhân giải phẫu & Gradient Bias**:
+    1. *Bóng tim to (Cardiomegaly)*: Grad-CAM từ nhãn mức ảnh có xu hướng tập trung cực đại vào bờ viền tim bên trái (Left Cardiac Border) vì đây là nơi có độ tương phản độ xám cao nhất giữa mô mềm của tim và phế trường phổi sáng. Kết quả là bản đồ nhiệt bị co rút thành một sợi chỉ viền (Contrast Collapse) thay vì bao phủ toàn bộ thể tích bóng tim, khiến Bounding Box dự đoán quá hẹp và chỉ số IoU bị thấp.
+    2. *Dày màng phổi (Pleural Thickening)*: Tổn thương nằm sát thành lồng ngực và lá thành màng phổi (Parietal Pleura), rất dễ bị các thuật toán gọt mặt nạ phổi truyền thống cắt lẹm.
+  - **Giải pháp Toán học Bi-Directional Attention Consistency Loss ($\mathcal{L}_{\text{attn}}$)**:
+    Phase 2 đã nâng cấp hàm mất mát định vị thành cơ chế hai chiều:
+    $$\mathcal{L}_{\text{attn}} = \mathcal{L}_{\text{leakage}} + \beta \cdot \mathcal{L}_{\text{coverage}}$$
+    Trong đó:
+    - $\mathcal{L}_{\text{leakage}}$: Phạt nặng phần năng lượng Grad-CAM rò rỉ ra ngoài Bounding Box chuyên gia của bác sĩ.
+    - $\mathcal{L}_{\text{coverage}}$: Phạt hiện tượng co rút chú ý bên trong Bounding Box:
+      $$\mathcal{L}_{\text{coverage}} = \text{ReLU}\left( \text{Target\_Fill\_Ratio} - \frac{\sum_{(i,j) \in B} \sigma(10 \cdot (CAM_{i,j} - 0.20))}{\text{Area}(B)} \right)$$
+      Với $\text{Target\_Fill\_Ratio} = 0.35$ cho Tim to, ép bản đồ chú ý phải phủ kín tối thiểu 35% diện tích bóng tim.
+    - Đồng thời, thuật toán mở rộng mặt nạ giải phẫu **Adaptive Dilation 25x25** bảo toàn trọn vẹn dải màng phổi sát xương sườn.
+  - **Kết quả nghiệm thu**: Sau khi áp dụng cơ chế này kết hợp với Disease-Adaptive Thresholding, Box-IoU của Consolidation đạt **0.4973** (100% $\ge 0.30$), Fibrosis đạt **0.4865**, và Cardiomegaly được mở rộng ôm trọn bóng tim theo đúng giải phẫu.

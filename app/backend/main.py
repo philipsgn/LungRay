@@ -40,6 +40,7 @@ async def health() -> HealthResponse:
         status="healthy",
         device=str(service.device),
         version=service.version,
+        active_checkpoint=getattr(service, "current_checkpoint", "checkpoints/best_model.pth"),
     )
 
 
