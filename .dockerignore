@@ -1,0 +1,53 @@
+# Git & System
+.git
+.gitignore
+.gitattributes
+.DS_Store
+Thumbs.db
+
+# Agent metadata and workspaces
+.agents/
+.gemini/
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.venv
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Node / Next.js caches and build artifacts
+node_modules/
+.next/
+out/
+app/frontend/node_modules/
+app/frontend/.next/
+app/frontend/out/
+
+# Large Datasets and Raw Archives (do not bake into Docker images)
+data/
+dataset/
+*.zip
+*.tar
+*.tar.gz
+*.csv
+
+# Documentation, Notebooks, Reports
+docs/
+notebooks/
+reports/
+results/
+*.log

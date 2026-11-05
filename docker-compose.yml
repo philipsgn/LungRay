@@ -1,0 +1,55 @@
+# ==============================================================================
+# LUNGRAY PLATFORM - DOCKER COMPOSE CONFIGURATION
+# Multi-Task CADx + WSOL Grounding Engine (Fullstack PACS Architecture)
+# ==============================================================================
+
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: lungray-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+      - CHECKPOINT_PATH=checkpoints/best_wsol_finetune.pth
+    volumes:
+      - ./checkpoints:/app/checkpoints
+      - ./configs:/app/configs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - lungray-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_API_BASE: http://localhost:8000
+    container_name: lungray-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - NEXT_PUBLIC_API_BASE=http://localhost:8000
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - lungray-net
+
+networks:
+  lungray-net:
+    driver: bridge

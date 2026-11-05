@@ -1,0 +1,41 @@
+# ==============================================================================
+# LUNGRAY PLATFORM - BACKEND DOCKERFILE
+# Multi-Task CADx + WSOL Grounding Engine (FastAPI Microservice)
+# ==============================================================================
+
+FROM python:3.10-slim AS base
+
+# System environment configurations
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    PORT=8000
+
+WORKDIR /app
+
+# Install minimal OS dependencies for OpenCV headless, PyTorch OpenMP, and healthcheck curl
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python production dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy source code and platform configurations
+COPY src/ ./src/
+COPY app/backend/ ./app/backend/
+COPY configs/ ./configs/
+COPY checkpoints/ ./checkpoints/
+
+# Expose backend REST API port
+EXPOSE 8000
+
+# Container healthcheck probing /health
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Start production uvicorn ASGI server
+CMD ["uvicorn", "app.backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

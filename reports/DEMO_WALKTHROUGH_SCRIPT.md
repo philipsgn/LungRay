@@ -11,7 +11,7 @@
 | **Định dạng Xuất bản** | `reports/demo_walkthrough.mp4` (Full HD 1080p 60fps) |
 | **Công cụ Ghi hình** | OBS Studio hoặc Windows Game Bar (`Win + Alt + R`) |
 | **Thư mục Dữ liệu Mẫu** | [demo_samples/](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/demo_samples/) (4 ca chụp chuẩn hóa) |
-| **Trạng thái** | ✅ HOÀN THIỆN & SẴN SÀNG QUAY VIDEO |
+| **Trạng thái** | ĐẠT TIÊU CHUẨN (PASS) — HOÀN THIỆN & SẴN SÀNG QUAY VIDEO |
 
 ---
 

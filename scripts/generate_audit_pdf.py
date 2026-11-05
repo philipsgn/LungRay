@@ -252,7 +252,7 @@ def convert_report_to_pdf(
     temp_uri = temp_html.resolve().as_uri()
     cmd = [
         edge_bin,
-        "--headless=new",
+        "--headless",
         "--disable-gpu",
         "--no-sandbox",
         "--disable-dev-shm-usage",
@@ -261,17 +261,19 @@ def convert_report_to_pdf(
         temp_uri,
     ]
 
-    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
-    if res.returncode != 0:
-        raise RuntimeError(f"Edge PDF print failed: {res.stderr.decode('utf-8', errors='ignore')}")
+    try:
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
 
-    # Remove temporary HTML (Rule 8: Lean Workspace)
-    if temp_html.exists():
-        temp_html.unlink()
-
-    pdf_size = abs_pdf.stat().st_size
-    print(f"[+] Successfully generated Academic PDF: {abs_pdf} ({pdf_size:,} bytes)")
-    return abs_pdf
+        if abs_pdf.exists() and abs_pdf.stat().st_size > 50000:
+            pdf_size = abs_pdf.stat().st_size
+            print(f"[+] Successfully generated Academic PDF: {abs_pdf} ({pdf_size:,} bytes)")
+            return abs_pdf
+        else:
+            raise RuntimeError(f"Edge PDF print failed (code {res.returncode}): {res.stderr.decode('utf-8', errors='ignore')}")
+    finally:
+        # Remove temporary HTML (Rule 8: Lean Workspace)
+        if temp_html.exists():
+            temp_html.unlink()
 
 
 if __name__ == "__main__":

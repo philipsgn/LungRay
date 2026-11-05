@@ -840,6 +840,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(f" Device: {device} | Epochs: {args.epochs} | Batch: {args.batch_size} | Size: {args.img_size}")
     print("=" * 74)
 
+    # Auto-resolve Kaggle / local dataset paths if provided directories don't exist
+    try:
+        from src.data.ingestion import resolve_dataset_paths
+        resolved = resolve_dataset_paths()
+        if not os.path.isdir(args.nih_image_dir) and resolved.get("nih_dir"):
+            args.nih_image_dir = resolved["nih_dir"]
+        if not os.path.isdir(args.covid_image_dir) and resolved.get("covid_dir"):
+            args.covid_image_dir = resolved["covid_dir"]
+        if not os.path.isdir(args.tb_image_dir) and resolved.get("tb_dir"):
+            args.tb_image_dir = resolved["tb_dir"]
+        if not os.path.isdir(args.splits_dir) and resolved.get("split_dir"):
+            args.splits_dir = resolved["split_dir"]
+    except Exception as exc:
+        print(f"[*] Ingestion path resolver note: {exc}; using CLI paths.")
+
     # 1. Assemble real multi-task data from the canonical splits.
     train_samples, val_samples = build_multitask_splits(args)
     print(

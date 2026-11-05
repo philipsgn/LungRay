@@ -185,7 +185,8 @@ def generate_final_pdf(
     }}
     tbody td {{
         padding: 4pt 4pt;
-        border-bottom: 0.5px solid #e0e0e0;
+        border-top: none;
+        border-bottom: none;
     }}
     tbody tr:last-child td {{
         border-bottom: 2px solid #000000;
@@ -249,16 +250,22 @@ def generate_final_pdf(
     ]
 
     print(f"[*] Compiling publication-grade PDF via Headless Edge...")
-    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
 
-    if abs_pdf.exists() and abs_pdf.stat().st_size > 50000:
-        size_kb = abs_pdf.stat().st_size / 1024
-        print(f"[OK] Successfully compiled: {abs_pdf} ({size_kb:.1f} KB)")
+        if abs_pdf.exists() and abs_pdf.stat().st_size > 50000:
+            size_kb = abs_pdf.stat().st_size / 1024
+            print(f"[OK] Successfully compiled: {abs_pdf} ({size_kb:.1f} KB)")
+            alt_pdf = WORKSPACE_ROOT / "reports" / "FINAL_SCIENTIFIC_REPORT.pdf"
+            import shutil
+            shutil.copyfile(abs_pdf, alt_pdf)
+            print(f"[OK] Synchronized copy to: {alt_pdf} ({size_kb:.1f} KB)")
+        else:
+            print(f"[!] Warning: PDF generation failed or empty. Stderr: {result.stderr}")
+    finally:
         # Clean up temporary HTML file (Rule 8: Lean Workspace)
         if temp_html.exists():
             temp_html.unlink()
-    else:
-        print(f"[!] Warning: PDF generation failed or empty. Stderr: {result.stderr}")
 
 
 if __name__ == "__main__":

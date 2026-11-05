@@ -4,22 +4,76 @@ from __future__ import annotations
 import base64
 import io
 
+import asyncio
+import httpx
 import numpy as np
 import pytest
-from fastapi.testclient import TestClient
 from PIL import Image
 
 from app.backend.main import app
 
 
+import sys
+
+# Prevent Windows Proactor event loop deadlock on localhost socketpair accept
+if sys.platform == "win32":
+    try:
+        import asyncio.proactor_events
+
+        class _DummySocket:
+            def setblocking(self, *a): pass
+            def send(self, *a): return 0
+            def recv(self, *a): return b""
+            def close(self): pass
+            def fileno(self): return -1
+
+        def _noop_self_pipe(self):
+            self._ssock = _DummySocket()
+            self._csock = _DummySocket()
+            self._internal_fds = 0
+
+        asyncio.proactor_events.BaseProactorEventLoop._make_self_pipe = _noop_self_pipe
+        asyncio.proactor_events.BaseProactorEventLoop._loop_self_reading = lambda self, *a: None
+    except Exception:
+        pass
+
+
+class TestClientSync:
+    """Synchronous test client bridge using httpx.ASGITransport without anyio deadlock."""
+
+    def __init__(self, asgi_app):
+        self.app = asgi_app
+        self.transport = httpx.ASGITransport(app=asgi_app)
+
+    def get(self, url: str, **kwargs):
+        async def _req():
+            async with httpx.AsyncClient(transport=self.transport, base_url="http://testserver") as c:
+                return await c.get(url, **kwargs)
+
+        return asyncio.run(_req())
+
+    def post(self, url: str, **kwargs):
+        async def _req():
+            async with httpx.AsyncClient(transport=self.transport, base_url="http://testserver") as c:
+                return await c.post(url, **kwargs)
+
+        return asyncio.run(_req())
+
+
+TestClient = TestClientSync
+
+
 @pytest.fixture(scope="module")
 def client():
-    with TestClient(app) as c:
-        yield c
+    yield TestClientSync(app)
 
 
 def _make_image_bytes(size: tuple[int, int] = (512, 512)) -> bytes:
-    array = np.random.randint(0, 255, (*size, 3), dtype=np.uint8)
+    h, w = size
+    y = np.linspace(0, 255, h, dtype=np.uint8)[:, None]
+    x = np.linspace(0, 255, w, dtype=np.uint8)[None, :]
+    base = (y // 2 + x // 2).astype(np.uint8)
+    array = np.stack([base, base, base], axis=-1)
     image = Image.fromarray(array, mode="RGB")
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")

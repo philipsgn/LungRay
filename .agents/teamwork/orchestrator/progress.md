@@ -1,22 +1,28 @@
 # Progress Tracking — Orchestrator
 
 ## Current Status
-Last visited: 2026-11-05T04:59:00Z
+Last visited: 2026-11-05T05:38:00Z
 
 ## Iteration Status
-Current iteration: 0 / 32
+Current iteration: 1 / 32
 
 ## Milestones & Work Items
-- [/] Phase 0: Survey codebase state (Fullstack PACS, Academic Defense, Existing Test Suite)
-  - [x] Explorer 1 dispatched (Fullstack PACS): 3e95055b-d520-485a-8517-5dca872d9bd6 (in progress)
-  - [x] Explorer 2 dispatched (Academic Defense): 27a3297c-71e2-40ac-bf38-5a402e2dd2df (in progress)
-  - [x] Spec Miner 3 dispatched (Verification & Specs): 3a02d71e-ccfa-4159-81df-e1c15adae9a9 (in progress)
-- [ ] Phase 1: Decompose requirements and establish PROJECT.md & feature inventory
-- [ ] Phase 2: Execute Parallel Tracks (Track 1: Fullstack PACS Production Readiness; Track 2: Academic Defense & Thesis Finalization)
-- [ ] Phase 3: Verification, Forensic Audit & Master Verification (`verify.ps1`)
+- [x] Phase 0: Survey codebase state (Fullstack PACS, Academic Defense, Existing Test Suite)
+- [x] Phase 1: Decompose requirements and establish PROJECT.md & feature inventory
+- [x] Phase 2: Execute Parallel Tracks
+  - [x] Milestone M1: Fullstack PACS Production & Docker Stack (`worker_m1`: 22/22 tests passed, Dockerfile.backend, Dockerfile.frontend, docker-compose.yml verified)
+  - [x] Milestone M2: Academic Defense & Thesis Finalization (`worker_m2`: 0 emojis, synchronized FAQ, 1.6MB report PDF & 3.3MB audit PDF compiled)
+- [/] Phase 3: Verification, Forensic Audit & Master Verification (`verify.ps1`)
+  - [ ] Milestone M3: Master Verification (`worker_m3`: running `scripts/verify.ps1`)
+  - [ ] Independent Reviews (`reviewer_1`, `reviewer_2`)
+  - [ ] Adversarial Verification (`challenger_1`, `challenger_2`)
+  - [ ] Forensic Audit (`auditor_1`)
 - [ ] Phase 4: Final Synthesis & Human Reporting
 
 ## Active Subagents
-- `3e95055b-d520-485a-8517-5dca872d9bd6`: Explorer Survey 1 (Fullstack PACS) — running
-- `27a3297c-71e2-40ac-bf38-5a402e2dd2df`: Explorer Survey 2 (Academic Defense) — running
-- `3a02d71e-ccfa-4159-81df-e1c15adae9a9`: Spec Miner Survey 3 (Verification Specs) — running
+- `worker_m3`: Master Verification Runner
+- `reviewer_1`: Reviewer 1 (PACS & Docker)
+- `reviewer_2`: Reviewer 2 (Academic & Rule 9)
+- `challenger_1`: Challenger 1 (PACS & OOD Stress Test)
+- `challenger_2`: Challenger 2 (Academic Standards & Emojis)
+- `auditor_1`: Forensic Integrity Auditor

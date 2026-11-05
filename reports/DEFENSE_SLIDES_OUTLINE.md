@@ -1,4 +1,4 @@
-# 🖥️ ĐỀ CƯƠNG BỘ SLIDE BÁO CÁO BẢO VỆ ĐỒ ÁN TỐT NGHIỆP (40 SLIDES)
+# ĐỀ CƯƠNG BỘ SLIDE BÁO CÁO BẢO VỆ ĐỒ ÁN TỐT NGHIỆP (40 SLIDES)
 ## Nền tảng LungRay: CADx X-Quang Ngực Đa Nhiệm, Định Vị Tổn Thương WSOL & Lớp Phòng Vệ Fail-Safe Ngoại Lai
 
 ---
@@ -9,7 +9,7 @@
 | **Quy mô** | **40 Slides Thuyết Trình Toàn Diện** |
 | **Thời lượng Báo cáo** | 20–25 phút thuyết trình + 10–15 phút phản biện |
 | **Tiêu chuẩn Học thuật** | MICCAI / IEEE Trans. Med. Imaging — Không icon/emoji, Bảng số liệu Booktabs, Chuẩn y khoa WHO ICD-10 |
-| **Trạng thái** | ✅ 100% HOÀN THIỆN & SẴN SÀNG CHO HỘI ĐỒNG BẢO VỆ |
+| **Trạng thái** | ĐẠT TIÊU CHUẨN (PASS) — 100% HOÀN THIỆN & SẴN SÀNG CHO HỘI ĐỒNG BẢO VỆ |
 
 ---
 

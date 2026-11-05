@@ -1,6 +1,16 @@
-# 🎓 BỘ 20 CÂU HỎI & ĐÁP PHẢN BIỆN BẢO VỆ ĐỒ ÁN TỐT NGHIỆP (docs/defense_faq.md)
+# BỘ CÂU HỎI & ĐÁP PHẢN BIỆN BẢO VỆ ĐỒ ÁN TỐT NGHIỆP (docs/defense_faq.md)
 ## Nền tảng Hỗ trợ Chẩn đoán & Định vị Tổn thương X-Quang Ngực Đa Nhiệm (LungRay Platform)
-### Chuẩn bị cho Hội đồng Chấm thi, Thẩm định Kỹ thuật & Bác sĩ Lâm sàng
+### Chuẩn bị cho Hội đồng Chấm thi, Thẩm định Kỹ thuật & Bác sĩ Lâm sàng (28 Câu hỏi Trọng tâm trên 5 Chủ đề)
+
+---
+
+| Thuộc tính | Chi tiết |
+|:---|:---|
+| **Hệ thống** | **LungRay** (CXR Multi-Task CADx + WSOL Grounding + Clinical Fail-Safe Workstation) |
+| **Quy mô** | **28 Câu hỏi Trọng tâm (30 Đề mục Vấn đáp Chi tiết)** phân bố trên 5 phần chuyên sâu |
+| **Phân bổ nội dung** | Phần 1: 3 câu (1–3); Phần 2: 6 câu (4–7, gồm 6b, 6c); Phần 3: 3 câu (8–10); Phần 4: 10 câu (11–20); Phần 5: 8 câu (21–28) |
+| **Tiêu chuẩn Học thuật** | MICCAI / IEEE Trans. Med. Imaging — Tiêu chuẩn Đơn sắc (Rule 9), Bảng Booktabs, Không icon/emoji |
+| **Trạng thái** | ĐẠT TIÊU CHUẨN (PASS) — HOÀN THIỆN & ĐỒNG BỘ 100% |
 
 ---
 
