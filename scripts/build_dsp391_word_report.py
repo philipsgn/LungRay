@@ -302,7 +302,7 @@ def build_report():
         "Table 6.2: Class-Specific ROC-AUC Comparison on Test Set (NIH ChestX-ray14).",
         "Table 6.3: Head B (TB) and Head C (COVID-19) Diagnostic Performance Metrics.",
         "Table 6.4: Quantitative Weakly-Supervised Localization Performance (Box-IoU).",
-        "Table 9.1: Calibrated Clinical Decision Thresholds via Youden's J Statistic.",
+        "Table A.1: Calibrated Clinical Decision Thresholds via Youden's J Statistic (Appendix A).",
     ]
     for t_item in tables_list:
         p_item = doc.add_paragraph()
@@ -340,16 +340,8 @@ def build_report():
     # ==========================================
     add_heading_styled(doc, "I. Project Introduction", level=1)
     
-    add_heading_styled(doc, "1. Overview", level=2)
-    add_heading_styled(doc, "1.1 Project Information", level=3)
-    add_body_p(doc, "Project Name: LungRay — Multi-Task Clinical CADx and Trustworthy WSOL Grounding Engine\n"
-                    "Project Code: DSP391-LungRay-2026\n"
-                    "Student Investigator: [Student Name] ([Student ID])\n"
-                    "Academic Advisor: [Supervisor Name]\n"
-                    "Target Platform: Production-Ready Web PACS Microservice & RESTful AI Inference Engine\n"
-                    "Source Code Repository: https://github.com/philipsgn/LungRay.git")
-
-    add_heading_styled(doc, "1.2 Project Overview", level=3)
+    add_heading_styled(doc, "1. Executive Project Overview", level=2)
+    add_body_p(doc, "The LungRay platform is an enterprise-grade medical artificial intelligence initiative developed within the Department of Artificial Intelligence and Data Science at FPT University. Designed to alleviate acute diagnostic backlogs and cognitive fatigue among clinical radiologists, LungRay establishes an end-to-end Computer-Aided Diagnosis (CADx) system that couples simultaneous triaging across sixteen cardiopulmonary pathologies with weakly-supervised anatomical lesion localization and out-of-distribution clinical safety guardrails.")
     add_body_p(doc, "Chest radiography (Chest X-ray, CXR) represents the most widely utilized diagnostic imaging modality worldwide, accounting for over 40% of all medical imaging procedures globally. Radiologists routinely inspect projectional radiographs to identify signs of pulmonary infections, thoracic masses, cardiac enlargement, pleural effusion, and chronic parenchymal disorders. However, modern healthcare systems face an acute, compounding crisis: escalating imaging volumes, coupled with a worldwide shortage of board-certified radiologists, have created unprecedented diagnostic backlogs and elevated cognitive burnout rates. Consequently, diagnostic error rates in complex thoracic radiography reach between 10% and 30% in high-volume emergency and primary care settings.")
     add_body_p(doc, "The LungRay platform addresses this fundamental clinical bottleneck. Rather than training fragmented, siloed deep learning models for isolated diseases, LungRay establishes a unified, shared-backbone Multi-Task 3-Head Convolutional Neural Network (DenseNet-121) capable of performing simultaneous, holistic triaging across 16 critical cardiopulmonary conditions: Head A evaluates 14 thoracic findings from NIH ChestX-ray14, Head B screens for active Tuberculosis, and Head C screens for viral COVID-19 pneumonia. Furthermore, LungRay integrates an explainable AI (XAI) engine based on Multi-Scale Grad-CAM++, rigorously evaluated under Weakly-Supervised Object Localization (WSOL) standards on certified clinical bounding boxes from VinDr-CXR and RSNA Pneumonia.")
 
@@ -907,7 +899,7 @@ def build_report():
         row.cells[2].paragraphs[0].text = d3
         row.cells[3].paragraphs[0].text = d4
     apply_booktabs_table_style(t_thresh, col_widths=[2.2, 1.5, 1.5, 1.5])
-    add_caption(doc, "Table 9.1: Calibrated Clinical Decision Thresholds via Youden's J Statistic.", is_table=True)
+    add_caption(doc, "Table A.1: Calibrated Clinical Decision Thresholds via Youden's J Statistic.", is_table=True)
 
     add_heading_styled(doc, "Appendix B: Reproduction and Verification Script", level=2)
     add_body_p(doc, "To replicate all empirical benchmarks and verify system integrity across 130 unit tests:\n"

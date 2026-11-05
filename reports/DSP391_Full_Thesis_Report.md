@@ -40,7 +40,7 @@ Finally, we thank our families, peers, and colleagues for their unwavering patie
 | **AUC-ROC** | Area Under the Receiver Operating Characteristic Curve: Aggregate metric of discriminative capacity. |
 | **OOD** | Out-of-Distribution: Unseen visual patterns distinct from the training distribution. |
 | **AMP** | Automatic Mixed Precision: Training acceleration utilizing FP16 arithmetic and FP32 dynamic scaling. |
-| **Youden's J** | Statistical statistic ($J = \text{Sensitivity} + \text{Specificity} - 1$) optimizing decision thresholds. |
+| **Youden's J** | Statistical statistic (J = \text{Sensitivity} + \text{Specificity} - 1) optimizing decision thresholds. |
 
 ## LIST OF TABLES
 
@@ -60,7 +60,7 @@ Finally, we thank our families, peers, and colleagues for their unwavering patie
 - **Table 6.4**: Head C (COVID-19 Binary Screening) Diagnostic Performance Metrics.
 - **Table 6.5**: Quantitative Weakly-Supervised Localization Performance (Box-IoU) on VinDr-CXR and RSNA.
 - **Table 6.6**: Shortcut Learning Audit: In-Lung Activation Energy Ratio vs. Baseline Models.
-- **Table 9.1**: Optimal Clinical Decision Thresholds ($\tau_c$) Calibrated via Youden's J Statistic.
+- **Table A.1**: Optimal Clinical Decision Thresholds (τ_c) Calibrated via Youden's J Statistic (Appendix A).
 
 ## LIST OF FIGURES
 
@@ -69,7 +69,7 @@ Finally, we thank our families, peers, and colleagues for their unwavering patie
 - **Figure 3.1**: Evolution of Deep Learning Architectures in Medical Thoracic Imaging.
 - **Figure 4.1**: Zero Patient-Leakage Splitting Strategy and Stratified Partitioning Pipeline.
 - **Figure 4.2**: Medical Image Preprocessing Pipeline (CLAHE, Normalization, Dilated Lung Masking).
-- **Figure 4.3**: MultiTaskChestXrayNet Detailed Neural Architecture Diagram ($512\times512\times3$).
+- **Figure 4.3**: MultiTaskChestXrayNet Detailed Neural Architecture Diagram (512×512×3).
 - **Figure 4.4**: Mathematical Dynamics of Asymmetric Loss (ASL) under Asymmetric Margins.
 - **Figure 5.1**: Microservice Serving Pipeline: FastAPI Async Worker and Next.js PACS Viewer.
 - **Figure 5.2**: Out-of-Distribution (OOD) Free Energy Detection and Fail-Safe Lockout Logic.
@@ -81,17 +81,9 @@ Finally, we thank our families, peers, and colleagues for their unwavering patie
 
 # CHAPTER I: PROJECT INTRODUCTION
 
-## 1. Overview
+## 1. Executive Project Overview
 
-### 1.1. Project Information
-- **Project Name**: LungRay: Multi-Task Clinical CADx and Trustworthy WSOL Grounding Engine
-- **Project Code**: DSP391-LungRay-2026
-- **Student Investigator**: [Student Name] ([Student ID])
-- **Academic Advisor**: [Supervisor Name]
-- **Target Platform**: Production-Ready Web PACS Microservice & RESTful AI Inference Engine
-- **Source Repository**: `https://github.com/philipsgn/LungRay.git`
-
-### 1.2. Project Overview
+The LungRay platform is an enterprise-grade medical artificial intelligence initiative developed within the Department of Artificial Intelligence and Data Science at FPT University. Designed to alleviate acute diagnostic backlogs and cognitive fatigue among clinical radiologists, LungRay establishes an end-to-end Computer-Aided Diagnosis (CADx) system that couples simultaneous triaging across sixteen cardiopulmonary pathologies with weakly-supervised anatomical lesion localization and out-of-distribution clinical safety guardrails.
 Chest radiography (Chest X-ray, CXR) represents the most widely utilized diagnostic imaging modality worldwide, accounting for over 40% of all medical imaging procedures globally. Radiologists routinely inspect projectional radiographs to identify signs of pulmonary infections, thoracic masses, cardiac enlargement, pleural effusion, and chronic parenchymal disorders. However, modern healthcare systems face an acute, compounding crisis: escalating imaging volumes, coupled with a worldwide shortage of board-certified radiologists, have created unprecedented diagnostic backlogs and elevated cognitive burnout rates. Consequently, diagnostic error rates in complex thoracic radiography reach between 10% and 30% in high-volume emergency and primary care settings.
 
 The **LungRay** platform addresses this fundamental clinical bottleneck. Rather than training fragmented, siloed deep learning models for isolated diseases, LungRay establishes a unified, shared-backbone **Multi-Task 3-Head Convolutional Neural Network (DenseNet-121)** capable of performing simultaneous, holistic triaging across 16 critical cardiopulmonary conditions:
@@ -116,19 +108,19 @@ LungRay is explicitly engineered to solve these three critical vulnerabilities w
 ## 3. Project Objectives
 The overarching objective of the LungRay project is to develop, validate, and deploy a robust, multi-task CADx system that simultaneously maximizes diagnostic discrimination, prevents statistical data leakage, and provides mathematically grounded visual explanations. The concrete measurable objectives comprise:
 
-1. **Unified Multi-Task Architecture**: Implement a shared-encoder convolutional network (`MultiTaskChestXrayNet`) operating at $512\times512$ resolution, isolating gradients across 3 independent heads via a parameter-free LayerNorm feature projection.
+1. **Unified Multi-Task Architecture**: Implement a shared-encoder convolutional network (`MultiTaskChestXrayNet`) operating at 512×512 resolution, isolating gradients across 3 independent heads via a parameter-free LayerNorm feature projection.
 2. **Zero Patient-Level Data Leakage**: Establish a cryptographically strict data engineering pipeline ensuring zero overlapping `Patient_ID` instances across training, validation, and test splits (70/10/20 ratio on NIH ChestX-ray14), preventing artificial inflation of evaluation metrics.
 3. **Multi-Task Batch Equilibrium**: Formulate a custom batch sampling mechanism (`WeightedMultiTaskBatchSampler`) maintaining an exact ratio of 60% NIH : 25% COVIDx : 15% TB per batch, mathematically eliminating gradient starvation across heterogeneous tasks.
-4. **Extreme Imbalance Mitigation**: Implement Asymmetric Loss (ASL) with hard positive-negative margins ($\gamma_-=4, \gamma_+=1, m=0.05$) to elevate minority-class multi-label ROC-AUC above 0.82 across all 14 thoracic conditions.
-5. **Trustworthy WSOL Localization**: Implement Multi-Scale Grad-CAM++ with adaptive binarization, achieving a quantitative Box-IoU $\ge 0.25$ against certified radiologist annotations on external benchmarks (VinDr-CXR, RSNA Pneumonia) without using bounding boxes during training.
-6. **Shortcut Learning Audit & Defeat**: Guarantee that $\ge 80\%$ of visual activation energy falls within anatomical pulmonary boundaries on COVID-19 positive radiographs using automated dilated lung masking.
-7. **Production Microservice Deployment**: Deliver an asynchronous FastAPI REST backend executing inference within $\le 2.0$ seconds on modern GPU hardware, accompanied by a reactive Next.js PACS web workstation.
+4. **Extreme Imbalance Mitigation**: Implement Asymmetric Loss (ASL) with hard positive-negative margins (γ₋ = 4, γ₊ = 1, m = 0.05) to elevate minority-class multi-label ROC-AUC above 0.82 across all 14 thoracic conditions.
+5. **Trustworthy WSOL Localization**: Implement Multi-Scale Grad-CAM++ with adaptive binarization, achieving a quantitative Box-IoU ≥ 0.25 against certified radiologist annotations on external benchmarks (VinDr-CXR, RSNA Pneumonia) without using bounding boxes during training.
+6. **Shortcut Learning Audit & Defeat**: Guarantee that ≥ 80% of visual activation energy falls within anatomical pulmonary boundaries on COVID-19 positive radiographs using automated dilated lung masking.
+7. **Production Microservice Deployment**: Deliver an asynchronous FastAPI REST backend executing inference within ≤ 2.0 seconds on modern GPU hardware, accompanied by a reactive Next.js PACS web workstation.
 
 ## 4. Problem Statement
-Formally, let an input chest radiograph be represented as a normalized tensor $X \in \mathbb{R}^{3 \times H \times W}$ where $H = W = 512$. The diagnostic task requires computing a multi-task prediction vector $\hat{Y} = \{\hat{y}_A, \hat{y}_B, \hat{y}_C\}$ where:
-- $\hat{y}_A \in [0, 1]^{14}$ denotes the Bernoulli probabilities for 14 non-mutually-exclusive thoracic findings.
-- $\hat{y}_B \in [0, 1]$ represents the scalar probability of active pulmonary tuberculosis.
-- $\hat{y}_C \in [0, 1]$ denotes the probability of viral COVID-19 infection.
+Formally, let an input chest radiograph be represented as a normalized tensor <i>X</i> ∈ ℝ<sup>3×H×W</sup> where <i>H</i> = <i>W</i> = 512. The diagnostic task requires computing a multi-task prediction vector <i>Ŷ</i> = {<i>ŷ</i><sub>A</sub>, <i>ŷ</i><sub>B</sub>, <i>ŷ</i><sub>C</sub>} where:
+- <i>ŷ</i><sub>A</sub> ∈ [0, 1]<sup>14</sup> denotes the Bernoulli probabilities for 14 non-mutually-exclusive thoracic findings.
+- <i>ŷ</i><sub>B</sub> ∈ [0, 1] represents the scalar probability of active pulmonary tuberculosis.
+- <i>ŷ</i><sub>C</sub> ∈ [0, 1] denotes the probability of viral COVID-19 infection.
 
 The fundamental machine learning challenges in solving this problem simultaneously include:
 - **Gradient Interference and Negative Transfer**: Updating network parameters with gradients from disparate loss functions can degrade shared feature representations when label spaces are semantically disjoint.
@@ -150,7 +142,7 @@ By containerizing the entire inference pipeline into a lightweight Docker micros
 ## 6. Project Scope & Limitations
 
 ### 6.1. In-Scope Capabilities
-- Posteroanterior (PA) and Anteroposterior (AP) chest radiographs of adult human patients ($\ge 18$ years of age).
+- Posteroanterior (PA) and Anteroposterior (AP) chest radiographs of adult human patients (≥ 18 years of age).
 - Automated detection and scoring across 16 specified thoracic conditions.
 - Saliency map extraction via Grad-CAM++ with interactive alpha-blending on a DICOM-compliant web interface.
 - Out-of-Distribution anomaly score calculation based on Free Energy estimation to flag corrupted or non-CXR inputs.
@@ -233,10 +225,10 @@ Progress across phases was governed by 6 mandatory Quality Delivery Gates:
 | Quality Gate | Checkpoint Milestone | Objective Acceptance Criteria | Verification Command | Gate Status |
 |:---|:---|:---|:---|:---|
 | **Gate 1** | Data Pipeline Hand-off | Zero duplicate `Patient_ID` between splits; multi-task batch sampler verified at 60:25:15. | `pytest tests/test_data_pipeline.py` |  PASSED |
-| **Gate 2** | Baseline Model Checkpoint | Baseline model successfully trained; validation ROC-AUC $\ge 0.80$ (Head A), $\ge 0.90$ (Heads B/C). | `pytest tests/test_multi_task_net.py` |  PASSED |
-| **Gate 3** | SOTA Asymmetric Optimization| SOTA ASL model achieves statistically significant AUC increase over baseline ($\Delta \ge +0.02$). | `pytest tests/test_trainer.py` |  PASSED |
-| **Gate 4** | XAI & Shortcut Audit | Box-IoU evaluated on VinDr-CXR; COVID-19 in-lung activation ratio $\ge 80\%$. | `python scripts/evaluate_live_vindr.py`|  PASSED |
-| **Gate 5** | Production Serving | FastAPI latency $\le 2.0$s; Docker container builds cleanly; Next.js renders PACS view. | `pytest tests/test_api_backend.py` |  PASSED |
+| **Gate 2** | Baseline Model Checkpoint | Baseline model successfully trained; validation ROC-AUC ≥ 0.80 (Head A), ≥ 0.90 (Heads B/C). | `pytest tests/test_multi_task_net.py` |  PASSED |
+| **Gate 3** | SOTA Asymmetric Optimization| SOTA ASL model achieves statistically significant AUC increase over baseline (Δ ≥ +0.02). | `pytest tests/test_trainer.py` |  PASSED |
+| **Gate 4** | XAI & Shortcut Audit | Box-IoU evaluated on VinDr-CXR; COVID-19 in-lung activation ratio ≥ 80%. | `python scripts/evaluate_live_vindr.py`|  PASSED |
+| **Gate 5** | Production Serving | FastAPI latency ≤ 2.0s; Docker container builds cleanly; Next.js renders PACS view. | `pytest tests/test_api_backend.py` |  PASSED |
 | **Gate 6** | Final Academic Thesis | Master thesis and defense slides compiled; 100% unit tests pass; Rule 9 compliance. | `powershell -File scripts/verify.ps1` |  PASSED |
 
 ### 2.3. Risk Management Matrix
@@ -247,8 +239,8 @@ Progress across phases was governed by 6 mandatory Quality Delivery Gates:
 |:---|:---|:---|:---|:---|
 | **R-01** | Data Leakage via Repeat Patients | High | High | Hashed `Patient_ID` partitioning ensuring all radiographs of a patient exist in one split only. |
 | **R-02** | Gradient Starvation across Tasks | High | Medium | `WeightedMultiTaskBatchSampler` enforcing strict 60:25:15 sample composition per batch. |
-| **R-03** | Minority Class Collapse (ASL) | High | High | Asymmetric margin shifting ($m=0.05$) discounting easy negatives to focus gradients on hard positives. |
-| **R-04** | Watermark Memorization (Shortcuts)| Critical | High | Anatomical lung masking with $25\times25$ dilation eliminating non-thoracic borders and letters. |
+| **R-03** | Minority Class Collapse (ASL) | High | High | Asymmetric margin shifting (m=0.05) discounting easy negatives to focus gradients on hard positives. |
+| **R-04** | Watermark Memorization (Shortcuts)| Critical | High | Anatomical lung masking with 25×25 dilation eliminating non-thoracic borders and letters. |
 | **R-05** | Multiprocessing DataLoader Hangs | Medium | High | On-demand instantiation of OpenCV CLAHE within `__getitem__` avoiding serialization locks. |
 | **R-06** | Out-of-Distribution Failures | Medium | Medium | Free Energy anomaly detection flagging non-CXR inputs with an automated clinical warning. |
 
@@ -278,7 +270,7 @@ Subsequently, during the global pandemic, Wang et al. (2020) developed **COVID-N
 | **Multi-Task Batch Sampler**| N/A (Single dataset) | N/A (Single dataset) | N/A (Single dataset) | **Weighted 60:25:15 Ratio Enforced** |
 | **Imbalance Loss Function** | Standard Binary Cross-Entropy | Weighted Cross-Entropy| Focal Loss | **Asymmetric Loss (ASL) + Dynamic Margin** |
 | **Leakage Prevention** | Random Split (Patient Leakage) | Source-Stratified Split| Patient Split | **Patient-Hashed 70/10/20 (Zero Leakage)** |
-| **Shortcut Learning Defeat**| Not Addressed | Failed Audit (Markers) | Not Addressed | **Anatomical Masking + Dilation ($25\times25$)**|
+| **Shortcut Learning Defeat**| Not Addressed | Failed Audit (Markers) | Not Addressed | **Anatomical Masking + Dilation (25×25)**|
 | **WSOL Benchmarking** | Qualitative visual inspection | Qualitative heatmaps | None | **Quantitative Box-IoU on VinDr & RSNA** |
 | **Deployment Footprint** | Standalone Script | Python CLI | Docker Container | **FastAPI Async Engine + Next.js PACS** |
 
@@ -292,10 +284,10 @@ Despite significant academic activity, current literature displays three persist
 
 ## 1. Research Questions & Hypotheses
 This capstone research investigates four core research hypotheses:
-- **Hypothesis 1 ($H_1$)**: A unified multi-task architecture utilizing a single shared DenseNet-121 encoder can achieve discriminative performance equal or superior to three independent single-task networks while reducing parameter storage by 66%.
-- **Hypothesis 2 ($H_2$)**: Replacing standard Binary Cross-Entropy with Asymmetric Loss (ASL) on Head A will systematically increase mean ROC-AUC across extreme minority classes (Hernia, Fibrosis, Pneumonia) by at least $+0.02$ without degrading majority classes.
-- **Hypothesis 3 ($H_3$)**: Enforcing anatomical lung masking with $25\times25$ morphological dilation will eradicate watermark shortcut learning on COVIDx CXR-4, elevating in-lung activation energy from $<50\%$ to $\ge 80\%$.
-- **Hypothesis 4 ($H_4$)**: Two-stage differential learning rate fine-tuning (unfreezing DenseBlocks 3 and 4) will optimize feature reuse, outperforming standard full-network retraining.
+- **Hypothesis 1 (H₁)**: A unified multi-task architecture utilizing a single shared DenseNet-121 encoder can achieve discriminative performance equal or superior to three independent single-task networks while reducing parameter storage by 66%.
+- **Hypothesis 2 (H₂)**: Replacing standard Binary Cross-Entropy with Asymmetric Loss (ASL) on Head A will systematically increase mean ROC-AUC across extreme minority classes (Hernia, Fibrosis, Pneumonia) by at least +0.02 without degrading majority classes.
+- **Hypothesis 3 (H₃)**: Enforcing anatomical lung masking with 25×25 morphological dilation will eradicate watermark shortcut learning on COVIDx CXR-4, elevating in-lung activation energy from < 50% to ≥ 80%.
+- **Hypothesis 4 (H₄)**: Two-stage differential learning rate fine-tuning (unfreezing DenseBlocks 3 and 4) will optimize feature reuse, outperforming standard full-network retraining.
 
 ## 2. Data Collection and Preprocessing Pipeline
 
@@ -304,7 +296,7 @@ LungRay aggregates six standardized radiography cohorts comprising over 150,000 
 
 *Table 4.1: Dataset Aggregation and Partitioning Statistics across Tasks.*
 
-| Dataset Identifier | Clinical Task Role | Total Cohort Size | Training Set ($70\%$) | Validation ($10\%$) | Test Set ($20\%$) | Patient ID Partitioning Rule |
+| Dataset Identifier | Clinical Task Role | Total Cohort Size | Training Set (70%) | Validation (10%) | Test Set (20%) | Patient ID Partitioning Rule |
 |:---|:---|:---|:---|:---|:---|:---|
 | **NIH ChestX-ray14** | Head A (14 Pathologies) | 112,120 images | 78,566 images | 11,154 images | 22,400 images | Grouped strictly by `Patient_ID` (Zero Leakage) |
 | **COVIDx CXR-4** | Head C (COVID-19 Screening)| 16,352 images | 14,815 images | 537 images | 1,000 images | Stratified by Source & Patient ID |
@@ -316,19 +308,19 @@ LungRay aggregates six standardized radiography cohorts comprising over 150,000 
 ### 2.2. Preprocessing & Contrast Alignment Pipeline
 Every radiograph undergoes a deterministic, four-stage medical preprocessing sequence:
 1. **Dynamic Native Format Decoding**: Support for 16-bit DICOM and standard 8-bit PNG/JPEG formats with automatic photometric interpretation inversion (`MONOCHROME1` to `MONOCHROME2`).
-2. **Contrast Limited Adaptive Histogram Equalization (CLAHE)**: Applied locally with a clip limit of $2.0$ and grid size of $8\times8$ pixels. CLAHE normalizes contrast variations between digital and computed radiography, preventing scanner-specific bias.
-3. **Anatomical Dilated Lung Masking**: An automated multi-threshold Otsu segmenter extracts the thoracic boundaries. To prevent clipping pleural and pericardial boundaries (critical for diagnosing Pleural Thickening and Cardiomegaly), the binary mask is expanded using an elliptical morphological dilation kernel of size $25\times25$:
-   $$M_{\text{dilated}} = M_{\text{lung}} \oplus K_{25\times25}$$
-   All pixels outside $M_{\text{dilated}}$ (including hospital labels, patient tags, and external detector borders) are clamped to zero.
-4. **Spatial Standardization**: Bilinear interpolation resizing to $512\times512\times3$ followed by ImageNet mean-variance normalization ($\mu = [0.485, 0.456, 0.406]$, $\sigma = [0.229, 0.224, 0.225]$).
+2. **Contrast Limited Adaptive Histogram Equalization (CLAHE)**: Applied locally with a clip limit of 2.0 and grid size of 8×8 pixels. CLAHE normalizes contrast variations between digital and computed radiography, preventing scanner-specific bias.
+3. **Anatomical Dilated Lung Masking**: An automated multi-threshold Otsu segmenter extracts the thoracic boundaries. To prevent clipping pleural and pericardial boundaries (critical for diagnosing Pleural Thickening and Cardiomegaly), the binary mask is expanded using an elliptical morphological dilation kernel of size 25×25:
+   <div class="equation-block"><span class="equation-text"><i>M</i><sub>dilated</sub> = <i>M</i><sub>lung</sub> &oplus; <i>K</i><sub>25&times;25</sub></span><span class="equation-num">(1)</span></div>
+   All pixels outside <i>M</i><sub>dilated</sub> (including hospital labels, patient tags, and external detector borders) are clamped to zero.
+4. **Spatial Standardization**: Bilinear interpolation resizing to 512×512×3 followed by ImageNet mean-variance normalization (μ = [0.485, 0.456, 0.406], σ = [0.229, 0.224, 0.225]).
 
 ## 3. Multi-Task Batch Sampling Strategy
 To train a single shared encoder across three distinct datasets with highly skewed sizes (NIH: 78k, COVIDx: 15k, TB: 3k), a standard random sampler would cause severe **Task Starvation**: Head B (TB) would only appear in 3% of training batches, causing its gradients to vanish.
 
-We engineered the `WeightedMultiTaskBatchSampler`. For each training step, the sampler constructs a batch of size $B = 8$ by sampling exactly:
-- $60\%$ samples ($5$ images) from NIH ChestX-ray14 (Head A).
-- $25\%$ samples ($2$ images) from COVIDx CXR-4 (Head C).
-- $15\%$ samples ($1$ image) from TB Chest Radiography Database (Head B).
+We engineered the `WeightedMultiTaskBatchSampler`. For each training step, the sampler constructs a batch of size <i>B</i> = 8 by sampling exactly:
+- 60% samples (5 images) from NIH ChestX-ray14 (Head A).
+- 25% samples (2 images) from COVIDx CXR-4 (Head C).
+- 15% samples (1 image) from TB Chest Radiography Database (Head B).
 
 This guarantees stable, continuous gradient backpropagation across all three heads throughout every epoch.
 
@@ -357,45 +349,45 @@ graph TD
 
 *Table 4.2: Complete Layer-by-Layer Architecture and Parameter Breakdown of DenseNet-121 MultiTaskChestXrayNet.*
 
-| Stage / Layer Name | Sub-Layers & Operations | Input Tensor Shape | Output Tensor Shape | Trainable Parameters | FLOPs ($512\times512$) |
+| Stage / Layer Name | Sub-Layers & Operations | Input Tensor Shape | Output Tensor Shape | Trainable Parameters | FLOPs (512×512) |
 |:---|:---|:---|:---|:---|:---|
-| **Input** | Raw Radiograph Tensor | $(B, 3, 512, 512)$ | $(B, 3, 512, 512)$ | $0$ | $0$ |
-| **Initial Stem (Conv0)**| $7\times7\text{ Conv}, s=2, p=3$ + BatchNorm + ReLU | $(B, 3, 512, 512)$ | $(B, 64, 256, 256)$ | $9,536$ | $624.9\text{ M}$ |
-| **Stem Pooling** | $3\times3\text{ MaxPool}, s=2, p=1$ | $(B, 64, 256, 256)$ | $(B, 64, 128, 128)$ | $0$ | $1.9\text{ M}$ |
-| **DenseBlock 1** | $6\times [1\times1\text{ conv}128 + 3\times3\text{ conv}32]$ | $(B, 64, 128, 128)$ | $(B, 256, 128, 128)$ | $141,696$ | $2,321.4\text{ M}$ |
-| **Transition 1** | $1\times1\text{ Conv} (256\to128) + 2\times2\text{ AvgPool}$ | $(B, 256, 128, 128)$ | $(B, 128, 64, 64)$ | $33,024$ | $135.3\text{ M}$ |
-| **DenseBlock 2** | $12\times [1\times1\text{ conv}128 + 3\times3\text{ conv}32]$ | $(B, 128, 64, 64)$ | $(B, 512, 64, 64)$ | $383,232$ | $1,569.8\text{ M}$ |
-| **Transition 2** | $1\times1\text{ Conv} (512\to256) + 2\times2\text{ AvgPool}$ | $(B, 512, 64, 64)$ | $(B, 256, 32, 32)$ | $131,584$ | $134.7\text{ M}$ |
-| **DenseBlock 3** | $24\times [1\times1\text{ conv}128 + 3\times3\text{ conv}32]$ | $(B, 256, 32, 32)$ | $(B, 1024, 32, 32)$ | $1,530,624$ | $1,567.4\text{ M}$ |
-| **Transition 3** | $1\times1\text{ Conv} (1024\to512) + 2\times2\text{ AvgPool}$| $(B, 1024, 32, 32)$ | $(B, 512, 16, 16)$ | $525,312$ | $134.5\text{ M}$ |
-| **DenseBlock 4** | $16\times [1\times1\text{ conv}128 + 3\times3\text{ conv}32]$ | $(B, 512, 16, 16)$ | $(B, 1024, 16, 16)$ | $2,000,896$ | $512.2\text{ M}$ |
-| **Final Norm (Norm5)** | $\text{BatchNorm2d}(1024) + \text{ReLU}$ | $(B, 1024, 16, 16)$ | $(B, 1024, 16, 16)$ | $2,048$ | $0.5\text{ M}$ |
-| **Feature Pooling**| $\text{AdaptiveAvgPool2d}(1, 1)$ | $(B, 1024, 16, 16)$ | $(B, 1024)$ | $0$ | $0.2\text{ M}$ |
-| **Projection Norm** | $\text{LayerNorm}(1024, \text{elementwise\_affine}=\text{False})$| $(B, 1024)$ | $(B, 1024)$ | $0$ | $0.1\text{ M}$ |
-| **Dropout** | $\text{Dropout}(p=0.20)$ | $(B, 1024)$ | $(B, 1024)$ | $0$ | $0$ |
-| **Head A (NIH)** | $\text{Linear}(1024 \to 14)$ | $(B, 1024)$ | $(B, 14)$ | $14,350$ | $0.03\text{ M}$ |
-| **Head B (TB)** | $\text{Linear}(1024 \to 1)$ | $(B, 1024)$ | $(B, 1)$ | $1,025$ | $0.002\text{ M}$ |
-| **Head C (COVIDx)** | $\text{Linear}(1024 \to 1)$ | $(B, 1024)$ | $(B, 1)$ | $1,025$ | $0.002\text{ M}$ |
+| **Input** | Raw Radiograph Tensor | (B, 3, 512, 512) | (B, 3, 512, 512) | 0 | 0 |
+| **Initial Stem (Conv0)**| 7×7\text{ Conv}, s=2, p=3 + BatchNorm + ReLU | (B, 3, 512, 512) | (B, 64, 256, 256) | 9,536 | 624.9\text{ M} |
+| **Stem Pooling** | 3×3\text{ MaxPool}, s=2, p=1 | (B, 64, 256, 256) | (B, 64, 128, 128) | 0 | 1.9\text{ M} |
+| **DenseBlock 1** | 6× [1×1\text{ conv}128 + 3×3\text{ conv}32] | (B, 64, 128, 128) | (B, 256, 128, 128) | 141,696 | 2,321.4\text{ M} |
+| **Transition 1** | 1×1\text{ Conv} (256\to128) + 2×2\text{ AvgPool} | (B, 256, 128, 128) | (B, 128, 64, 64) | 33,024 | 135.3\text{ M} |
+| **DenseBlock 2** | 12× [1×1\text{ conv}128 + 3×3\text{ conv}32] | (B, 128, 64, 64) | (B, 512, 64, 64) | 383,232 | 1,569.8\text{ M} |
+| **Transition 2** | 1×1\text{ Conv} (512\to256) + 2×2\text{ AvgPool} | (B, 512, 64, 64) | (B, 256, 32, 32) | 131,584 | 134.7\text{ M} |
+| **DenseBlock 3** | 24× [1×1\text{ conv}128 + 3×3\text{ conv}32] | (B, 256, 32, 32) | (B, 1024, 32, 32) | 1,530,624 | 1,567.4\text{ M} |
+| **Transition 3** | 1×1\text{ Conv} (1024\to512) + 2×2\text{ AvgPool}| (B, 1024, 32, 32) | (B, 512, 16, 16) | 525,312 | 134.5\text{ M} |
+| **DenseBlock 4** | 16× [1×1\text{ conv}128 + 3×3\text{ conv}32] | (B, 512, 16, 16) | (B, 1024, 16, 16) | 2,000,896 | 512.2\text{ M} |
+| **Final Norm (Norm5)** | BatchNorm2d(1024) + ReLU | (B, 1024, 16, 16) | (B, 1024, 16, 16) | 2,048 | 0.5\text{ M} |
+| **Feature Pooling**| AdaptiveAvgPool2d(1, 1) | (B, 1024, 16, 16) | (B, 1024) | 0 | 0.2\text{ M} |
+| **Projection Norm** | LayerNorm(1024, \text{elementwise\_affine}=\text{False})| (B, 1024) | (B, 1024) | 0 | 0.1\text{ M} |
+| **Dropout** | \text{Dropout}(p=0.20) | (B, 1024) | (B, 1024) | 0 | 0 |
+| **Head A (NIH)** | Linear(1024 \to 14) | (B, 1024) | (B, 14) | 14,350 | 0.03\text{ M} |
+| **Head B (TB)** | Linear(1024 \to 1) | (B, 1024) | (B, 1) | 1,025 | 0.002\text{ M} |
+| **Head C (COVIDx)** | Linear(1024 \to 1) | (B, 1024) | (B, 1) | 1,025 | 0.002\text{ M} |
 | **TOTALS** | **DenseNet-121 MultiTaskChestXrayNet** | **Input: 512x512** | **Output: 3-Head** | **6,973,350 params** | **7.00 GFLOPs** |
 
 ## 5. Mathematical Formulations of the Loss Engine
 
 ### 5.1. Masked Multi-Task Objective
-Let $t_i \in \{0, 1, 2\}$ represent the task identifier associated with training sample $i$. The composite multi-task loss is defined as:
-$$\mathcal{L}_{\text{total}} = \frac{1}{B} \sum_{i=1}^B \sum_{k \in \{A, B, C\}} \mathbb{I}(t_i = k) \cdot \lambda_k \cdot \mathcal{L}_k(\hat{y}_{i,k}, y_{i,k})$$
-where $\mathbb{I}(\cdot)$ is the indicator function masking inactive heads, and task weighting scalars are balanced at $\lambda_A = 1.0, \lambda_B = 1.0, \lambda_C = 1.0$.
+Let <i>t<sub>i</sub></i> ∈ {0, 1, 2} represent the task identifier associated with training sample <i>i</i>. The composite multi-task loss is defined as:
+<div class="equation-block"><span class="equation-text"><i>\mathcal{L}_{\text{total}} = \frac{1}{B} \sum_{i=1}^B \sum_{k \in \{A, B, C\}} \mathbb{I}(t_i = k) \cdot \lambda_k \cdot \mathcal{L}_k(\hat{y}_{i,k}, y_{i,k})</i></span></div>
+where 𝕀(·) is the indicator function masking inactive heads, and task weighting scalars are balanced at λ<sub>A</sub> = 1.0, λ<sub>B</sub> = 1.0, λ<sub>C</sub> = 1.0.
 
 ### 5.2. Asymmetric Loss (ASL) for Head A
 In multi-label classification across the 14 NIH findings, negative examples outnumber positive examples by over 100:1. Standard Binary Cross-Entropy (BCE) causes gradients to be completely dominated by easy negatives.
 
-Asymmetric Loss dynamically shifts negative probabilities by a margin $m \ge 0$ and applies asymmetric focusing parameters $\gamma_- > \gamma_+$:
-$$\mathcal{L}_{\text{ASL}} = \sum_{c=1}^{14} -y_c (1-p_c)^{\gamma_+} \log(p_c) - (1-y_c) (p_{c,m})^{\gamma_-} \log(1 - p_{c,m})$$
-where the shifted negative probability $p_{c,m} = \max(p_c - m, 0)$. In LungRay, we configure $\gamma_+ = 1.0, \gamma_- = 4.0, m = 0.05$. When an easy negative achieves $p_c \le 0.05$, its effective probability becomes zero, completely zeroing its negative gradient and concentrating optimization on hard minority lesions.
+Asymmetric Loss dynamically shifts negative probabilities by a margin m ≥ 0 and applies asymmetric focusing parameters γ₋ > γ₊:
+<div class="equation-block"><span class="equation-text"><i>\mathcal{L}_{\text{ASL}} = \sum_{c=1}^{14} -y_c (1-p_c)^{\gamma_+} \log(p_c) - (1-y_c) (p_{c,m})^{\gamma_-} \log(1 - p_{c,m})</i></span></div>
+where the shifted negative probability <i>p<sub>c,m</sub></i> = max(<i>p<sub>c</sub></i> - <i>m</i>, 0). In LungRay, we configure γ₊ = 1.0, γ₋ = 4.0, <i>m</i> = 0.05. When an easy negative achieves <i>p<sub>c</sub></i> ≤ 0.05, its effective probability becomes zero, completely zeroing its negative gradient and concentrating optimization on hard minority lesions.
 
 ### 5.3. Optimal Decision Threshold Calibration (Youden's J)
-Standard argmax or a fixed threshold of $0.5$ is clinically invalid in imbalanced settings. On the validation set, we calibrate individual disease thresholds $\tau_c \in (0, 1)$ by maximizing Youden's J statistic:
-$$\tau_c^* = \arg\max_\tau \left( \text{Sensitivity}_c(\tau) + \text{Specificity}_c(\tau) - 1 \right)$$
-These optimal thresholds $\tau^*$ are serialized to `configs/optimal_thresholds.json` and loaded during production inference.
+Standard argmax or a fixed threshold of 0.5 is clinically invalid in imbalanced settings. On the validation set, we calibrate individual disease thresholds τ<sub>c</sub> ∈ (0, 1) by maximizing Youden's J statistic:
+<div class="equation-block"><span class="equation-text">&tau;<sub><i>c</i></sub><sup>*</sup> = arg max<sub>&tau;</sub> [ Sensitivity<sub><i>c</i></sub>(&tau;) + Specificity<sub><i>c</i></sub>(&tau;) &minus; 1 ]</span><span class="equation-num">(4)</span></div>
+These optimal thresholds \tau^* are serialized to `configs/optimal_thresholds.json` and loaded during production inference.
 
 # CHAPTER V: SYSTEM DESIGN AND IMPLEMENTATION
 
@@ -431,77 +423,77 @@ sequenceDiagram
 
 ## 2. Out-of-Distribution (OOD) Clinical Safety Lockout
 To prevent the model from hallucinating diagnoses on corrupt files, abdominal scans, or inverted noise, LungRay implements a Free Energy scoring function computed over the pooled feature representations:
-$$E(x; T) = -T \cdot \log \sum_{c} \exp\left(\frac{f_c(x)}{T}\right)$$
-If the calculated Free Energy exceeds the empirically calibrated threshold $E_{\text{threshold}} = -4.2$, the system triggers an immediate **Fail-Safe Lockout**, refusing to display diagnostic probabilities and instructing the operator to verify the radiograph orientation and modality.
+<div class="equation-block"><span class="equation-text"><i>E</i>(<i>x</i>; <i>T</i>) = &minus;<i>T</i> &middot; log &sum;<sub><i>c</i></sub> exp( <sup><i>f</i><sub><i>c</i></sub>(<i>x</i>)</sup>&frasl;<sub><i>T</i></sub> )</span><span class="equation-num">(5)</span></div>
+If the calculated Free Energy exceeds the empirically calibrated threshold <i>E</i><sub>threshold</sub> = -4.2, the system triggers an immediate **Fail-Safe Lockout**, refusing to display diagnostic probabilities and instructing the operator to verify the radiograph orientation and modality.
 
 # CHAPTER VI: RESULTS AND DISCUSSION
 
 ## 1. Training Convergence Analysis
-Both the Baseline Multi-Task Model (Notebook 02, trained with standard Masked BCE) and the SOTA Multi-Task Model (Notebook 03, trained with ASL and two-stage differential learning rates) were trained on Kaggle GPU hardware (NVIDIA Tesla T4, 16GB VRAM) under identical seed configurations ($seed=42$).
+Both the Baseline Multi-Task Model (Notebook 02, trained with standard Masked BCE) and the SOTA Multi-Task Model (Notebook 03, trained with ASL and two-stage differential learning rates) were trained on Kaggle GPU hardware (NVIDIA Tesla T4, 16GB VRAM) under identical seed configurations (<i>seed</i> = 42).
 
 *Table 6.1: Training and Validation Convergence Metrics for Baseline vs. SOTA Models.*
 
 | Model Variant | Epochs | Training Loss (Final) | Validation Loss (Final) | Mean AUC (Head A) | TB AUC (Head B) | COVID AUC (Head C) |
 |:---|:---|:---|:---|:---|:---|:---|
-| **Baseline Multi-Task (NB02)** | 10 Epochs | $0.1842$ | $0.1985$ | $0.8124$ | $0.9120$ | $0.9315$ |
-| **SOTA Asymmetric (NB03)** | 15 Epochs | **$0.1421$** | **$0.1580$** | **$0.8352$** | **$0.9412$** | **$0.9520$** |
+| **Baseline Multi-Task (NB02)** | 10 Epochs | 0.1842 | 0.1985 | 0.8124 | 0.9120 | 0.9315 |
+| **SOTA Asymmetric (NB03)** | 15 Epochs | **0.1421** | **0.1580** | **0.8352** | **0.9412** | **0.9520** |
 
 Convergence curves demonstrate that the Baseline model experiences premature plateauing around Epoch 6 due to negative gradient saturation on Head A. In contrast, the SOTA model with ASL maintains positive gradient flow throughout all 15 epochs, steadily reducing multi-label training loss while preventing overfitting via Cosine Annealing learning rate scheduling.
 
 ## 2. Head A Quantitative Evaluation (14 NIH Thoracic Pathologies)
-Evaluation was conducted on the holdout, patient-stratified test set ($N = 22,400$ images) ensuring zero identity overlap with training cohorts:
+Evaluation was conducted on the holdout, patient-stratified test set (<i>N</i> = 22,400 images) ensuring zero identity overlap with training cohorts:
 
 *Table 6.2: Head A (14 NIH Pathologies) Class-Specific ROC-AUC Comparison on Test Set.*
 
-| Pathology Class | Positive Cases (Test) | Baseline Model (NB02) ROC-AUC | SOTA ASL Model (NB03) ROC-AUC | Absolute Gain ($\Delta$) | Clinical Significance |
+| Pathology Class | Positive Cases (Test) | Baseline Model (NB02) ROC-AUC | SOTA ASL Model (NB03) ROC-AUC | Absolute Gain (Δ) | Clinical Significance |
 |:---|:---|:---|:---|:---|:---|
-| **Atelectasis** | $2,185$ ($9.75\%$) | $0.8042$ | **$0.8215$** | $+0.0173$ | Improved lung collapse detection |
-| **Cardiomegaly** | $554$ ($2.47\%$) | $0.8710$ | **$0.8984$** | $+0.0274$ | Reliable heart enlargement triage |
-| **Effusion** | $2,668$ ($11.91\%$) | $0.8623$ | **$0.8841$** | $+0.0218$ | High sensitivity for pleural fluid |
-| **Infiltration** | $4,012$ ($17.91\%$) | $0.7015$ | **$0.7180$** | $+0.0165$ | Resolves diffuse interstitial opacity |
-| **Mass** | $1,154$ ($5.15\%$) | $0.8125$ | **$0.8410$** | $+0.0285$ | Critical for early tumor flagging |
-| **Nodule** | $1,265$ ($5.65\%$) | $0.7420$ | **$0.7695$** | $+0.0275$ | Elevates small pulmonary lesion detection|
-| **Pneumonia** | $285$ ($1.27\%$) | $0.7512$ | **$0.7850$** | **$+0.0338$** | Major gain on acute clinical infection |
-| **Pneumothorax** | $1,061$ ($4.74\%$) | $0.8450$ | **$0.8720$** | $+0.0270$ | Life-saving emergency condition |
-| **Consolidation** | $935$ ($4.17\%$) | $0.7820$ | **$0.8062$** | $+0.0242$ | Clear distinction from fluid effusion |
-| **Edema** | $462$ ($2.06\%$) | $0.8640$ | **$0.8915$** | $+0.0275$ | Critical for congestive heart failure |
-| **Emphysema** | $508$ ($2.27\%$) | $0.8812$ | **$0.9104$** | $+0.0292$ | Robust chronic alveolar hyperinflation |
-| **Fibrosis** | $338$ ($1.51\%$) | $0.8015$ | **$0.8350$** | **$+0.0335$** | Substantial gain on rare scarring |
-| **Pleural Thickening**| $682$ ($3.04\%$) | $0.7680$ | **$0.7952$** | $+0.0272$ | Preserved via morphological dilation |
-| **Hernia** | $45$ ($0.20\%$) | $0.8870$ | **$0.9340$** | **$+0.0470$** | **Highest gain on extreme minority class**|
-| **MEAN ROC-AUC** | **Average (14 Classes)**| **$0.8124$** | **$0.8352$** | **$+0.0228$** | **Statistically significant ($p < 0.001$)**|
+| **Atelectasis** | 2,185 (9.75%) | 0.8042 | **0.8215** | +0.0173 | Improved lung collapse detection |
+| **Cardiomegaly** | 554 (2.47%) | 0.8710 | **0.8984** | +0.0274 | Reliable heart enlargement triage |
+| **Effusion** | 2,668 (11.91%) | 0.8623 | **0.8841** | +0.0218 | High sensitivity for pleural fluid |
+| **Infiltration** | 4,012 (17.91%) | 0.7015 | **0.7180** | +0.0165 | Resolves diffuse interstitial opacity |
+| **Mass** | 1,154 (5.15%) | 0.8125 | **0.8410** | +0.0285 | Critical for early tumor flagging |
+| **Nodule** | 1,265 (5.65%) | 0.7420 | **0.7695** | +0.0275 | Elevates small pulmonary lesion detection|
+| **Pneumonia** | 285 (1.27%) | 0.7512 | **0.7850** | **+0.0338** | Major gain on acute clinical infection |
+| **Pneumothorax** | 1,061 (4.74%) | 0.8450 | **0.8720** | +0.0270 | Life-saving emergency condition |
+| **Consolidation** | 935 (4.17%) | 0.7820 | **0.8062** | +0.0242 | Clear distinction from fluid effusion |
+| **Edema** | 462 (2.06%) | 0.8640 | **0.8915** | +0.0275 | Critical for congestive heart failure |
+| **Emphysema** | 508 (2.27%) | 0.8812 | **0.9104** | +0.0292 | Robust chronic alveolar hyperinflation |
+| **Fibrosis** | 338 (1.51%) | 0.8015 | **0.8350** | **+0.0335** | Substantial gain on rare scarring |
+| **Pleural Thickening**| 682 (3.04%) | 0.7680 | **0.7952** | +0.0272 | Preserved via morphological dilation |
+| **Hernia** | 45 (0.20%) | 0.8870 | **0.9340** | **+0.0470** | **Highest gain on extreme minority class**|
+| **MEAN ROC-AUC** | **Average (14 Classes)**| **0.8124** | **0.8352** | **+0.0228** | **Statistically significant (p < 0.001)**|
 
-The empirical results decisively confirm **Hypothesis 2**: Asymmetric Loss achieved its greatest performance margins on the rarest conditions, registering a $+0.0470$ gain on Hernia (prevalence $0.20\%$) and $+0.0338$ on Pneumonia (prevalence $1.27\%$), proving that margin-shifted negative discounting successfully mitigates severe data imbalance.
+The empirical results decisively confirm **Hypothesis 2**: Asymmetric Loss achieved its greatest performance margins on the rarest conditions, registering a +0.0470 gain on Hernia (prevalence 0.20%) and +0.0338 on Pneumonia (prevalence 1.27%), proving that margin-shifted negative discounting successfully mitigates severe data imbalance.
 
 ## 3. Head B & Head C Quantitative Diagnostic Performance
 
 *Table 6.3: Head B (TB) and Head C (COVID-19) Independent Test Set Performance.*
 
-| Task Head | Evaluated Condition | Cohort Size (Test) | ROC-AUC | Sensitivity | Specificity | F1-Score | Youden Threshold ($\tau^*$) |
+| Task Head | Evaluated Condition | Cohort Size (Test) | ROC-AUC | Sensitivity | Specificity | F1-Score | Youden Threshold (\tau^*) |
 |:---|:---|:---|:---|:---|:---|:---|:---|
-| **Head B** | Pulmonary Tuberculosis | $840$ images | **$0.9412$** | **$89.2\%$** | **$91.5\%$** | **$0.903$** | $\tau_B = 0.448$ |
-| **Head C** | COVID-19 Viral Pneumonia | $1,000$ images | **$0.9520$** | **$92.4\%$** | **$93.1\%$** | **$0.927$** | $\tau_C = 0.512$ |
+| **Head B** | Pulmonary Tuberculosis | 840 images | **0.9412** | **89.2%** | **91.5%** | **0.903** | \tau_B = 0.448 |
+| **Head C** | COVID-19 Viral Pneumonia | 1,000 images | **0.9520** | **92.4%** | **93.1%** | **0.927** | \tau_C = 0.512 |
 
-Both screening heads comfortably surpass the World Health Organization (WHO) target product profile for automated community triage (Sensitivity $\ge 90\%$, Specificity $\ge 70\%$).
+Both screening heads comfortably surpass the World Health Organization (WHO) target product profile for automated community triage (Sensitivity ≥ 90%, Specificity ≥ 70%).
 
 ## 4. Trustworthy WSOL Localization & Shortcut Learning Audit
 
 ### 4.1. WSOL Box-IoU Benchmark
-We evaluated the localization fidelity of Grad-CAM++ activation maps against certified expert bounding boxes from VinDr-CXR ($N = 4,394$) and RSNA Pneumonia ($N = 6,012$) under varying IoU thresholds:
+We evaluated the localization fidelity of Grad-CAM++ activation maps against certified expert bounding boxes from VinDr-CXR (<i>N</i> = 4,394) and RSNA Pneumonia (<i>N</i> = 6,012) under varying IoU thresholds:
 
 *Table 6.4: Quantitative Weakly-Supervised Localization Performance (Box-IoU).*
 
-| Benchmark Dataset | Target Pathology | Model Variant | Mean Box-IoU | Localization Accuracy (IoU $\ge 0.10$) | Localization Accuracy (IoU $\ge 0.25$) |
+| Benchmark Dataset | Target Pathology | Model Variant | Mean Box-IoU | Localization Accuracy (IoU ≥ 0.10) | Localization Accuracy (IoU ≥ 0.25) |
 |:---|:---|:---|:---|:---|:---|
-| **RSNA Pneumonia** | Pneumonia Consolidations| Baseline DenseNet-121 | $0.184$ | $42.5\%$ | $24.8\%$ |
-| **RSNA Pneumonia** | Pneumonia Consolidations| **SOTA Asymmetric Net** | **$0.248$** | **$58.2\%$** | **$36.4\%$** |
-| **VinDr-CXR** | Cardiomegaly | Baseline DenseNet-121 | $0.285$ | $65.4\%$ | $44.1\%$ |
-| **VinDr-CXR** | Cardiomegaly | **SOTA Asymmetric Net** | **$0.372$** | **$79.8\%$** | **$58.9\%$** |
+| **RSNA Pneumonia** | Pneumonia Consolidations| Baseline DenseNet-121 | 0.184 | 42.5% | 24.8% |
+| **RSNA Pneumonia** | Pneumonia Consolidations| **SOTA Asymmetric Net** | **0.248** | **58.2%** | **36.4%** |
+| **VinDr-CXR** | Cardiomegaly | Baseline DenseNet-121 | 0.285 | 65.4% | 44.1% |
+| **VinDr-CXR** | Cardiomegaly | **SOTA Asymmetric Net** | **0.372** | **79.8%** | **58.9%** |
 
 ### 4.2. Shortcut Learning Audit
-On the COVIDx CXR-4 test set, we quantified the ratio of Grad-CAM++ activation energy located strictly within the anatomical lung boundaries ($\text{Ratio} = \sum_{\text{lung}} \text{CAM} / \sum_{\text{total}} \text{CAM}$):
-- **Unmasked Baseline Model**: In-Lung Energy Ratio = **$41.8\%$** (Severe failure: over $58\%$ of gradient heat concentrated on hospital orientation letters "R"/"L" and detector edges).
-- **LungRay SOTA Model (with $25\times25$ Dilated Masking)**: In-Lung Energy Ratio = **$86.4\%$** (Confounding artifacts eradicated; attention strictly grounded within pulmonary parenchyma).
+On the COVIDx CXR-4 test set, we quantified the ratio of Grad-CAM++ activation energy located strictly within the anatomical lung boundaries (Ratio = ∑<sub>lung</sub> CAM / ∑<sub>total</sub> CAM):
+- **Unmasked Baseline Model**: In-Lung Energy Ratio = **41.8%** (Severe failure: over 58% of gradient heat concentrated on hospital orientation letters "R"/"L" and detector edges).
+- **LungRay SOTA Model (with 25×25 Dilated Masking)**: In-Lung Energy Ratio = **86.4%** (Confounding artifacts eradicated; attention strictly grounded within pulmonary parenchyma).
 
 # CHAPTER VII: CONCLUSION & FUTURE WORK
 
@@ -509,17 +501,17 @@ On the COVIDx CXR-4 test set, we quantified the ratio of Grad-CAM++ activation e
 The LungRay capstone project establishes a complete, trustworthy, production-grade CADx platform for thoracic radiography:
 1. **Multi-Task Efficacy**: Proved that a single shared-backbone DenseNet-121 can simultaneously perform 14-disease multi-label triage, tuberculosis screening, and COVID-19 detection, outperforming single-task baselines with a mean ROC-AUC of **0.8352** on NIH ChestX-ray14, **0.9412** on TB, and **0.9520** on COVIDx.
 2. **Methodological Rigor**: Completely eliminated patient-level data leakage through hashed patient identifier partitioning and eradicated task starvation via the `WeightedMultiTaskBatchSampler`.
-3. **Imbalance Resolution**: Proved that Asymmetric Loss provides massive gains (up to $+0.0470$ AUC) on rare clinical conditions by mathematically discounting easy negative signals.
-4. **Clinical Safety & Grounding**: Defeated shortcut learning through dilated anatomical lung masking (elevating in-lung activation energy to $86.4\%$), validated WSOL Box-IoU on VinDr-CXR and RSNA, and integrated Free Energy OOD safety lockouts.
+3. **Imbalance Resolution**: Proved that Asymmetric Loss provides massive gains (up to +0.0470 AUC) on rare clinical conditions by mathematically discounting easy negative signals.
+4. **Clinical Safety & Grounding**: Defeated shortcut learning through dilated anatomical lung masking (elevating in-lung activation energy to 86.4%), validated WSOL Box-IoU on VinDr-CXR and RSNA, and integrated Free Energy OOD safety lockouts.
 5. **Full-Stack Implementation**: Containerized the complete pipeline into an asynchronous FastAPI microservice with Next.js web PACS workstation.
 
 ## 2. Limitations
 - Frontal projection radiographs only (lateral views are excluded).
-- Evaluated exclusively on adult cohorts ($\ge 18$ years).
+- Evaluated exclusively on adult cohorts (≥ 18 years).
 - WSOL localization, while clinically valuable for visual verification, exhibits lower precision than fully-supervised bounding-box object detectors.
 
 ## 3. Future Work: Phase 2 Attention-Regularized Fine-Tuning
-As explored in the ongoing research phase (Notebook 06: `06_attention_regularized_wsol_finetuning.ipynb`), future iterations will deploy the **Bi-Directional Attention Consistency Loss** ($\mathcal{L}_{\text{attn}}$), which penalizes CAM energy leakage outside certified lesion silhouettes and prevents CAM collapse on diffuse pathologies like Cardiomegaly. Further plans include conducting multi-center prospective clinical trials across provincial hospitals in Vietnam.
+As explored in the ongoing research phase (Notebook 06: `06_attention_regularized_wsol_finetuning.ipynb`), future iterations will deploy the **Bi-Directional Attention Consistency Loss** (\mathcal{L}_{\text{attn}}), which penalizes CAM energy leakage outside certified lesion silhouettes and prevents CAM collapse on diffuse pathologies like Cardiomegaly. Further plans include conducting multi-center prospective clinical trials across provincial hospitals in Vietnam.
 
 # CHAPTER VIII: REFERENCES
 
@@ -546,27 +538,27 @@ As explored in the ongoing research phase (Notebook 06: `06_attention_regularize
 
 # CHAPTER IX: APPENDICES
 
-### Appendix A: Optimal Clinical Decision Thresholds ($\tau^*$)
-*Table 9.1: Optimal Clinical Decision Thresholds ($\tau_c$) Calibrated via Youden's J Statistic.*
+### Appendix A: Optimal Clinical Decision Thresholds (\tau^*)
+*Table A.1: Optimal Clinical Decision Thresholds (τ_c) Calibrated via Youden's J Statistic.*
 
-| Pathology Index | Pathology Finding | Optimal Cutoff Threshold ($\tau_c^*$) | Sensitivity at $\tau^*$ | Specificity at $\tau^*$ |
+| Pathology Index | Pathology Finding | Optimal Cutoff Threshold (\tau_c^*) | Sensitivity at \tau^* | Specificity at \tau^* |
 |:---|:---|:---|:---|:---|
-| 0 | Atelectasis | $0.578$ | $82.4\%$ | $81.5\%$ |
-| 1 | Cardiomegaly | $0.485$ | $89.2\%$ | $88.7\%$ |
-| 2 | Effusion | $0.512$ | $88.1\%$ | $87.9\%$ |
-| 3 | Infiltration | $0.491$ | $72.5\%$ | $71.2\%$ |
-| 4 | Mass | $0.699$ | $83.6\%$ | $84.2\%$ |
-| 5 | Nodule | $0.482$ | $77.4\%$ | $76.8\%$ |
-| 6 | Pneumonia | $0.420$ | $79.5\%$ | $77.1\%$ |
-| 7 | Pneumothorax | $0.546$ | $87.8\%$ | $86.4\%$ |
-| 8 | Consolidation | $0.465$ | $81.2\%$ | $80.1\%$ |
-| 9 | Edema | $0.530$ | $89.5\%$ | $88.4\%$ |
-| 10 | Emphysema | $0.515$ | $91.2\%$ | $90.5\%$ |
-| 11 | Fibrosis | $0.681$ | $83.1\%$ | $83.9\%$ |
-| 12 | Pleural Thickening | $0.532$ | $80.2\%$ | $79.1\%$ |
-| 13 | Hernia | $0.380$ | $94.2\%$ | $92.8\%$ |
-| Head B | Tuberculosis | $0.448$ | $89.2\%$ | $91.5\%$ |
-| Head C | COVID-19 | $0.512$ | $92.4\%$ | $93.1\%$ |
+| 0 | Atelectasis | 0.578 | 82.4% | 81.5% |
+| 1 | Cardiomegaly | 0.485 | 89.2% | 88.7% |
+| 2 | Effusion | 0.512 | 88.1% | 87.9% |
+| 3 | Infiltration | 0.491 | 72.5% | 71.2% |
+| 4 | Mass | 0.699 | 83.6% | 84.2% |
+| 5 | Nodule | 0.482 | 77.4% | 76.8% |
+| 6 | Pneumonia | 0.420 | 79.5% | 77.1% |
+| 7 | Pneumothorax | 0.546 | 87.8% | 86.4% |
+| 8 | Consolidation | 0.465 | 81.2% | 80.1% |
+| 9 | Edema | 0.530 | 89.5% | 88.4% |
+| 10 | Emphysema | 0.515 | 91.2% | 90.5% |
+| 11 | Fibrosis | 0.681 | 83.1% | 83.9% |
+| 12 | Pleural Thickening | 0.532 | 80.2% | 79.1% |
+| 13 | Hernia | 0.380 | 94.2% | 92.8% |
+| Head B | Tuberculosis | 0.448 | 89.2% | 91.5% |
+| Head C | COVID-19 | 0.512 | 92.4% | 93.1% |
 
 ### Appendix B: Verification Commands & Environment
 To replicate all empirical benchmarks and verify system integrity:

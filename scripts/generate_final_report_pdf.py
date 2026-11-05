@@ -151,6 +151,9 @@ def render_academic_math(text: str) -> str:
 
     # 3. Generic fallback for any remaining $variable$
     text = re.sub(r'\$([A-Za-z0-9_+\-^*/]+)\$', r'<i>\1</i>', text)
+    # 4. Strict absolute sweep: strip any residual dollar signs
+    text = re.sub(r'\$([^\$\n]+)\$', r'\1', text)
+    text = text.replace('$', '')
     return text
 
 
@@ -393,11 +396,10 @@ def generate_final_pdf(
 
     cmd = [
         edge_bin,
-        "--headless",
+        "--headless=new",
         "--no-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
-        "--run-all-compositor-stages-before-draw",
         "--no-pdf-header-footer",
         f"--print-to-pdf={abs_pdf}",
         str(temp_html.resolve().as_uri()),
@@ -410,9 +412,12 @@ def generate_final_pdf(
             size_kb = abs_pdf.stat().st_size / 1024
             print(f"[OK] Successfully compiled PDF: {abs_pdf} ({size_kb:.1f} KB)")
             alt_pdf = WORKSPACE_ROOT / "reports" / "FINAL_SCIENTIFIC_REPORT.pdf"
+            alt_pdf2 = WORKSPACE_ROOT / "reports" / "output" / "pdf" / "LungRay_Final_Report.pdf"
             import shutil
             shutil.copyfile(abs_pdf, alt_pdf)
+            shutil.copyfile(abs_pdf, alt_pdf2)
             print(f"[OK] Synchronized copy to: {alt_pdf} ({size_kb:.1f} KB)")
+            print(f"[OK] Synchronized copy to: {alt_pdf2} ({size_kb:.1f} KB)")
         else:
             print(f"[!] Warning: PDF generation failed or empty. Stderr: {result.stderr}")
     finally:
