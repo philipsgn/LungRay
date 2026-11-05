@@ -242,6 +242,8 @@ def generate_final_pdf(
     cmd = [
         edge_bin,
         "--headless",
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
         "--disable-gpu",
         "--run-all-compositor-stages-before-draw",
         "--no-pdf-header-footer",
