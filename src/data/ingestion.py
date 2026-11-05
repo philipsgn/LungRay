@@ -268,9 +268,11 @@ def resolve_dataset_paths(kaggle_base: str = "/kaggle/input") -> Dict[str, objec
         kaggle_base: Root of the Kaggle input mount (overridable for tests).
 
     Returns:
-        Dictionary with resolved directories, split CSV paths, pre-resize flags
-        and output locations. Raises ``FileNotFoundError`` when a Kaggle run
-        cannot find one of the three mandatory datasets.
+        Dictionary with resolved directories, split CSV paths, pre-resize flags,
+        output locations and a ``missing`` list naming any dataset that could not
+        be located. Partially mounted Kaggle runs return the datasets that were
+        found (missing ones are ``None``); ``FileNotFoundError`` is raised only
+        when no dataset whatsoever is available on Kaggle.
     """
     is_kaggle = os.path.isdir(kaggle_base)
     project_root = _project_root()
@@ -303,16 +305,18 @@ def resolve_dataset_paths(kaggle_base: str = "/kaggle/input") -> Dict[str, objec
             for name, path in (("NIH", nih_dir), ("COVIDx", covid_dir), ("TB", tb_dir))
             if not path
         ]
-        if missing:
+        # Hard-fail only when nothing at all is mounted. A partially mounted run
+        # still returns the datasets that were found; missing ones stay ``None``
+        # and are reported through ``missing`` so callers can decide.
+        if len(missing) == 3:
             raise FileNotFoundError(
-                "[LungRay] Missing Kaggle dataset mount(s): "
-                + ", ".join(missing)
-                + f" under {kaggle_base}. Expected slugs: lungray-nih-512, "
+                "[LungRay] No Kaggle dataset mount found under "
+                f"{kaggle_base}. Expected slugs: lungray-nih-512, "
                 "lungray-covidx-512, tawsifurrahman/tuberculosis-tb-chest-xray-dataset."
             )
 
-        nih_pre_resized = _looks_pre_resized(nih_dir)
-        covid_pre_resized = _looks_pre_resized(covid_dir)
+        nih_pre_resized = _looks_pre_resized(nih_dir) if nih_dir else False
+        covid_pre_resized = _looks_pre_resized(covid_dir) if covid_dir else False
         tb_pre_resized = True
         output_dir = "/kaggle/working"
         results_dir = "/kaggle/working/results/baseline"
@@ -340,6 +344,11 @@ def resolve_dataset_paths(kaggle_base: str = "/kaggle/input") -> Dict[str, objec
         nih_pre_resized = _looks_pre_resized(nih_dir)
         covid_pre_resized = _looks_pre_resized(covid_dir)
         tb_pre_resized = True
+        missing = [
+            name
+            for name, path in (("NIH", nih_dir), ("COVIDx", covid_dir), ("TB", tb_dir))
+            if not os.path.isdir(path)
+        ]
         output_dir = os.path.join(project_root, "checkpoints")
         results_dir = os.path.join(project_root, "results", "baseline")
 
@@ -353,6 +362,7 @@ def resolve_dataset_paths(kaggle_base: str = "/kaggle/input") -> Dict[str, objec
 
     return {
         "is_kaggle": is_kaggle,
+        "missing": missing,
         "nih_dir": nih_dir,
         "covid_dir": covid_dir,
         "tb_dir": tb_dir,

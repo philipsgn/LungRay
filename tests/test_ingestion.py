@@ -1,10 +1,12 @@
 """Unit tests for Kaggle path resolution and COVIDx CXR-4 ingestion."""
 import os
+import shutil
 import warnings
 
 import cv2
 import numpy as np
 import pandas as pd
+import pytest
 
 from src.data.ingestion import (
     _parse_covidx_class,
@@ -77,6 +79,29 @@ def test_nested_kaggle_resolution_returns_leaf_dataset(tmp_path):
     assert paths["tb_dir"] == str(tb_dir)
     assert paths["nih_pre_resized"] is True
     assert paths["covid_pre_resized"] is True
+    assert paths["missing"] == []
+
+
+def test_partial_kaggle_mount_keeps_resolved_datasets(tmp_path):
+    """A missing TB mount must not discard the NIH/COVIDx datasets already found."""
+    kaggle_base, nih_dir, covid_dir, tb_dir = _build_mock_kaggle(tmp_path)
+    shutil.rmtree(tb_dir)
+
+    paths = resolve_dataset_paths(kaggle_base=str(kaggle_base))
+
+    assert paths["nih_dir"] == str(nih_dir)
+    assert paths["covid_dir"] == str(covid_dir)
+    assert paths["tb_dir"] is None
+    assert paths["missing"] == ["TB"]
+
+
+def test_empty_kaggle_mount_raises(tmp_path):
+    """A Kaggle mount with no dataset at all must fail loudly rather than silently."""
+    empty_base = tmp_path / "kaggle" / "input"
+    empty_base.mkdir(parents=True)
+
+    with pytest.raises(FileNotFoundError):
+        resolve_dataset_paths(kaggle_base=str(empty_base))
 
 
 def test_covidx_manifest_loading_and_patient_stratified_validation(tmp_path):
