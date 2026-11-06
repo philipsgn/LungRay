@@ -1,0 +1,26 @@
+sample_idx,image_id,vindr_class,nih_disease,target_probability,num_gt_boxes,num_pred_boxes,best_box_iou,mean_box_iou,mask_iou,in_lung_energy,pass_iou_01,pass_iou_03,pass_iou_05,latency_ms
+1,fb31baa6cb3084cb283c11ee81c32f22,Pulmonary fibrosis,Fibrosis,0.3691,5,2,0.6028,0.2339,0.4102,0.1896,True,True,True,7546.9
+2,5d5a37ba110538a40cbc037126af47d3,Pulmonary fibrosis,Fibrosis,0.3653,2,2,0.5879,0.503,0.3055,0.3171,True,True,True,5958.9
+3,bbc8cca2bda1c6bc5b66715a12830d78,Cardiomegaly,Cardiomegaly,0.4561,2,2,0.127,0.1269,0.0373,0.173,True,False,False,5359.5
+4,6900482a91a538ead56b483f77bcf289,Cardiomegaly,Cardiomegaly,0.485,1,1,0.0999,0.0999,0.0087,0.1979,False,False,False,6233.5
+5,6f9c69586ff53e488b23e7bb6b0556c5,Cardiomegaly,Cardiomegaly,0.4591,2,2,0.1258,0.1236,0.071,0.1758,True,False,False,6125.2
+6,522dea0833b59836405679f464299eac,Pleural effusion,Effusion,0.5563,4,2,0.0109,0.0086,0.0241,0.2873,False,False,False,7565.5
+7,a2ef60f418b8518fc372b7c333f8a5c3,Cardiomegaly,Cardiomegaly,0.4462,2,1,0.0903,0.0865,0.0679,0.2403,False,False,False,7317.3
+8,a0f8199197edd3488950b47b3db6646b,Pleural thickening,Pleural_Thickening,0.2923,1,2,0.0013,0.0013,0.0004,0.181,False,False,False,4175.9
+9,c8f75e6529a051827b8b7952a3e65f5b,Pulmonary fibrosis,Fibrosis,0.3622,2,2,0.0262,0.0257,0.0221,0.2791,False,False,False,4497.3
+10,65624a2cdd11858b1ebadc900859214d,Pleural thickening,Pleural_Thickening,0.2794,1,2,0.1071,0.1071,0.0663,0.2504,True,False,False,4007.6
+11,4e8ff7aae833d90a392038e0469a580b,Cardiomegaly,Cardiomegaly,0.3991,3,1,0.1218,0.1049,0.0815,0.1958,True,False,False,4657.2
+12,f7dd175ca0962155ec39311b997a5288,Pleural effusion,Effusion,0.5707,2,2,0.0673,0.0406,0.0289,0.2046,False,False,False,9114.0
+13,ff924bcbd38f123aec723aa7040d7e43,Consolidation,Consolidation,0.4774,2,3,0.3527,0.2055,0.2279,0.2745,True,True,False,4675.6
+14,2d4a3f928bbd1cf6cec20fc617af2fa3,Pleural effusion,Effusion,0.61,1,2,0.0002,0.0002,0.0,0.2487,False,False,False,5675.9
+15,f853be3a4ec02063d6e9c0279c8cb559,Pleural thickening,Pleural_Thickening,0.2869,3,1,0.007,0.004,0.0172,0.3314,False,False,False,9425.8
+16,6081e75c58a050442a9ff3a5a2a51ffc,Pulmonary fibrosis,Fibrosis,0.3912,1,4,0.0474,0.0474,0.0791,0.2298,False,False,False,13973.8
+17,8de556d9cd8d026b8eba03870cc6acba,Pulmonary fibrosis,Fibrosis,0.3882,3,2,0.1748,0.1444,0.084,0.2381,True,False,False,8554.4
+18,54fa20d07ac42e467ab67a87cf8563a3,Pleural effusion,Effusion,0.6199,1,2,0.0843,0.0843,0.0452,0.2018,False,False,False,9461.3
+19,9822d3f2c751dcc995ea4d827e63aed9,Pleural thickening,Pleural_Thickening,0.281,4,2,0.0422,0.0305,0.0407,0.226,False,False,False,7387.3
+20,f7793fee61ea241a3fc07b927e4914f6,Pleural thickening,Pleural_Thickening,0.2728,1,2,0.0017,0.0017,0.0014,0.1612,False,False,False,6765.3
+21,4e7a534c72ee26ef1610dd6e5c94d246,Infiltration,Infiltration,0.5584,2,2,0.0572,0.0531,0.0784,0.1945,False,False,False,6766.9
+22,a6541e2d7a4e09d6c1bdee83632bf781,Consolidation,Consolidation,0.4538,1,2,0.1574,0.1574,0.0394,0.2409,True,False,False,8080.1
+23,b9bf0f1b540eaf41cb590ee0a15fe0e7,Infiltration,Infiltration,0.5274,1,1,0.0516,0.0516,0.0935,0.1849,False,False,False,11722.6
+24,ba1795ee5daae1ed415756c3f4f21b48,Pleural effusion,Effusion,0.622,3,2,0.2595,0.2459,0.1215,0.1441,True,False,False,8307.1
+25,fc50039c45fdb6c9224bfff5ba4e64b3,Consolidation,Consolidation,0.4739,1,4,0.0441,0.0441,0.0083,0.2399,False,False,False,16469.6

@@ -908,8 +908,13 @@ def build_report():
                     "python scripts/evaluate_live_rsna.py --n-samples 100 --weights checkpoints/best_model.pth")
 
     os.makedirs(os.path.dirname(OUTPUT_DOCX), exist_ok=True)
-    doc.save(OUTPUT_DOCX)
-    print(f"[SUCCESS] Document generated successfully: {OUTPUT_DOCX}")
+    try:
+        doc.save(OUTPUT_DOCX)
+        print(f"[SUCCESS] Document generated successfully: {OUTPUT_DOCX}")
+    except PermissionError:
+        alt_path = OUTPUT_DOCX.replace(".docx", "_v2.docx")
+        doc.save(alt_path)
+        print(f"[NOTICE] Primary file locked by viewer; saved updated report to: {alt_path}")
     print(f"[*] File size: {os.path.getsize(OUTPUT_DOCX):,} bytes")
 
 if __name__ == "__main__":
