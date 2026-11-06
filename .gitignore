@@ -89,3 +89,7 @@ results/fintune/
 
 !/.agents/**/*.md
 !/.agents/*.md
+
+~$*.docx
+~*.tmp
+results/fine-tune-v2/

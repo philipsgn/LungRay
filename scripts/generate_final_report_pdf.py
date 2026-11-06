@@ -184,6 +184,7 @@ def generate_final_pdf(
         "head_b_tb_evaluation.png": WORKSPACE_ROOT / "results" / "head_b_tb_evaluation.png",
         "head_c_covid_evaluation.png": WORKSPACE_ROOT / "results" / "head_c_covid_evaluation.png",
         "shortcut_audit_summary.png": WORKSPACE_ROOT / "results" / "shortcut_audit_summary.png",
+        "wsol_finetune_curves.png": WORKSPACE_ROOT / "results" / "wsol_finetune_curves.png",
     }
 
     # Embed images in Chapter VI

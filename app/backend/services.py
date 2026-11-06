@@ -67,7 +67,10 @@ class LungRayService:
         self.version = "v7.0"
         self.img_size = 512
         self.thresholds = self._load_thresholds()
-        self.model = self._load_model()
+        self.models: dict[str, MultiTaskChestXrayNet] = {}
+        self.model_info: dict[str, dict[str, Any]] = {}
+        self._load_hybrid_models()
+        self.model = self.models.get("standard") or next(iter(self.models.values()))
         self.transform = get_val_transforms(img_size=self.img_size)
         self.segmenter = LungSegmenter()
         self.audit_engine = ShortcutAuditEngine(self.segmenter)
@@ -88,7 +91,7 @@ class LungRayService:
                 "head_c_covid": {"threshold": 0.5},
             }
 
-    def _load_model(self, checkpoint_path: Optional[str] = None) -> MultiTaskChestXrayNet:
+    def _instantiate_and_load(self, checkpoint_path: str) -> MultiTaskChestXrayNet:
         model = MultiTaskChestXrayNet(
             backbone_name="densenet121",
             pretrained=False,
@@ -98,15 +101,6 @@ class LungRayService:
             num_classes_c=1,
         )
 
-        if checkpoint_path is None:
-            checkpoint_path = os.getenv("CHECKPOINT_PATH")
-            if not checkpoint_path:
-                if os.path.exists("checkpoints/best_wsol_finetune.pth"):
-                    checkpoint_path = "checkpoints/best_wsol_finetune.pth"
-                else:
-                    checkpoint_path = "checkpoints/best_model.pth"
-
-        self.current_checkpoint = checkpoint_path
         if os.path.exists(checkpoint_path):
             logger.info("Loading checkpoint from %s", checkpoint_path)
             state = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
@@ -125,6 +119,53 @@ class LungRayService:
         model.eval()
         return model
 
+    def _load_hybrid_models(self) -> None:
+        standard_path = os.getenv("CHECKPOINT_PATH", "checkpoints/best_model.pth")
+        wsol_path = "checkpoints/best_wsol_finetune.pth"
+
+        # 1. Standard CADx model (SOTA Asymmetric Net)
+        self.models["standard"] = self._instantiate_and_load(standard_path)
+        self.current_checkpoint = standard_path
+        self.model_info["standard"] = {
+            "id": "standard",
+            "name": "Standard Diagnostic CADx (SOTA)",
+            "role": "Primary emergency triaging across 16 cardiopulmonary conditions (Multi-Task Mean AUC 0.91)",
+            "checkpoint": standard_path,
+            "metrics": {
+                "head_a_auc": 0.8352,
+                "head_b_tb_auc": 0.9412,
+                "head_c_covid_auc": 0.9520,
+                "mean_auc": 0.9095,
+            },
+        }
+
+        # 2. WSOL Specialist model (Attention-Regularized WSOL Net)
+        if os.path.exists(wsol_path):
+            self.models["wsol"] = self._instantiate_and_load(wsol_path)
+            self.model_info["wsol"] = {
+                "id": "wsol",
+                "name": "WSOL Attention Specialist",
+                "role": "Focused lesion localization & specialized TB screening (RSNA IoU 0.245, TB AUC 0.968)",
+                "checkpoint": wsol_path,
+                "metrics": {
+                    "head_a_auc": 0.7351,
+                    "head_b_tb_auc": 0.9684,
+                    "head_c_covid_auc": 0.6135,
+                    "rsna_mean_best_iou": 0.2454,
+                    "rsna_pass_iou_01": 0.760,
+                },
+            }
+        else:
+            self.models["wsol"] = self.models["standard"]
+            self.model_info["wsol"] = self.model_info["standard"]
+
+    def get_model(self, model_name: str = "standard") -> MultiTaskChestXrayNet:
+        key = "wsol" if "wsol" in model_name.lower() else "standard"
+        return self.models.get(key, self.model)
+
+    def list_models(self) -> list[dict[str, Any]]:
+        return list(self.model_info.values())
+
     def preprocess(self, image_bytes: bytes) -> torch.Tensor:
         """Convert raw image bytes to a batched (1, 3, 512, 512) tensor."""
         try:
@@ -137,13 +178,16 @@ class LungRayService:
         transformed = self.transform(image=image_np)["image"]
         return transformed.unsqueeze(0).to(self.device)
 
-    def predict(self, image_bytes: bytes) -> dict[str, Any]:
+    def predict(self, image_bytes: bytes, model_name: str = "standard") -> dict[str, Any]:
         tensor = self.preprocess(image_bytes)
+        active_model = self.get_model(model_name)
+        active_key = "wsol" if "wsol" in model_name.lower() else "standard"
+        display_name = self.model_info.get(active_key, {}).get("name", "Standard Diagnostic CADx")
 
         start = time.perf_counter()
         with torch.no_grad():
-            logits_dict = self.model(tensor)
-            outputs = self.model.predict(tensor)
+            logits_dict = active_model(tensor)
+            outputs = active_model.predict(tensor)
         elapsed_ms = (time.perf_counter() - start) * 1000.0
 
         logits_a = logits_dict["head_a"]
@@ -184,6 +228,8 @@ class LungRayService:
         )
 
         return {
+            "active_model": active_key,
+            "model_display_name": display_name,
             "head_a_prediction": head_a,
             "head_b_tb_screening": head_b_res,
             "head_c_covidx": head_c_res,
@@ -214,9 +260,12 @@ class LungRayService:
         target_class: int,
         clinical_grounding: bool = True,
         target_disease_name: str = "",
+        model_name: str = "standard",
     ) -> dict[str, Any]:
         started_at = time.perf_counter()
         tensor = self.preprocess(image_bytes)
+        active_model = self.get_model(model_name)
+        active_key = "wsol" if "wsol" in model_name.lower() else "standard"
 
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         image_np = np.array(image)
@@ -234,7 +283,7 @@ class LungRayService:
 
         # Compute forward pass probability and threshold for target pathology
         with torch.no_grad():
-            outputs = self.model(tensor)
+            outputs = active_model(tensor)
             if target_head == "head_a":
                 target_prob = float(torch.sigmoid(outputs["head_a"])[0, target_class].item())
                 target_thresh = float(self.thresholds.get("head_a_nih_14", {}).get(target_disease_name, 0.45))
@@ -249,7 +298,7 @@ class LungRayService:
                 target_thresh = 0.5
         is_target_positive = bool(target_prob >= target_thresh)
 
-        explainer = MultiScaleGradCAMPlusPlus(self.model)
+        explainer = MultiScaleGradCAMPlusPlus(active_model)
         try:
             raw_heatmap = explainer.generate(
                 tensor,
@@ -381,6 +430,7 @@ class LungRayService:
         )
 
         return {
+            "active_model": active_key,
             "heatmap_base64": self._image_to_base64(heatmap_color),
             "overlay_base64": self._image_to_base64(overlay),
             "contour_base64": contour_b64,

@@ -287,3 +287,28 @@ def test_explain_raw_mode_has_no_contour(client: TestClient) -> None:
     assert payload["contour_base64"] == ""
     assert payload["lesion_bounding_boxes"] == []
     assert payload["lesion_area_ratio"] == 0.0
+
+
+def test_list_models_endpoint(client: TestClient) -> None:
+    response = client.get("/api/v1/models")
+    assert response.status_code == 200
+    models = response.json()
+    assert isinstance(models, list)
+    model_ids = [m["id"] for m in models]
+    assert "standard" in model_ids
+    assert "wsol" in model_ids
+
+
+def test_predict_with_wsol_model(client: TestClient) -> None:
+    image_bytes = _make_image_bytes()
+    response = client.post(
+        "/api/v1/predict?model=wsol",
+        files={"file": ("cxr.png", image_bytes, "image/png")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["active_model"] == "wsol"
+    assert "WSOL" in payload["model_display_name"]
+    assert "head_a_prediction" in payload
+    assert "head_b_tb_screening" in payload
+

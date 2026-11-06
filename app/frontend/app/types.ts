@@ -5,6 +5,14 @@ export interface HealthResponse {
   ood_failsafe_enabled?: boolean;
 }
 
+export interface ModelInfo {
+  id: string;
+  name: string;
+  description: string;
+  best_for: string;
+  checkpoint: string;
+}
+
 export interface SafetyDecision {
   decision: "ACCEPT" | "REJECT";
   is_safe: boolean;
@@ -39,6 +47,8 @@ export interface PredictionResponse {
   head_b_tb_screening: HeadBScreening;
   head_c_covidx: HeadCScreening;
   inference_time_ms: number;
+  active_model?: string;
+  model_display_name?: string;
   safety?: SafetyDecision;
   report?: ClinicalReport;
 }

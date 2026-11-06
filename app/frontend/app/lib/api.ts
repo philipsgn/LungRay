@@ -4,6 +4,7 @@ import {
   AuditResponse,
   ExplainResponse,
   HealthResponse,
+  ModelInfo,
   PredictionResponse,
 } from "../types";
 
@@ -25,10 +26,18 @@ export async function checkHealth(): Promise<HealthResponse> {
   return handleResponse<HealthResponse>(response);
 }
 
-export async function predictImage(file: File): Promise<PredictionResponse> {
+export async function getModels(): Promise<ModelInfo[]> {
+  const response = await fetch(`${API_BASE}/api/v1/models`, {
+    method: "GET",
+    cache: "no-store",
+  });
+  return handleResponse<ModelInfo[]>(response);
+}
+
+export async function predictImage(file: File, model: string = "standard"): Promise<PredictionResponse> {
   const formData = new FormData();
   formData.append("file", file);
-  const response = await fetch(`${API_BASE}/api/v1/predict`, {
+  const response = await fetch(`${API_BASE}/api/v1/predict?model=${encodeURIComponent(model)}`, {
     method: "POST",
     body: formData,
   });
@@ -40,13 +49,15 @@ export async function explainImage(
   targetHead: string,
   targetClass: number,
   clinicalGrounding: boolean = true,
-  targetDiseaseName: string = ""
+  targetDiseaseName: string = "",
+  model: string = "standard"
 ): Promise<ExplainResponse> {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("target_head", targetHead);
   formData.append("target_class", String(targetClass));
   formData.append("clinical_grounding", String(clinicalGrounding));
+  formData.append("model", model);
   if (targetDiseaseName) {
     formData.append("target_disease_name", targetDiseaseName);
   }

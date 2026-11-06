@@ -1,6 +1,8 @@
 """Pydantic request/response schemas for the LungRay FastAPI backend."""
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -31,7 +33,17 @@ class ReportResponse(BaseModel):
     disclaimer: str = Field(default="")
 
 
+class ModelInfo(BaseModel):
+    id: str = Field(..., description="Model identifier ('standard' or 'wsol')")
+    name: str = Field(..., description="Human-readable model name")
+    role: str = Field(..., description="Clinical specialization and primary domain")
+    checkpoint: str = Field(..., description="Underlying PyTorch weights checkpoint")
+    metrics: dict[str, Any] = Field(default_factory=dict, description="Summary performance metrics")
+
+
 class PredictionResponse(BaseModel):
+    active_model: str = Field(default="standard", description="Model variant used for inference")
+    model_display_name: str = Field(default="Standard CADx (SOTA AUC 0.91)", description="Model variant display title")
     head_a_prediction: dict[str, float] = Field(
         ..., description="Map of 14 NIH pathology names to predicted probabilities"
     )
@@ -51,6 +63,7 @@ class PredictionResponse(BaseModel):
 
 
 class ExplainResponse(BaseModel):
+    active_model: str = Field(default="standard", description="Model variant used for explanation")
     heatmap_base64: str = Field(..., description="Base64-encoded Grad-CAM heatmap PNG")
     overlay_base64: str = Field(..., description="Base64-encoded heatmap overlay PNG")
     contour_base64: str = Field(default="", description="Base64-encoded clinical lesion iso-contour overlay PNG")

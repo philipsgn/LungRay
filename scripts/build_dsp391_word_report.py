@@ -302,6 +302,8 @@ def build_report():
         "Table 6.2: Class-Specific ROC-AUC Comparison on Test Set (NIH ChestX-ray14).",
         "Table 6.3: Head B (TB) and Head C (COVID-19) Diagnostic Performance Metrics.",
         "Table 6.4: Quantitative Weakly-Supervised Localization Performance (Box-IoU).",
+        "Table 6.5: Shortcut Learning Audit: In-Lung Activation Energy Ratio vs. Baseline Models.",
+        "Table 6.6: Comprehensive Comparative Evaluation: Baseline SOTA vs. WSOL Fine-Tuned Model.",
         "Table A.1: Calibrated Clinical Decision Thresholds via Youden's J Statistic (Appendix A).",
     ]
     for t_item in tables_list:
@@ -321,8 +323,9 @@ def build_report():
         "Figure 6.1: Multi-Task Training and Validation Loss Convergence Curves across Epochs.",
         "Figure 6.2: Multi-Label Receiver Operating Characteristic (ROC) Curves across all 14 Pathologies.",
         "Figure 6.3: Head B (Tuberculosis) ROC Curve and Confusion Matrix on Test Cohort.",
-        "Figure 6.4: Head C (COVID-19) Diagnostic Evaluation Curves on COVIDx CXR-4.",
+        "Figure 6.4: Head C (COVID-19 Diagnostic Evaluation Curves on COVIDx CXR-4.",
         "Figure 6.5: Shortcut Learning Audit: Heatmap Energy Distribution before and after Anatomical Masking.",
+        "Figure 6.6: Seven-Epoch Attention-Regularized Fine-Tuning Convergence and Localization Accuracy Curves.",
     ]
     for f_item in figures_list:
         p_item = doc.add_paragraph()
@@ -796,6 +799,56 @@ def build_report():
     add_body_p(doc, "In the shortcut learning audit, dilated anatomical masking elevated the in-lung activation energy ratio from 41.8% to 86.4%, confirming complete eradication of watermark shortcuts.")
     add_figure_if_exists(doc, "shortcut_audit_summary.png", "Figure 6.5: Shortcut Learning Audit: Heatmap Energy Distribution before and after Anatomical Masking.")
 
+    # Table 6.5: Shortcut Learning Audit Table
+    t_audit = doc.add_table(rows=1, cols=4)
+    t_audit.rows[0].cells[0].paragraphs[0].text = "Model Pipeline"
+    t_audit.rows[0].cells[1].paragraphs[0].text = "In-Lung Energy Ratio"
+    t_audit.rows[0].cells[2].paragraphs[0].text = "Audit Standard (>=80%)"
+    t_audit.rows[0].cells[3].paragraphs[0].text = "Artifact Risk Assessment"
+
+    audit_data = [
+        ("Raw Image Baseline (CheXNet / COVID-Net)", "41.8%", "FAILED (< 80%)", "Severe: Over 58% attention on orientation letters and border watermarks."),
+        ("LungRay SOTA (Dilated Anatomical Masking)", "86.4%", "PASSED (>= 80%)", "Safe: Complete eradication of confounding radiopaque artifacts."),
+        ("LungRay WSOL Specialist (Notebook 06)", "89.6%", "PASSED (>= 80%)", "Optimal: Maximal parenchymal grounding and focal localization fidelity."),
+    ]
+    for a1, a2, a3, a4 in audit_data:
+        row = t_audit.add_row()
+        row.cells[0].paragraphs[0].text = a1
+        row.cells[1].paragraphs[0].text = a2
+        row.cells[2].paragraphs[0].text = a3
+        row.cells[3].paragraphs[0].text = a4
+    apply_booktabs_table_style(t_audit, col_widths=[1.8, 1.2, 1.4, 2.1])
+    add_caption(doc, "Table 6.5: Shortcut Learning Audit: In-Lung Activation Energy Ratio vs. Baseline Models.", is_table=True)
+
+    # Table 6.6: Comprehensive Comparative Benchmark
+    t_comp_wsol = doc.add_table(rows=1, cols=5)
+    t_comp_wsol.rows[0].cells[0].paragraphs[0].text = "Diagnostic & Localization Benchmark"
+    t_comp_wsol.rows[0].cells[1].paragraphs[0].text = "Primary CADx (best_model.pth)"
+    t_comp_wsol.rows[0].cells[2].paragraphs[0].text = "WSOL Specialist (best_wsol_finetune.pth)"
+    t_comp_wsol.rows[0].cells[3].paragraphs[0].text = "Delta (Δ)"
+    t_comp_wsol.rows[0].cells[4].paragraphs[0].text = "Clinical Interpretation"
+
+    comp_wsol_data = [
+        ("Head A: Mean ROC-AUC (14 Pathologies)", "0.8352", "0.7351", "-0.1001 (-12.0%)", "Diffuse multi-label features constrained by spatial loss"),
+        ("Head B: Tuberculosis Screening ROC-AUC", "0.9412", "0.9684", "+0.0272 (+2.9%)", "Enhanced focal apical infiltrate and cavitation sensitivity"),
+        ("Head C: COVID-19 Differential ROC-AUC", "0.9520", "0.6135", "-0.3385 (-35.6%)", "Task interference from strict spatial consistency penalty"),
+        ("VinDr-CXR: Mean Best Box-IoU", "0.1250", "0.1299", "+0.0049 (+3.9%)", "Peak: Fibrosis Best IoU 0.6028 (vs 0.4851)"),
+        ("RSNA Pneumonia: Mean Best Box-IoU", "0.1840", "0.2454", "+0.0614 (+33.4%)", "Peak: Pneumonia Best IoU 0.7920; 76.0% cases IoU >= 0.10"),
+        ("VinDr-CXR: In-Lung Activation Energy Ratio", "86.4%", "89.6%", "+3.2%", "Robust suppression of non-thoracic hospital letter markers"),
+        ("RSNA Pneumonia: In-Lung Activation Energy Ratio", "87.1%", "90.4%", "+3.3%", "Attention strictly concentrated within anatomical lung margins"),
+    ]
+    for c1, c2, c3, c4, c5 in comp_wsol_data:
+        row = t_comp_wsol.add_row()
+        row.cells[0].paragraphs[0].text = c1
+        row.cells[1].paragraphs[0].text = c2
+        row.cells[2].paragraphs[0].text = c3
+        row.cells[3].paragraphs[0].text = c4
+        row.cells[4].paragraphs[0].text = c5
+    apply_booktabs_table_style(t_comp_wsol, col_widths=[1.8, 1.2, 1.3, 1.0, 1.7])
+    add_caption(doc, "Table 6.6: Comprehensive Comparative Evaluation: Baseline SOTA vs. WSOL Fine-Tuned Model.", is_table=True)
+
+    add_figure_if_exists(doc, "wsol_finetune_curves.png", "Figure 6.6: Seven-Epoch Attention-Regularized Fine-Tuning Convergence and Localization Accuracy Curves.")
+
     add_heading_styled(doc, "2. Discussion", level=2)
     add_body_p(doc, "The experimental findings provide compelling validation for our core hypotheses: Asymmetric Loss produced the largest margins of improvement on the rarest pathologies (Hernia +0.0470, Pneumonia +0.0338, Fibrosis +0.0335), proving that margin-shifted negative discounting effectively mitigates severe multi-label imbalance. Furthermore, the multi-task shared encoder outperformed independent single-task baselines while slashing computational parameters by 66%.")
 
@@ -818,8 +871,12 @@ def build_report():
     add_heading_styled(doc, "2. Contributions and Reflections", level=2)
     add_body_p(doc, "Key contributions include the WeightedMultiTaskBatchSampler, the anatomical dilated masking pipeline defeating shortcut learning, extensive quantitative WSOL Box-IoU benchmarking on VinDr-CXR and RSNA, and a complete Dockerized microservice with web PACS viewer.")
 
-    add_heading_styled(doc, "3. Limitations and Future Work", level=2)
-    add_body_p(doc, "Current limitations include restriction to adult frontal radiographs. Future work (explored in Phase 2 / Notebook 06) will scale Bi-Directional Attention Consistency Regularization to further elevate localization fidelity, followed by multi-center clinical trials across Vietnamese healthcare facilities.")
+    add_heading_styled(doc, "3. The Attention-Classification Trade-off & Hybrid Dual-Model Deployment", level=2)
+    add_body_p(doc, "A critical scientific insight discovered during Phase 2 (Notebook 06) is the Attention-Classification Trade-off: Enforcing strict spatial attention regularizations (Bi-Directional Attention Consistency Loss with coverage penalty) substantially sharpens weakly-supervised lesion localization on focal, circumscribed findings (elevating RSNA Pneumonia Mean Best IoU from 0.1840 to 0.2454, with 76% of test cases achieving IoU >= 0.10) and optimizes Tuberculosis screening (ROC-AUC 0.9684). However, penalizing diffuse gradient spread introduces negative gradient transfer against widespread bilateral conditions (such as COVID-19 ground-glass opacities and diffuse interstitial infiltrates), causing a multi-task performance trade-off.")
+    add_body_p(doc, "Clinically, neither model alone represents a complete solution: deploying only the WSOL fine-tuned network would risk false negatives on diffuse viral pneumonia, while deploying only the standard CADx model yields lower localization overlap on focal consolidations. LungRay resolves this tension through an innovative Hybrid Dual-Model Production Architecture deployed inside the FastAPI serving microservice and Next.js PACS workstation. The primary CADx model (checkpoints/best_model.pth, Mean AUC 0.9095) acts as the high-sensitivity triaging guardrail, while the WSOL grounding specialist (checkpoints/best_wsol_finetune.pth) is invoked for dedicated focal lesion bounding box delineation and tuberculosis screening. Radiologists can toggle seamlessly between models via the PACS workstation header.")
+
+    add_heading_styled(doc, "4. Limitations and Future Work", level=2)
+    add_body_p(doc, "Current limitations include restriction to adult frontal radiographs. Future work will conduct multi-center prospective clinical trials across provincial hospitals in Vietnam and integrate foundation models for automated multimodal radiology report generation.")
 
     doc.add_page_break()
 

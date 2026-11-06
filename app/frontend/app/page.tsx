@@ -23,6 +23,7 @@ export default function Home() {
 
   // Two-Section Navigation State: "scan" | "report"
   const [activeSection, setActiveSection] = useState<"scan" | "report">("scan");
+  const [selectedModel, setSelectedModel] = useState<string>("standard");
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -81,7 +82,8 @@ export default function Home() {
     head: string,
     classIdx: number,
     diseaseName: string,
-    grounding: boolean
+    grounding: boolean,
+    modelName: string = selectedModel
   ) => {
     setIsExplaining(true);
     setError(null);
@@ -91,7 +93,8 @@ export default function Home() {
         head,
         classIdx,
         grounding,
-        diseaseName
+        diseaseName,
+        modelName
       );
       setHeatmapUrl(`data:image/png;base64,${explainResult.heatmap_base64}`);
       if (explainResult.contour_base64) {
@@ -135,7 +138,7 @@ export default function Home() {
     setLoading(true);
     try {
       const [predResult, auditResult] = await Promise.all([
-        predictImage(selectedFile),
+        predictImage(selectedFile, selectedModel),
         auditImage(selectedFile),
       ]);
       setPrediction(predResult);
@@ -207,13 +210,36 @@ export default function Home() {
       selectedHead,
       selectedClass,
       selectedDiseaseName,
-      newGrounding
+      newGrounding,
+      selectedModel
     );
+  };
+
+  const handleModelChange = async (newModel: string) => {
+    setSelectedModel(newModel);
+    if (!file) return;
+    setLoading(true);
+    try {
+      const predResult = await predictImage(file, newModel);
+      setPrediction(predResult);
+      await fetchExplanation(
+        file,
+        selectedHead,
+        selectedClass,
+        selectedDiseaseName,
+        clinicalGrounding,
+        newModel
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to switch model");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#05080E] text-slate-100 font-sans">
-      <PacsHeader />
+      <PacsHeader selectedModel={selectedModel} onSelectModel={handleModelChange} />
 
       <main className="max-w-5xl mx-auto p-3 sm:p-5 space-y-4">
         {/* ========================================================================= */}

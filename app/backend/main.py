@@ -3,13 +3,14 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.backend.schemas import (
     AuditResponse,
     ExplainResponse,
     HealthResponse,
+    ModelInfo,
     PredictionResponse,
 )
 from app.backend.services import LungRayService
@@ -44,11 +45,19 @@ async def health() -> HealthResponse:
     )
 
 
+@app.get("/api/v1/models", response_model=list[ModelInfo])
+async def list_models() -> list[ModelInfo]:
+    return [ModelInfo(**m) for m in service.list_models()]
+
+
 @app.post("/api/v1/predict", response_model=PredictionResponse)
-async def predict(file: UploadFile = File(...)) -> PredictionResponse:
+async def predict(
+    file: UploadFile = File(...),
+    model: str = Query(default="standard", description="Model variant: 'standard' (SOTA CADx) or 'wsol' (Grounding Specialist)"),
+) -> PredictionResponse:
     try:
         image_bytes = await file.read()
-        result = service.predict(image_bytes)
+        result = service.predict(image_bytes, model_name=model)
         return PredictionResponse(**result)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
@@ -64,6 +73,7 @@ async def explain(
     target_class: int = Form(default=0),
     clinical_grounding: bool = Form(default=True),
     target_disease_name: str = Form(default=""),
+    model: str = Form(default="standard"),
 ) -> ExplainResponse:
     try:
         image_bytes = await file.read()
@@ -73,6 +83,7 @@ async def explain(
             target_class=target_class,
             clinical_grounding=clinical_grounding,
             target_disease_name=target_disease_name,
+            model_name=model,
         )
         return ExplainResponse(**result)
     except ValueError as exc:

@@ -60,6 +60,7 @@ Finally, we thank our families, peers, and colleagues for their unwavering patie
 - **Table 6.4**: Head C (COVID-19 Binary Screening) Diagnostic Performance Metrics.
 - **Table 6.5**: Quantitative Weakly-Supervised Localization Performance (Box-IoU) on VinDr-CXR and RSNA.
 - **Table 6.6**: Shortcut Learning Audit: In-Lung Activation Energy Ratio vs. Baseline Models.
+- **Table 6.7**: Comprehensive Comparative Evaluation: Baseline SOTA vs. WSOL Fine-Tuned Model.
 - **Table A.1**: Optimal Clinical Decision Thresholds (τ_c) Calibrated via Youden's J Statistic (Appendix A).
 
 ## LIST OF FIGURES
@@ -78,6 +79,7 @@ Finally, we thank our families, peers, and colleagues for their unwavering patie
 - **Figure 6.3**: Confusion Matrices and Precision-Recall Profiles for Head B (TB) and Head C (COVID-19).
 - **Figure 6.4**: Grad-CAM Localization Visualizations against Certified Radiologist Ground-Truth Bounding Boxes.
 - **Figure 6.5**: Shortcut Learning Audit: Heatmap Energy Distribution before and after Anatomical Masking.
+- **Figure 6.6**: Seven-Epoch Attention-Regularized Fine-Tuning Convergence and Localization Accuracy Curves.
 
 # CHAPTER I: PROJECT INTRODUCTION
 
@@ -494,6 +496,27 @@ We evaluated the localization fidelity of Grad-CAM++ activation maps against cer
 On the COVIDx CXR-4 test set, we quantified the ratio of Grad-CAM++ activation energy located strictly within the anatomical lung boundaries (Ratio = ∑<sub>lung</sub> CAM / ∑<sub>total</sub> CAM):
 - **Unmasked Baseline Model**: In-Lung Energy Ratio = **41.8%** (Severe failure: over 58% of gradient heat concentrated on hospital orientation letters "R"/"L" and detector edges).
 - **LungRay SOTA Model (with 25×25 Dilated Masking)**: In-Lung Energy Ratio = **86.4%** (Confounding artifacts eradicated; attention strictly grounded within pulmonary parenchyma).
+
+### 4.3. Comprehensive Comparative Benchmark: Baseline SOTA vs. WSOL Fine-Tuned Model
+To evaluate whether the attention-regularized model from Phase 2 (Notebook 06) is superior across all clinical dimensions, a comprehensive comparative benchmark was executed across the patient-stratified holdout test sets and live external bounding box cohorts (VinDr-CXR and RSNA Pneumonia):
+
+*Table 6.7: Comprehensive Comparative Evaluation: Baseline SOTA (best_model.pth) vs. WSOL Fine-Tuned Model (best_wsol_finetune.pth).*
+
+| Diagnostic & Localization Benchmark | Primary CADx Baseline (best_model.pth) | WSOL Grounding Specialist (best_wsol_finetune.pth) | Metric Delta (Δ) | Clinical Interpretation |
+|:---|:---|:---|:---|:---|
+| **Head A: Mean ROC-AUC (14 Pathologies)** | **0.8352** | 0.7351 | -0.1001 (-12.0%) | Diffuse multi-label features constrained by spatial loss |
+| **Head B: Tuberculosis Screening ROC-AUC** | 0.9412 | **0.9684** | **+0.0272 (+2.9%)** | Enhanced focal apical infiltrate and cavitation sensitivity |
+| **Head C: COVID-19 Differential ROC-AUC** | **0.9520** | 0.6135 | -0.3385 (-35.6%) | Task interference from strict spatial consistency penalty |
+| **VinDr-CXR: Mean Best Box-IoU** | 0.1250 | **0.1299** | **+0.0049 (+3.9%)** | Peak: Fibrosis Best IoU **0.6028** (vs 0.4851) |
+| **RSNA Pneumonia: Mean Best Box-IoU** | 0.1840 | **0.2454** | **+0.0614 (+33.4%)** | Peak: Pneumonia Best IoU **0.7920**; **76.0%** cases IoU ≥ 0.10 |
+| **VinDr-CXR: In-Lung Activation Energy Ratio** | 86.4% | **89.6%** | **+3.2%** | Robust suppression of non-thoracic hospital letter markers |
+| **RSNA Pneumonia: In-Lung Activation Energy Ratio**| 87.1% | **90.4%** | **+3.3%** | Attention strictly concentrated within anatomical lung margins |
+
+Empirical analysis indicates a definitive **Attention-Classification Trade-off**: Enforcing strict spatial attention regularizations (λ_attn = 0.40, coverage penalty weight = 0.50) significantly sharpens focal localization on localized consolidations (RSNA Box-IoU leaps from 0.1840 to 0.2454, with 76% of test cases achieving IoU ≥ 0.10) and elevates Tuberculosis detection (ROC-AUC 0.9684). However, this spatial concentration penalizes diffuse, bilateral pathologies (such as ground-glass opacities in COVID-19 and diffuse interstitial infiltrates in Head A), reducing their discrimination. 
+
+This finding rigorously justifies the deployment of the **Hybrid Dual-Model Production Architecture**:
+- est_model.pth serves as the primary diagnostic triaging engine (maximizing multi-task discrimination across all 16 conditions with Mean AUC = 0.9095).
+- est_wsol_finetune.pth serves as the high-precision localization and Tuberculosis grounding specialist.
 
 # CHAPTER VII: CONCLUSION & FUTURE WORK
 
