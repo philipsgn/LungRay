@@ -43,6 +43,19 @@
    - 🔴 **Ràng buộc 7 (Chuẩn Nghiên cứu Thực nghiệm Sống & Cấm Tuyệt đối Fake/Display Ảnh Tĩnh)**: Mọi phân tích dữ liệu (EDA), đánh giá mô hình, ma trận nhầm lẫn (Confusion Matrix), Grad-CAM heatmap hay định vị IoU trong Jupyter Notebooks (`notebooks/*.ipynb`) **BẮT BUỘC phải viết bằng code Python/PyTorch tương tác sống** (`pandas`, `seaborn`, `matplotlib`, `zipfile`, `cv2`, `PIL`), tính toán trực tiếp từ dữ liệu thực tế và xuất đồ thị/ảnh live trong phiên làm việc. **TUYỆT ĐỐI CẤM** hành vi dùng `display(Image("...png"))` hay nhúng ảnh tĩnh dựng sẵn vào notebook để giả lập kết quả.
    - 🔴 **Ràng buộc 8 (Dọn dẹp Tệp Tạm & Tinh gọn Không gian Dự án - Lean Workspace & Immediate Scratch Cleanup)**: Khi tạo tệp tạm thời (scratch scripts, runner helpers, debug logs, test dumps) để hỗ trợ quá trình thực thi: **BẮT BUỘC phải xóa sạch ngay lập tức sau khi hoàn thành nhiệm vụ**. Tuyệt đối không để lại mã nguồn rác, tệp mồ côi trong `scripts/`, `src/` hoặc thư mục gốc. Workspace phải luôn ở trạng thái tinh gọn chuẩn Enterprise.
    - 🔴 **Ràng buộc 9 (Chuẩn Báo Cáo Nghiên Cứu Khoa Học & Luận Án Đơn Sắc - Academic Report Rigor & Monochrome Standards)**: Mọi tài liệu báo cáo nghiệm thu, tài liệu kỹ thuật, bài báo khoa học và kết xuất PDF (`reports/`, `results/*.md`, `results/*.pdf`) **BẮT BUỘC** phải tuân thủ nghiêm ngặt [.agents/rules/academic_report_standards.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/.agents/rules/academic_report_standards.md): Tuyệt đối cấm sử dụng icon/emoji, bắt buộc dùng phông chữ Times New Roman trang trọng, bảng biểu Booktabs 3 đường kẻ đen, tone màu đơn sắc đen trắng, và văn phong nghiên cứu khoa học khách quan.
+   - 🔴 **Ràng buộc 10 (Giao thức Đồng bộ hóa Tài liệu & Model Toàn diện - Mandatory Model-to-Docs Sync Protocol)**: Bất kỳ khi nào có bất kỳ cập nhật hoặc thay đổi nào liên quan đến:
+     1. **Mô hình / Checkpoint mới** (ví dụ: huấn luyện lại backbone, thêm ResNet-50, ViT, hoặc WSOL fine-tuning checkpoint).
+     2. **Kết quả / Chỉ số thực nghiệm mới** (ROC-AUC, độ nhạy, độ đặc hiệu, F1, Box-IoU định vị, hàm mất mát, độ trễ suy luận latency).
+     3. **Quy trình xử lý / Thuật toán** (hàm Loss, cơ chế lấy mẫu batch, ngưỡng Youden's J, kỹ thuật che phổi dilated lung mask).
+     
+     **BẮT BUỘC** Agent phải quét toàn bộ tài liệu dự án và cập nhật chính xác, đồng bộ vào đúng các danh mục/bảng tương ứng trên **toàn bộ 7 tài liệu trọng yếu** sau đây trước khi bàn giao:
+     - 1. `TECH_ARCHITECTURE.md`: Cập nhật bảng tham số, cấu hình backbone, độ trễ suy luận và sơ đồ luồng dữ liệu.
+     - 2. `PRD.md`: Cập nhật tiêu chí nghiệm thu chức năng (FR/NFR) và danh mục các mô hình được hỗ trợ.
+     - 3. `PHASES.md`: Cập nhật tiến độ nhiệm vụ, số lượng kiểm thử unit test và trạng thái cổng chất lượng.
+     - 4. `reports/DSP391_Full_Thesis_Report.md`: Cập nhật các bảng số liệu thực nghiệm (Bảng 4.2–4.4, Bảng 6.1–6.9, Phụ lục A.1).
+     - 5. `reports/docs_report.md`: Cập nhật bản sao tài liệu luận văn chuẩn copy-paste vào Word (0 ký tự raw LaTeX `$`).
+     - 6. `reports/LANDING_PAGE_REPORT.html`: Cập nhật các thẻ chỉ số tóm tắt, biểu đồ động Chart.js và bảng đối chiếu đa mô hình.
+     - 7. `docs/DEMO_PRESENTATION_GUIDE.md`: Cập nhật kịch bản trình diễn 5 ca bệnh và hướng dẫn nạp checkpoint mới.
 3. **Bước 3 — Thực thi nhất quán (Execution with Integrity)**:
    - Không tự ý bổ sung dataset ngoài phạm vi đã duyệt (ví dụ: không tải MIMIC-CXR 570GB).
    - Không tự ý thay đổi taxonomy hoặc loại bỏ nhiệm vụ khi chưa có phê duyệt từ `Lead AI Orchestrator`.
@@ -235,6 +248,14 @@ graph TD
 - **Điều kiện bàn giao**:
   - Hệ thống Docker Compose khởi chạy thành công và hoạt động mượt mà.
   - Toàn bộ bảng số liệu thực nghiệm (AUC, F1, IoU, Audit) đã được trích xuất thành file CSV chuẩn.
+
+### Giao thức 5: Model Evolution & Full Documentation Synchronization Protocol (Gate 2 & 3 Extension)
+- **Bên giao**: `ModelArchitectAgent` + `XAIEvalAgent`
+- **Bên nhận**: `QAReportAgent` + `FullstackDeployAgent` + `Lead AI Orchestrator`
+- **Điều kiện bàn giao**:
+  - Khi có checkpoint mới hoặc kết quả đánh giá mới: các chỉ số trong `configs/optimal_thresholds.json` và API endpoint `/api/v1/models` phải được cập nhật đồng thời.
+  - Cả 7 tài liệu trọng yếu trong Danh mục Đồng bộ Bắt buộc (Ràng buộc 10) phải được rà soát và chỉnh sửa đúng chính xác từng bảng biểu, biểu đồ và văn bản phân tích.
+  - Lệnh kiểm tra tự động `powershell -File scripts/verify.ps1` phải chạy đạt 100% PASS trên cả 4 bước (bao gồm Bước 4: Model & Documentation Integrity Check).
 
 ---
 
