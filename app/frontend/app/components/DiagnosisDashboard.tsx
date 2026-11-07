@@ -202,6 +202,53 @@ export default function DiagnosisDashboard({
         </div>
       )}
 
+      {/* Consensus Ensemble Agreement Banner */}
+      {prediction?.ensemble_agreement !== undefined && (
+        <div className="bg-[#0B0F19] border border-purple-800/60 rounded-xl p-3 shadow-sm flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+              <span className="text-xs font-bold text-purple-200 uppercase tracking-wider">
+                {lang === "vi" ? "Độ đồng thuận Ensemble" : "Ensemble Consensus Agreement"}
+              </span>
+            </div>
+            <span
+              className={`px-2 py-0.5 rounded text-xs font-bold border ${
+                prediction.ensemble_agreement >= 0.9
+                  ? "bg-emerald-950/80 text-emerald-300 border-emerald-700/60"
+                  : prediction.ensemble_agreement >= 0.8
+                  ? "bg-amber-950/80 text-amber-300 border-amber-700/60"
+                  : "bg-rose-950/80 text-rose-300 border-rose-700/60"
+              }`}
+            >
+              {(prediction.ensemble_agreement * 100).toFixed(1)}%{" "}
+              {prediction.ensemble_agreement >= 0.9
+                ? lang === "vi"
+                  ? "Đồng thuận cao"
+                  : "High Agreement"
+                : lang === "vi"
+                ? "Có phân kỳ"
+                : "Moderate Divergence"}
+            </span>
+          </div>
+          {prediction.ensemble_models && (
+            <div className="text-[10px] text-slate-400 flex flex-wrap gap-1.5 items-center">
+              <span className="text-slate-500 font-semibold">
+                {lang === "vi" ? "Mô hình tham gia:" : "Participating Backbones:"}
+              </span>
+              {prediction.ensemble_models.map((m, idx) => (
+                <span
+                  key={idx}
+                  className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-purple-300/80"
+                >
+                  {m}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* ACCORDION 1: BÁO CÁO LÂM SÀNG TỔNG HỢP & CẢNH BÁO AN TOÀN OOD            */}
       {/* ========================================================================= */}

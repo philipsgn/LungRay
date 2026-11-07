@@ -53,7 +53,7 @@ async def list_models() -> list[ModelInfo]:
 @app.post("/api/v1/predict", response_model=PredictionResponse)
 async def predict(
     file: UploadFile = File(...),
-    model: str = Query(default="standard", description="Model variant: 'standard' (SOTA CADx) or 'wsol' (Grounding Specialist)"),
+    model: str = Query(default="standard", description="Model variant: 'standard' (SOTA CADx), 'wsol' (Grounding Specialist), or 'ensemble' (Consensus Multi-Backbone)"),
 ) -> PredictionResponse:
     try:
         image_bytes = await file.read()

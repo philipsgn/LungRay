@@ -1,7 +1,7 @@
 """Pydantic request/response schemas for the LungRay FastAPI backend."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -54,6 +54,9 @@ class PredictionResponse(BaseModel):
         ..., description="COVID-19 screening result with probability and binary flag"
     )
     inference_time_ms: float = Field(..., ge=0.0, description="Pure inference latency in ms")
+    ensemble_agreement: Optional[float] = Field(None, description="Consensus agreement percentage across ensemble models [0, 1]")
+    ensemble_models: list[str] = Field(default_factory=list, description="Participating ensemble backbones")
+    individual_model_predictions: Optional[dict[str, Any]] = Field(None, description="Individual model outputs")
     safety: SafetyDecisionSchema = Field(
         ..., description="OOD Fail-Safe evaluation and rejection decision"
     )
@@ -85,3 +88,9 @@ class AuditResponse(BaseModel):
     in_lung_energy_ratio: float = Field(..., ge=0.0, le=1.0)
     pass_80_percent: bool = Field(..., description="Whether the in-lung ratio meets the 80% threshold")
     lung_mask_base64: str = Field(..., description="Base64-encoded lung mask PNG")
+
+
+PredictionResponse.model_rebuild()
+ModelInfo.model_rebuild()
+ExplainResponse.model_rebuild()
+AuditResponse.model_rebuild()

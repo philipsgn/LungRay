@@ -49,6 +49,9 @@ export interface PredictionResponse {
   inference_time_ms: number;
   active_model?: string;
   model_display_name?: string;
+  ensemble_agreement?: number;
+  ensemble_models?: string[];
+  individual_model_predictions?: Record<string, any>;
   safety?: SafetyDecision;
   report?: ClinicalReport;
 }

@@ -63,6 +63,18 @@ export default function PacsHeader({
             >
               WSOL Specialist
             </button>
+            <button
+              type="button"
+              onClick={() => onSelectModel("ensemble")}
+              title="Consensus Ensemble (DenseNet-121 + ResNet-50 + WSOL Adaptive Soft-Voting & Inter-Model Agreement)"
+              className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
+                selectedModel === "ensemble"
+                  ? "bg-purple-950/80 text-purple-300 border border-purple-700/60 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Consensus Ensemble
+            </button>
           </div>
         )}
 

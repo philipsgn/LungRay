@@ -312,3 +312,42 @@ def test_predict_with_wsol_model(client: TestClient) -> None:
     assert "head_a_prediction" in payload
     assert "head_b_tb_screening" in payload
 
+
+def test_predict_with_ensemble_model(client: TestClient) -> None:
+    image_bytes = _make_image_bytes()
+    response = client.post(
+        "/api/v1/predict?model=ensemble",
+        files={"file": ("cxr.png", image_bytes, "image/png")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["active_model"] == "ensemble"
+    assert "Consensus" in payload["model_display_name"]
+    assert payload["ensemble_agreement"] is not None
+    assert 0.0 <= payload["ensemble_agreement"] <= 1.0
+    assert len(payload["ensemble_models"]) >= 2
+    assert "individual_model_predictions" in payload
+    assert "densenet121_standard" in payload["individual_model_predictions"]
+    assert "head_a_prediction" in payload
+    assert "safety" in payload
+
+
+def test_explain_with_ensemble_model(client: TestClient) -> None:
+    image_bytes = _make_image_bytes()
+    response = client.post(
+        "/api/v1/explain",
+        files={"file": ("cxr.png", image_bytes, "image/png")},
+        data={
+            "target_head": "head_b",
+            "target_class": 0,
+            "clinical_grounding": "true",
+            "target_disease_name": "Tuberculosis",
+            "model": "ensemble",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["target_disease_name"] == "Tuberculosis"
+    assert payload["heatmap_base64"] != ""
+
+
