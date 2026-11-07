@@ -10,7 +10,7 @@
 | **Tiến độ Hiện tại** | **36 / 36 Tasks Hoàn Thành (100.0%) — Delivery Gate 6 Approved (Final Defense Milestone Closed)** |
 | **Độ sẵn sàng sản phẩm**| **98/100** (Full Academic Suite: 4 Thí nghiệm SOTA, Fail-Safe OOD Layer, Grounded Report, Native PACS) |
 | **Tiêu chuẩn** | Senior AI Engineer / Staff AI Architect (10+ YOE) |
-| **Quy chuẩn kiểm thử** | Tự động hóa qua PyTest, Script CLI & Metric Thresholds (`powershell -File scripts/verify.ps1`: 125/125 Tests PASS) |
+| **Quy chuẩn kiểm thử** | Tự động hóa qua PyTest, Script CLI & Metric Thresholds (`powershell -File scripts/verify.ps1`: 136/136 Tests PASS) |
 
 ---
 

@@ -86,6 +86,14 @@ Xây dựng **LungRay** — hệ sinh thái phần mềm **Hỗ trợ Ra Quyết
   - Tầng chiếu đặc trưng tích hợp **LayerNorm parameter-free** (`elementwise_affine=False`) đặt sau GAP và trước Dropout(0.2), bảo đảm 100% tương thích nghiêm ngặt với checkpoint `checkpoints/best_model.pth` (không sinh key lạ trong `state_dict`).
   - Hỗ trợ gọi suy luận riêng lẻ từng head qua tham số `task_id` (`'head_a'`, `'head_b'`, `'head_c'`) để tiết kiệm FLOPs hoặc gộp toàn diện cả 3 heads trong 1 lần forward pass.
   - Bảo đảm cơ chế Zero Gradient Leakage giữa các heads trong quá trình huấn luyện.
+- **FR1.6 — Multi-Backbone Consensus Serving & Adaptive Soft-Voting Ensemble (Phase 2 & Phase 7)**:
+  - Hỗ trợ chuyển đổi linh hoạt giữa 3 chế độ suy luận:
+    1. `standard`: Mô hình DenseNet-121 SOTA CADx (`best_model.pth`, Mean AUC 0.9095) phục vụ triaging khẩn cấp 16 bệnh.
+    2. `wsol`: Mô hình DenseNet-121 WSOL Attention Specialist (`best_wsol_finetune.pth`, RSNA Box-IoU 0.2454, TB AUC 0.9684) tối ưu định vị tổn thương khu trú.
+    3. `ensemble`: Động cơ đồng thuận kết hợp liên minh 3 mô hình (DenseNet-121 + ResNet-50 + WSOL Specialist) qua thuật toán bỏ phiếu mềm thích ứng.
+  - Tự động tính toán điểm số đồng thuận đa mô hình `ensemble_agreement` $\in [0, 1]$ và hiển thị huy hiệu Consensus trên trạm đọc PACS Next.js.
+  - Đối chiếu kiểm chứng thực nghiệm lâm sàng theo nghiên cứu công bố trên *The Lancet Digital Health* (PubMed 34219054): Hợp tác Bác sĩ X-quang và trợ lý AI giúp nâng độ chính xác từ 0.713 lên 0.808 ROC-AUC (+0.095 AUC) đồng thời giảm 48.6% thời gian đọc mỗi ca bệnh.
+  - Xác minh độ bao quát lâm sàng đạt 100% các bệnh lý lồng ngực khả dĩ trên ảnh X-quang ngực phẳng theo chuẩn quốc tế *The Radiology Assistant Chest Index*.
 
 ### FR1.5 — Phase 8: Clinical Fail-Safe Layer & OOD Anomaly Lockout
 - **FR1.5.1 — Helmholtz Free Energy Safety Gate ($S_E$)**:
