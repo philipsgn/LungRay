@@ -78,6 +78,12 @@ export default function PacsHeader({
           </div>
         )}
 
+        {/* Clinical TTA Robustness Indicator */}
+        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-950/40 border border-emerald-800/60 rounded text-[10px] text-emerald-400 font-medium">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>TTA 3-Pass Active</span>
+        </div>
+
         {/* Language Switcher Pill */}
         <div className="bg-slate-900 border border-slate-800 rounded-md p-0.5 flex items-center shadow-inner">
           <button

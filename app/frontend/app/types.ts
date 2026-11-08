@@ -47,6 +47,9 @@ export interface PredictionResponse {
   head_b_tb_screening: HeadBScreening;
   head_c_covidx: HeadCScreening;
   inference_time_ms: number;
+  tta_enabled?: boolean;
+  passes_executed?: number;
+  calibration_temperature?: number;
   active_model?: string;
   model_display_name?: string;
   ensemble_agreement?: number;

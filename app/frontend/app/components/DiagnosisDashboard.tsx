@@ -249,6 +249,21 @@ export default function DiagnosisDashboard({
         </div>
       )}
 
+      {/* TTA & Confidence Calibration Indicator */}
+      {prediction?.tta_enabled && (
+        <div className="bg-[#0B0F19] border border-emerald-900/40 rounded-xl px-3 py-2 text-[11px] flex items-center justify-between text-slate-300 shadow-sm">
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span className="font-semibold text-emerald-300">
+              {lang === "vi" ? "Kiểm định đa góc độ (TTA 3-Pass)" : "Clinical 3-Pass TTA Active"}
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+            {lang === "vi" ? "Hiệu chuẩn nhiệt độ: T=1.20" : "Calibrated: T=1.20"}
+          </span>
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* ACCORDION 1: BÁO CÁO LÂM SÀNG TỔNG HỢP & CẢNH BÁO AN TOÀN OOD            */}
       {/* ========================================================================= */}

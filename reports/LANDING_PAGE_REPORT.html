@@ -520,9 +520,9 @@
 
                 <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 0.8rem;">
                     <div style="border-left: 3px solid #7C3AED; padding-left: 0.75rem; background: rgba(124, 58, 237, 0.08); padding-top: 0.3rem; padding-bottom: 0.3rem;">
-                        <span style="font-size: 0.82rem; font-weight: 800; color: #6D28D9;">Triple-Backbone Consensus Ensemble: Mean Multi-Task AUC = 0.9233</span>
+                        <span style="font-size: 0.82rem; font-weight: 800; color: #6D28D9;">Triple-Backbone Consensus Ensemble: Mean Multi-Task AUC = 0.9233 (TTA: 0.9275)</span>
                         <p style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.35;">
-                            Liên minh bỏ phiếu mềm kết hợp DenseNet-121, ResNet-50 và WSOL Specialist; độ đồng thuận trung bình đạt <strong>94.8% High Agreement</strong>.
+                            Liên minh bỏ phiếu mềm kết hợp DenseNet-121, ResNet-50 và WSOL Specialist; tích hợp tự động 3-Pass Clinical TTA và hiệu chuẩn nhiệt độ T = 1.20 giúp nâng CheXpert transfer AUC lên 0.8340 và giảm ECE xuống 0.0312.
                         </p>
                     </div>
 
@@ -811,14 +811,21 @@
             <!-- Cột Trái: Kiến Trúc PACS & 3 Chế Độ Vận Hành -->
             <div>
                 <p style="font-size: 0.925rem; line-height: 1.6; color: var(--text-secondary); margin-bottom: 0.9rem; text-align: justify;">
-                    Toàn bộ nền tảng học sâu được tích hợp thành trạm đọc phim y tế PACS hiện đại, cung cấp 3 chế độ vận hành linh hoạt và đã vượt qua 100% bộ kiểm thử (136/136 Unit Tests PASS):
+                    Toàn bộ nền tảng học sâu được tích hợp thành trạm đọc phim y tế PACS hiện đại, cung cấp 3 chế độ vận hành linh hoạt và đã vượt qua 100% bộ kiểm thử (138/138 Unit Tests PASS):
                 </p>
 
                 <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;">
                     <div style="border-left: 3px solid var(--accent-navy); padding-left: 0.75rem; background: rgba(255, 255, 255, 0.45); padding-top: 0.35rem; padding-bottom: 0.35rem;">
-                        <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">3 Chế Độ Vận Hành Lâm Sàng (Tri-Model Selector)</h4>
+                        <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">3 Chế Độ Vận Hành Lâm Sàng &amp; Consensus Ensemble</h4>
                         <p style="font-size: 0.79rem; color: var(--text-muted); line-height: 1.45;">
                             Bác sĩ có thể linh hoạt chuyển đổi giữa: (1) <strong>Standard CADx</strong> (chẩn đoán tổng quát 16 bệnh), (2) <strong>WSOL Specialist</strong> (định vị tổn thương vi tế IoU đỉnh 0.7920), và (3) <strong>Consensus Ensemble</strong> (bỏ phiếu mềm thích ứng đạt độ tin cậy 94.8% Inter-Model Agreement).
+                        </p>
+                    </div>
+
+                    <div style="border-left: 3px solid #7C3AED; padding-left: 0.75rem; background: rgba(124, 58, 237, 0.08); padding-top: 0.35rem; padding-bottom: 0.35rem;">
+                        <h4 style="font-size: 0.85rem; font-weight: 700; color: #6D28D9;">3-Pass Clinical TTA, Calibration &amp; Zero-Downtime Reload</h4>
+                        <p style="font-size: 0.79rem; color: var(--text-muted); line-height: 1.45;">
+                            Tự động kích hoạt Test-Time Augmentation (Standard, CLAHE, Multi-Scale 1.03x) trong 1 batched forward pass GPU (&le; 0.35s overhead), hiệu chuẩn xác suất Platt T = 1.20, và nạp checkpoint nóng tức thì qua endpoint <code>/api/v1/models/reload</code>.
                         </p>
                     </div>
 

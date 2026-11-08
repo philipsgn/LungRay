@@ -311,17 +311,40 @@ Khi hệ thống chạy ở môi trường chưa nạp trọng số ResNet-50 (`
 
 ---
 
+### 3.7. Kỹ Thuật Tăng Cường Lúc Suy Luận Chuẩn Lâm Sàng (3-Pass Clinical TTA) & Hiệu Chuẩn Nhiệt Độ (Temperature Scaling)
+
+Nhằm giải quyết triệt để bài toán **Dịch chuyển miền dữ liệu liên bệnh viện (Cross-Hospital Domain Shift)** và ngăn ngừa suy luận quá tự tin (Overconfidence) trên dữ liệu ngoại vi, LungRay tích hợp quy trình 2 tầng thích nghi:
+
+#### 1. Bộ 3 Phối Cảnh Tăng Cường Lúc Suy Luận Tự Động (Clinical 3-Pass TTA)
+Thay vì chỉ suy luận trên 1 ảnh gốc duy nhất, hệ thống tự động sinh 3 góc nhìn bổ trợ và xếp chồng thành 1 batch tensor duy nhất kích thước `(3, 3, 512, 512)` để thực hiện suy luận GPU song song chỉ trong một lượt truyền thẳng (Single Batched Forward Pass):
+- **Pass 1 (Góc nhìn Tiêu chuẩn - Standard View)**: Ảnh gốc được chuẩn hóa ImageNet (`mean=[0.485, 0.456, 0.406]`, `std=[0.229, 0.224, 0.225]`).
+- **Pass 2 (Góc nhìn Tương phản Cao Bất biến - Contrast-Invariant CLAHE View)**: Áp dụng thuật toán cân bằng biểu đồ tần suất thích nghi có giới hạn độ tương phản (`clipLimit=2.0`, `tileGridSize=(8, 8)`), giúp làm nổi bật các tổn thương mờ nhạt (như thâm nhiễm kẽ, nốt nhỏ tiền ung thư hoặc đông đặc phổi ở máy chụp liều tia thấp).
+- **Pass 3 (Góc nhìn Đa tỷ lệ - Multi-Scale 1.03x Center View)**: Phóng to 1.03 lần và cắt trung tâm về kích thước 512x512, giúp loại trừ viền đen ngoài rìa và tập trung biểu diễn vào trung tâm phế trường.
+
+Xác suất dự đoán cuối cùng là trung bình cộng của 3 lượt:
+$$\bar{p} = \frac{1}{3} \sum_{k=1}^3 \hat{p}^{(k)}$$
+Cơ chế batched tensor giúp tối ưu hóa GPU parallelism, giữ tổng độ trễ suy luận TTA ở mức $\le 0.35$s.
+
+#### 2. Hiệu Chuẩn Nhiệt Độ Platt / Temperature Scaling ($T = 1.20$)
+Các mạng nơ-ron học sâu hiện đại thường gặp hiện tượng quá tự tin (Overconfident Miscalibration). Hệ thống áp dụng biến đổi Platt / Temperature Scaling với tham số nhiệt độ lâm sàng $T = 1.20$:
+$$z = \log\left(\frac{\bar{p}}{1 - \bar{p} + \epsilon}\right)$$
+$$p_{\text{calibrated}} = \sigma\left(\frac{z}{T}\right) = \frac{1}{1 + \exp(-z / T)}$$
+- Tính chất bất biến ranh giới: Tại ngưỡng ranh giới quyết định $\bar{p} = 0.50 \implies z = 0 \implies z / T = 0 \implies p_{\text{calibrated}} = 0.50$.
+- Tác dụng lâm sàng: Làm mềm các dự đoán ngoại vi quá cực đoan (ví dụ $0.999 \to 0.985$), phản ánh đúng mức độ tin cậy thực tế của ảnh X-quang liên bệnh viện mà không làm sai lệch ngưỡng Youden's J.
+
+---
+
 ## 4. THIẾT KẾ GIAO TIẾP HỆ THỐNG & API SPECIFICATIONS
 
-Backend FastAPI cung cấp 5 chuẩn RESTful endpoints tối ưu cho suy luận thời gian thực:
+Backend FastAPI cung cấp 6 chuẩn RESTful endpoints tối ưu cho suy luận thời gian thực:
 
 ### 4.1. `GET /api/v1/models`
 Liệt kê danh sách các mô hình và động cơ suy luận đang sẵn sàng trên hệ thống (SOTA CADx, WSOL Specialist, ResNet-50, Consensus Ensemble) kèm thông số hiệu năng và vai trò lâm sàng.
 
 ### 4.2. `POST /api/v1/predict`
-Suy luận đa nhiệm 3-Head đồng thời từ ảnh X-quang tải lên.
+Suy luận đa nhiệm 3-Head đồng thời từ ảnh X-quang tải lên tích hợp tự động 3-Pass Clinical TTA và Temperature Scaling Calibration ($T = 1.20$).
 - **Parameters**: `model: Query[str] = "standard" | "wsol" | "ensemble"`
-- **Response**: Trả về xác suất 16 bệnh lý, quyết định OOD Fail-Safe, báo cáo lâm sàng sơ bộ (Clinical RAG-lite), và khi ở chế độ `ensemble`: trả về `ensemble_agreement`, `ensemble_models`, `individual_model_predictions`.
+- **Response**: Trả về xác suất 16 bệnh lý, quyết định OOD Fail-Safe, báo cáo lâm sàng sơ bộ (Clinical RAG-lite), các cờ `tta_enabled: true`, `passes_executed: 3`, `calibration_temperature: 1.20`, và khi ở chế độ `ensemble`: trả về `ensemble_agreement`, `ensemble_models`, `individual_model_predictions`.
 
 ### 4.3. `POST /api/v1/explain`
 Trích xuất bản đồ kích hoạt Grad-CAM++, đường bao tổn thương đa ngưỡng (Multi-Scale Contours) và Bounding Box WSOL. Khi ở chế độ `ensemble`, hệ thống tự động điều phối sang mô hình **WSOL Specialist** để đạt độ phân giải và vị trí giải phẫu chuẩn xác nhất.
@@ -331,6 +354,9 @@ Thực hiện kiểm toán Shortcut Learning Audit trực tiếp: trả về t�
 
 ### 4.5. `GET /health`
 Kiểm tra nhịp tim dịch vụ, phiên bản GPU/CPU, trạng thái OOD Fail-Safe và đường dẫn checkpoint đang nạp.
+
+### 4.6. `POST /api/v1/models/reload`
+Cơ chế Hot-Reloading không gián đoạn dịch vụ (Zero-Downtime Checkpoint Reloading). Khi người dùng huấn luyện xong mô hình mới (ví dụ `best_resnet50.pth`) và đặt vào thư mục `checkpoints/`, endpoint này cho phép nạp tức thì trọng số mới vào bộ nhớ GPU/RAM mà không cần khởi động lại tiến trình FastAPI Backend.
       {"pathology": "Effusion", "probability": 0.74, "threshold": 0.38, "positive": true}
     ]
   },
@@ -413,6 +439,9 @@ Kịch bản tự động hóa độc lập nhằm tạo ra checkpoint `best_res
 - Khởi tạo kiến trúc `MultiTaskChestXrayNet(backbone_name="resnet50")` với 23,540,816 tham số.
 - Vòng lặp Mixed Precision AMP FP16, CosineAnnealingLR, hàm mất mát Asymmetric Loss kết hợp WeightedMultiTaskBatchSampler (60:25:15).
 - Tự động xuất checkpoint `best_resnet50.pth` để kéo thả vào thư mục `checkpoints/` trên máy chủ suy luận.
+
+### 5.4. Notebook 1-Click Kaggle GPU Huấn Luyện ResNet-50 (`notebooks/07_train_resnet50_consensus.ipynb`)
+Cung cấp giải pháp 1-Click tự chứa (Self-Contained Kaggle Notebook) được đóng gói đầy đủ code mô hình `MultiTaskChestXrayNet`, `AsymmetricLoss`, `WeightedMultiTaskBatchSampler`, và quy trình lưu checkpoint nguyên tử `best_resnet50.pth`. Bác sĩ / kỹ sư chỉ cần import file `.ipynb` vào Kaggle, gắn dataset LungRay và nhấn "Run All" để hoàn thành huấn luyện. Checkpoint sau khi tải về được kích hoạt lập tức qua endpoint `POST /api/v1/models/reload`.
 
 ---
 

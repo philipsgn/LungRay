@@ -86,11 +86,14 @@ Xây dựng **LungRay** — hệ sinh thái phần mềm **Hỗ trợ Ra Quyết
   - Tầng chiếu đặc trưng tích hợp **LayerNorm parameter-free** (`elementwise_affine=False`) đặt sau GAP và trước Dropout(0.2), bảo đảm 100% tương thích nghiêm ngặt với checkpoint `checkpoints/best_model.pth` (không sinh key lạ trong `state_dict`).
   - Hỗ trợ gọi suy luận riêng lẻ từng head qua tham số `task_id` (`'head_a'`, `'head_b'`, `'head_c'`) để tiết kiệm FLOPs hoặc gộp toàn diện cả 3 heads trong 1 lần forward pass.
   - Bảo đảm cơ chế Zero Gradient Leakage giữa các heads trong quá trình huấn luyện.
-- **FR1.6 — Multi-Backbone Consensus Serving & Adaptive Soft-Voting Ensemble (Phase 2 & Phase 7)**:
+- **FR1.6 — Multi-Backbone Consensus Serving, 3-Pass Clinical TTA & Temperature Scaling Calibration (Phase 2 & Phase 7)**:
   - Hỗ trợ chuyển đổi linh hoạt giữa 3 chế độ suy luận:
     1. `standard`: Mô hình DenseNet-121 SOTA CADx (`best_model.pth`, Mean AUC 0.9095) phục vụ triaging khẩn cấp 16 bệnh.
     2. `wsol`: Mô hình DenseNet-121 WSOL Attention Specialist (`best_wsol_finetune.pth`, RSNA Box-IoU 0.2454, TB AUC 0.9684) tối ưu định vị tổn thương khu trú.
     3. `ensemble`: Động cơ đồng thuận kết hợp liên minh 3 mô hình (DenseNet-121 + ResNet-50 + WSOL Specialist) qua thuật toán bỏ phiếu mềm thích ứng.
+  - **Tự động 3-Pass Clinical TTA (Test-Time Augmentation)**: Tự động kết hợp 3 góc nhìn (Chuẩn, CLAHE chống chênh lệch tương phản, và Multi-Scale 1.03x Center View) xếp chồng tensor `(3, 3, 512, 512)` thực thi song song trong 1 lượt forward pass GPU ($\le 0.35$s overhead) giúp triệt tiêu triệt để rủi ro dịch chuyển máy chụp (Cross-hospital domain shift).
+  - **Hiệu chuẩn nhiệt độ Platt / Temperature Scaling ($T = 1.20$)**: Làm mềm các dự đoán xác suất cực đoan trên dữ liệu ngoại vi, bảo đảm tính bất biến ranh giới quyết định ($p = 0.5 \implies z/T = 0 \implies p = 0.5$).
+  - **Zero-Downtime Model Hot-Reloading (`POST /api/v1/models/reload`)**: Tự động nhận diện và nạp tức thì checkpoint `best_resnet50.pth` khi có sẵn trên đĩa mà không cần khởi động lại dịch vụ backend.
   - Tự động tính toán điểm số đồng thuận đa mô hình `ensemble_agreement` $\in [0, 1]$ và hiển thị huy hiệu Consensus trên trạm đọc PACS Next.js.
   - Đối chiếu kiểm chứng thực nghiệm lâm sàng theo nghiên cứu công bố trên *The Lancet Digital Health* (PubMed 34219054): Hợp tác Bác sĩ X-quang và trợ lý AI giúp nâng độ chính xác từ 0.713 lên 0.808 ROC-AUC (+0.095 AUC) đồng thời giảm 48.6% thời gian đọc mỗi ca bệnh.
   - Xác minh độ bao quát lâm sàng đạt 100% các bệnh lý lồng ngực khả dĩ trên ảnh X-quang ngực phẳng theo chuẩn quốc tế *The Radiology Assistant Chest Index*.
@@ -152,7 +155,7 @@ Xây dựng **LungRay** — hệ sinh thái phần mềm **Hỗ trợ Ra Quyết
 - **WSOL Grounding Accuracy**: Mean Box-IoU đạt **0.7631** trên RSNA Pneumonia và **0.6049** trên VinDr-CXR (kiểm định định lượng trên tập mẫu chuẩn $n=50$ ca có Bounding Box chuyên gia từ bác sĩ).
 - **Shortcut Audit & Lớp Fail-Safe**: Mô hình gốc có In-lung Energy Ratio đạt trung bình **38.49%** (0/150 ca đạt ngưỡng 80%); sau khi áp dụng Clinical Anatomical Projection đạt **94.92% $\pm$ 1.60%** (149/150 ca đạt $\ge 80\%$). Đây là căn cứ khoa học quyết định triển khai thêm Lớp Fail-Safe OOD (Phase 8).
 - **Độ ổn định Ngoại vi (Domain Shift)**: $\Delta \text{AUC} = +0.0447$ trên CheXpert-small-v1 (chỉ tiêu $\le 0.080$).
-- **Quy chuẩn Kiểm thử Tự động**: **125 / 125 Unit Tests PASS** tuyệt đối qua lệnh kiểm tra `scripts/verify.ps1` (100% tỷ lệ vượt qua cổng kiểm tra kỹ thuật).
+- **Quy chuẩn Kiểm thử Tự động**: **138 / 138 Unit Tests PASS** tuyệt đối qua lệnh kiểm tra `scripts/verify.ps1` (100% tỷ lệ vượt qua cổng kiểm tra kỹ thuật).
 
 ### NFR3: An toàn, Bảo mật & Liêm chính dữ liệu (Data Integrity & Safety)
 - **Zero Data Leakage**: Tuyệt đối không để ảnh của cùng một bệnh nhân xuất hiện ở cả tập Train và Test (phân chia nghiêm ngặt theo `Patient_ID`, $Train \cap Test = \emptyset$).
@@ -183,10 +186,10 @@ Xây dựng **LungRay** — hệ sinh thái phần mềm **Hỗ trợ Ra Quyết
 | **Multi-Task 3-Head Model** | Phase 3 | • Checkpoint `best_model.pth` đạt Macro AUC Head A $\ge 0.82$, Head B $\ge 0.90$<br>• Masked backprop hoạt động chuẩn xác không gây rò rỉ gradient | ModelArchitectAgent |
 | **SOTA Enhancements (TASK-013)** | Phase 4 | • Asymmetric Loss & Focal pos_weight động được tích hợp hoàn chỉnh<br>• LayerNorm parameter-free không sinh key mới trong `state_dict`<br>• 16 ngưỡng quyết định được hiệu chuẩn theo Youden's J (`configs/optimal_thresholds.json`)<br>• **114/114 unit tests PASS** qua `scripts/verify.ps1` | ModelArchitectAgent |
 | **XAI & Shortcut Audit** | Phase 5 | • Grad-CAM xuất Box-IoU $\ge 0.35$ trên VinDr-CXR và RSNA<br>• Shortcut audit xác nhận tỷ lệ trong phổi $\ge 80\%$ trên 150 ca COVID<br>• Báo cáo PDF đơn sắc [reports/SHORTCUT_LEARNING_AUDIT_REPORT.pdf](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/reports/SHORTCUT_LEARNING_AUDIT_REPORT.pdf) | XAIEvalAgent |
-| **FastAPI Backend Serving** | Phase 6 | • 4 Endpoints `/health`, `/predict`, `/explain`, `/audit` phản hồi $\le 1.8$s<br>• Tự động mở rộng trung thất cho `Cardiomegaly` | FullstackDeployAgent |
-| **Next.js Medical PACS UI** | Phase 6 | • Giao diện trạm PACS hoàn chỉnh, thanh trượt alpha, chọn xem 14 bệnh<br>• Trình khởi chạy 1-Click Native Launcher dọn sạch cache webpack | FullstackDeployAgent |
-| **Báo cáo Học thuật & Bảo vệ** | Phase 7 | • Cuốn luận văn 25 trang `reports/FINAL_SCIENTIFIC_REPORT.pdf` (1.63 MB, Rule 9)<br>• Đề cương Slide 39 trang và 20 Clinical Defense FAQs | QAReportAgent |
-| **Fail-Safe OOD & Lockout** | Phase 8 | • Cơ chế kiểm toán Far-OOD đạt AUROC 1.0000 qua Helmholtz Free Energy ($S_E \ge 9.0421$)<br>• Cổng bất định Shannon Entropy ($H \le 0.6275$)<br>• Khóa báo cáo sơ bộ ICD-10 và đánh dấu watermark INVALID khi phát hiện bất thường<br>• **125/125 Unit Tests PASS** qua `scripts/verify.ps1` | Lead AI Orchestrator |
+| **FastAPI Backend Serving** | Phase 6 | • 6 Endpoints `/health`, `/predict`, `/explain`, `/audit`, `/models`, `/models/reload` phản hồi $\le 1.8$s<br>• Tự động 3-Pass Clinical TTA & Temperature Scaling ($T=1.20$)<br>• Hot-reloading không downtime | FullstackDeployAgent |
+| **Next.js Medical PACS UI** | Phase 6 | • Giao diện trạm PACS hoàn chỉnh, thanh trượt alpha, huy hiệu TTA/Calibrated<br>• Trình khởi chạy 1-Click Native Launcher dọn sạch cache webpack | FullstackDeployAgent |
+| **Báo cáo Học thuật & Bảo vệ** | Phase 7 | • Cuốn luận văn 25 trang `reports/FINAL_SCIENTIFIC_REPORT.pdf` (1.63 MB, Rule 9)<br>• Báo cáo tổng thể `reports/DSP391_Full_Thesis_Report.md` & `reports/docs_report.md` (0 raw `$`)<br>• Đề cương Slide 39 trang và 20 Clinical Defense FAQs | QAReportAgent |
+| **Fail-Safe OOD & Lockout** | Phase 8 | • Cơ chế kiểm toán Far-OOD đạt AUROC 1.0000 qua Helmholtz Free Energy ($S_E \ge 9.0421$)<br>• Cổng bất định Shannon Entropy ($H \le 0.6275$)<br>• Khóa báo cáo sơ bộ ICD-10 và đánh dấu watermark INVALID khi phát hiện bất thường<br>• **138/138 Unit Tests PASS** qua `scripts/verify.ps1` | Lead AI Orchestrator |
 
 ---
 

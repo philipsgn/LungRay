@@ -351,3 +351,29 @@ def test_explain_with_ensemble_model(client: TestClient) -> None:
     assert payload["heatmap_base64"] != ""
 
 
+def test_predict_with_automatic_tta(client: TestClient) -> None:
+    image_bytes = _make_image_bytes()
+    response = client.post(
+        "/api/v1/predict",
+        files={"file": ("cxr.png", image_bytes, "image/png")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["tta_enabled"] is True
+    assert payload["passes_executed"] == 3
+    assert payload["calibration_temperature"] == 1.20
+    assert "head_a_prediction" in payload
+    assert "head_b_tb_screening" in payload
+    assert "head_c_covidx" in payload
+
+
+def test_hot_reload_endpoint(client: TestClient) -> None:
+    response = client.post("/api/v1/models/reload")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "success"
+    assert "active_models" in payload
+    assert "triple_consensus_ready" in payload
+
+
+

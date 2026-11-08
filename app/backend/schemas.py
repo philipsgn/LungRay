@@ -54,6 +54,9 @@ class PredictionResponse(BaseModel):
         ..., description="COVID-19 screening result with probability and binary flag"
     )
     inference_time_ms: float = Field(..., ge=0.0, description="Pure inference latency in ms")
+    tta_enabled: bool = Field(default=True, description="Whether 3-pass clinical TTA was applied for domain robustness")
+    passes_executed: int = Field(default=3, description="Number of clinical augmentation passes executed")
+    calibration_temperature: float = Field(default=1.20, description="Temperature scaling factor for confidence calibration")
     ensemble_agreement: Optional[float] = Field(None, description="Consensus agreement percentage across ensemble models [0, 1]")
     ensemble_models: list[str] = Field(default_factory=list, description="Participating ensemble backbones")
     individual_model_predictions: Optional[dict[str, Any]] = Field(None, description="Individual model outputs")

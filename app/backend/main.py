@@ -50,6 +50,15 @@ async def list_models() -> list[ModelInfo]:
     return [ModelInfo(**m) for m in service.list_models()]
 
 
+@app.post("/api/v1/models/reload")
+async def reload_models() -> dict[str, Any]:
+    try:
+        return service.check_and_reload_checkpoints()
+    except Exception as exc:
+        logger.exception("Model hot-reloading failed")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+
 @app.post("/api/v1/predict", response_model=PredictionResponse)
 async def predict(
     file: UploadFile = File(...),

@@ -5,6 +5,7 @@ import base64
 import io
 import json
 import logging
+import math
 import os
 import time
 from typing import Any
@@ -123,18 +124,18 @@ class LungRayService:
         return model
 
     def _load_hybrid_models(self) -> None:
-        standard_path = os.getenv("CHECKPOINT_PATH", "checkpoints/best_model.pth")
-        wsol_path = "checkpoints/best_wsol_finetune.pth"
-        resnet_path = "checkpoints/best_resnet50.pth"
+        self.standard_path = os.getenv("CHECKPOINT_PATH", "checkpoints/best_model.pth")
+        self.wsol_path = "checkpoints/best_wsol_finetune.pth"
+        self.resnet_path = "checkpoints/best_resnet50.pth"
 
         # 1. Standard CADx model (SOTA Asymmetric Net)
-        self.models["standard"] = self._instantiate_and_load(standard_path, backbone_name="densenet121")
-        self.current_checkpoint = standard_path
+        self.models["standard"] = self._instantiate_and_load(self.standard_path, backbone_name="densenet121")
+        self.current_checkpoint = self.standard_path
         self.model_info["standard"] = {
             "id": "standard",
             "name": "Standard Diagnostic CADx (SOTA)",
             "role": "Primary emergency triaging across 16 cardiopulmonary conditions (Multi-Task Mean AUC 0.91)",
-            "checkpoint": standard_path,
+            "checkpoint": self.standard_path,
             "metrics": {
                 "head_a_auc": 0.8352,
                 "head_b_tb_auc": 0.9412,
@@ -144,13 +145,13 @@ class LungRayService:
         }
 
         # 2. WSOL Specialist model (Attention-Regularized WSOL Net)
-        if os.path.exists(wsol_path):
-            self.models["wsol"] = self._instantiate_and_load(wsol_path, backbone_name="densenet121")
+        if os.path.exists(self.wsol_path):
+            self.models["wsol"] = self._instantiate_and_load(self.wsol_path, backbone_name="densenet121")
             self.model_info["wsol"] = {
                 "id": "wsol",
                 "name": "WSOL Attention Specialist",
                 "role": "Focused lesion localization & specialized TB screening (RSNA IoU 0.245, TB AUC 0.968)",
-                "checkpoint": wsol_path,
+                "checkpoint": self.wsol_path,
                 "metrics": {
                     "head_a_auc": 0.7351,
                     "head_b_tb_auc": 0.9684,
@@ -164,13 +165,13 @@ class LungRayService:
             self.model_info["wsol"] = self.model_info["standard"]
 
         # 3. ResNet-50 Residual Specialist (if checkpoint exists)
-        if os.path.exists(resnet_path):
-            self.models["resnet50"] = self._instantiate_and_load(resnet_path, backbone_name="resnet50")
+        if os.path.exists(self.resnet_path):
+            self.models["resnet50"] = self._instantiate_and_load(self.resnet_path, backbone_name="resnet50")
             self.model_info["resnet50"] = {
                 "id": "resnet50",
                 "name": "ResNet-50 Residual Specialist",
                 "role": "Deep residual representations & multi-scale gradient flow (ResNet-50 23.5M params)",
-                "checkpoint": resnet_path,
+                "checkpoint": self.resnet_path,
                 "metrics": {
                     "head_a_auc": 0.8290,
                     "head_b_tb_auc": 0.9380,
@@ -192,6 +193,57 @@ class LungRayService:
                 "mean_auc": 0.9233,
             },
         }
+
+    def check_and_reload_checkpoints(self) -> dict[str, Any]:
+        """
+        Dynamically detects new or updated checkpoints (e.g., best_resnet50.pth)
+        and reloads them into the running inference service with zero downtime.
+        """
+        reloaded = []
+        if os.path.exists(self.resnet_path) and "resnet50" not in self.models:
+            logger.info("New ResNet-50 checkpoint detected at %s. Hot-reloading...", self.resnet_path)
+            self.models["resnet50"] = self._instantiate_and_load(self.resnet_path, backbone_name="resnet50")
+            self.model_info["resnet50"] = {
+                "id": "resnet50",
+                "name": "ResNet-50 Residual Specialist",
+                "role": "Deep residual representations & multi-scale gradient flow (ResNet-50 23.5M params)",
+                "checkpoint": self.resnet_path,
+                "metrics": {
+                    "head_a_auc": 0.8290,
+                    "head_b_tb_auc": 0.9380,
+                    "head_c_covid_auc": 0.9480,
+                    "mean_auc": 0.9050,
+                },
+            }
+            reloaded.append("resnet50")
+
+        return {
+            "status": "success",
+            "active_models": list(self.models.keys()),
+            "reloaded": reloaded,
+            "triple_consensus_ready": "resnet50" in self.models and "wsol" in self.models and "standard" in self.models,
+        }
+
+    @staticmethod
+    def apply_temperature_scaling(p: np.ndarray | float, temperature: float = 1.20) -> np.ndarray | float:
+        """
+        Applies Platt/Temperature Scaling to probabilities to soften overconfident predictions:
+        p_calib = sigmoid(logit(p) / T)
+        """
+        if temperature <= 0.0 or abs(temperature - 1.0) < 1e-4:
+            return p
+        
+        eps = 1e-6
+        if isinstance(p, np.ndarray):
+            p_clipped = np.clip(p, eps, 1.0 - eps)
+            logits = np.log(p_clipped / (1.0 - p_clipped))
+            calibrated_logits = logits / temperature
+            return 1.0 / (1.0 + np.exp(-calibrated_logits))
+        else:
+            p_clipped = max(min(float(p), 1.0 - eps), eps)
+            logits = math.log(p_clipped / (1.0 - p_clipped))
+            calibrated_logits = logits / temperature
+            return 1.0 / (1.0 + math.exp(-calibrated_logits))
 
     def get_model(self, model_name: str = "standard") -> MultiTaskChestXrayNet:
         name_lower = model_name.lower()
@@ -218,8 +270,58 @@ class LungRayService:
         transformed = self.transform(image=image_np)["image"]
         return transformed.unsqueeze(0).to(self.device)
 
+    def preprocess_tta(self, image_bytes: bytes) -> torch.Tensor:
+        """
+        Generate a 3-pass augmented batch tensor (3, 3, 512, 512) for clinical test-time augmentation:
+        - Pass 1: Standard normalized view
+        - Pass 2: High-contrast CLAHE view (recovers subtle interstitial/alveolar infiltrates)
+        - Pass 3: Multi-scale anatomical view (scaled by 1.03x and center-cropped to 512x512)
+        """
+        try:
+            image = Image.open(io.BytesIO(image_bytes))
+        except Exception as exc:
+            raise ValueError(f"Cannot decode uploaded image: {exc}") from exc
+
+        image = image.convert("RGB")
+        image_np = np.array(image)
+
+        # Pass 1: Standard
+        t1 = self.transform(image=image_np)["image"]
+
+        # Pass 2: CLAHE Contrast Invariant
+        try:
+            lab = cv2.cvtColor(image_np, cv2.COLOR_RGB2LAB)
+            clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+            lab[:, :, 0] = clahe.apply(lab[:, :, 0])
+            clahe_np = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+            t2 = self.transform(image=clahe_np)["image"]
+        except Exception:
+            t2 = t1.clone()
+
+        # Pass 3: Multi-scale Anatomical Invariant (1.03x scale with center-crop)
+        try:
+            h, w = image_np.shape[:2]
+            scaled_w = int(w * 1.03)
+            scaled_h = int(h * 1.03)
+            scaled_np = cv2.resize(image_np, (scaled_w, scaled_h), interpolation=cv2.INTER_LINEAR)
+            start_x = (scaled_w - w) // 2
+            start_y = (scaled_h - h) // 2
+            cropped_np = scaled_np[start_y:start_y + h, start_x:start_x + w]
+            t3 = self.transform(image=cropped_np)["image"]
+        except Exception:
+            t3 = t1.clone()
+
+        # Stack into a single batched tensor (3, 3, 512, 512)
+        batch_tensor = torch.stack([t1, t2, t3], dim=0).to(self.device)
+        return batch_tensor
+
     def predict(self, image_bytes: bytes, model_name: str = "standard") -> dict[str, Any]:
-        tensor = self.preprocess(image_bytes)
+        # Dynamic hot-reload check
+        self.check_and_reload_checkpoints()
+
+        # 3-Pass Medical TTA Tensor Generation
+        batch_tensor = self.preprocess_tta(image_bytes)
+        standard_tensor = batch_tensor[:1]
 
         # ---------------------------------------------------------
         # Branch A: Consensus Ensemble (Multi-Backbone Soft-Voting)
@@ -232,30 +334,31 @@ class LungRayService:
 
             participating_models = ["DenseNet-121 (Standard)", "DenseNet-121 (WSOL Specialist)"]
             with torch.no_grad():
-                out_dense = dense_model.predict(tensor)
-                logits_dense = dense_model(tensor)["head_a"]
-                out_wsol = wsol_model.predict(tensor)
+                out_dense = dense_model.predict(batch_tensor)
+                logits_dense = dense_model(standard_tensor)["head_a"]
+                out_wsol = wsol_model.predict(batch_tensor)
 
                 if resnet_model is not None:
-                    out_res = resnet_model.predict(tensor)
-                    logits_res = resnet_model(tensor)["head_a"]
+                    out_res = resnet_model.predict(batch_tensor)
+                    logits_res = resnet_model(standard_tensor)["head_a"]
                     participating_models.append("ResNet-50 (Residual Specialist)")
                 else:
                     out_res = None
             elapsed_ms = (time.perf_counter() - start) * 1000.0
 
-            p_dense_a = out_dense["head_a"][0].cpu().numpy()
-            p_dense_b = float(out_dense["head_b"][0].item())
-            p_dense_c = float(out_dense["head_c"][0].item())
+            # 3-Pass TTA Averaging
+            p_dense_a = out_dense["head_a"].mean(dim=0).cpu().numpy()
+            p_dense_b = float(out_dense["head_b"].mean().item())
+            p_dense_c = float(out_dense["head_c"].mean().item())
 
-            p_wsol_a = out_wsol["head_a"][0].cpu().numpy()
-            p_wsol_b = float(out_wsol["head_b"][0].item())
-            p_wsol_c = float(out_wsol["head_c"][0].item())
+            p_wsol_a = out_wsol["head_a"].mean(dim=0).cpu().numpy()
+            p_wsol_b = float(out_wsol["head_b"].mean().item())
+            p_wsol_c = float(out_wsol["head_c"].mean().item())
 
             if out_res is not None:
-                p_res_a = out_res["head_a"][0].cpu().numpy()
-                p_res_b = float(out_res["head_b"][0].item())
-                p_res_c = float(out_res["head_c"][0].item())
+                p_res_a = out_res["head_a"].mean(dim=0).cpu().numpy()
+                p_res_b = float(out_res["head_b"].mean().item())
+                p_res_c = float(out_res["head_c"].mean().item())
                 prob_a = 0.50 * p_dense_a + 0.50 * p_res_a
                 prob_b = 0.60 * p_wsol_b + 0.20 * p_dense_b + 0.20 * p_res_b
                 prob_c = 0.50 * p_dense_c + 0.50 * p_res_c
@@ -265,6 +368,11 @@ class LungRayService:
                 prob_b = 0.70 * p_wsol_b + 0.30 * p_dense_b
                 prob_c = 0.90 * p_dense_c + 0.10 * p_wsol_c
                 combined_logits_a = logits_dense
+
+            # Apply Temperature Scaling Calibration (T = 1.20)
+            prob_a = self.apply_temperature_scaling(prob_a, temperature=1.20)
+            prob_b = float(self.apply_temperature_scaling(prob_b, temperature=1.20))
+            prob_c = float(self.apply_temperature_scaling(prob_c, temperature=1.20))
 
             stds = []
             for i in range(14):
@@ -336,6 +444,9 @@ class LungRayService:
                 "head_b_tb_screening": head_b_res,
                 "head_c_covidx": head_c_res,
                 "inference_time_ms": round(elapsed_ms, 2),
+                "tta_enabled": True,
+                "passes_executed": 3,
+                "calibration_temperature": 1.20,
                 "ensemble_agreement": round(agreement_score, 4),
                 "ensemble_models": participating_models,
                 "individual_model_predictions": indiv_predictions,
@@ -352,22 +463,25 @@ class LungRayService:
 
         start = time.perf_counter()
         with torch.no_grad():
-            logits_dict = active_model(tensor)
-            outputs = active_model.predict(tensor)
+            logits_dict = active_model(standard_tensor)
+            outputs = active_model.predict(batch_tensor)
         elapsed_ms = (time.perf_counter() - start) * 1000.0
 
         logits_a = logits_dict["head_a"]
-        prob_a_tensor = outputs["head_a"]
 
-        # 1. Fail-Safe OOD & Uncertainty Evaluation
+        # 1. 3-Pass TTA Averaging & Temperature Calibration
+        prob_a = outputs["head_a"].mean(dim=0).cpu().numpy()
+        prob_b = float(outputs["head_b"].mean().item())
+        prob_c = float(outputs["head_c"].mean().item())
+
+        prob_a = self.apply_temperature_scaling(prob_a, temperature=1.20)
+        prob_b = float(self.apply_temperature_scaling(prob_b, temperature=1.20))
+        prob_c = float(self.apply_temperature_scaling(prob_c, temperature=1.20))
+
+        # 2. Fail-Safe OOD & Uncertainty Evaluation
         energy_val = float(compute_sigmoid_energy(logits_a).item())
-        entropy_val = float(compute_shannon_entropy(prob_a_tensor).item())
+        entropy_val = float(compute_shannon_entropy(torch.from_numpy(prob_a).unsqueeze(0).to(self.device)).item())
         safety_decision = self.safety_policy.evaluate(energy_val, entropy_val)
-
-        # 2. Extract Head A, B, C probabilities
-        prob_a = outputs["head_a"][0].cpu().numpy()
-        prob_b = float(outputs["head_b"][0].item())
-        prob_c = float(outputs["head_c"][0].item())
 
         head_a = {disease: float(prob_a[i]) for i, disease in enumerate(NIH_14_DISEASES)}
 
@@ -400,6 +514,9 @@ class LungRayService:
             "head_b_tb_screening": head_b_res,
             "head_c_covidx": head_c_res,
             "inference_time_ms": round(elapsed_ms, 2),
+            "tta_enabled": True,
+            "passes_executed": 3,
+            "calibration_temperature": 1.20,
             "safety": safety_decision.to_dict(),
             "report": clinical_report.to_dict(),
         }
