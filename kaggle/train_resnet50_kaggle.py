@@ -36,23 +36,24 @@ from src.data.ingestion import resolve_dataset_paths
 from src.models.losses import MaskedMultiTaskLoss
 from src.models.multi_task_net import MultiTaskChestXrayNet
 from src.models.trainer import MultiTaskTrainer
-from src.utils.threshold_tuning import calibrate_thresholds, save_thresholds_json
+from src.utils.threshold_tuning import save_thresholds_json
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="LungRay ResNet-50 Multi-Task Training on Kaggle")
     parser.add_argument("--epochs", type=int, default=15, help="Number of training epochs")
-    parser.add_argument("--batch-size", type=int, default=16, help="Batch size per forward pass")
+    parser.add_argument("--batch-size", type=int, default=20, help="Batch size per forward pass (20 splits into exact 12:5:3 ratio)")
     parser.add_argument("--lr", type=float, default=1e-4, help="Peak AdamW learning rate")
     parser.add_argument("--weight-decay", type=float, default=1e-4, help="Weight decay for regularization")
+    parser.add_argument("--seed", type=int, default=42, help="Deterministic random seed")
     parser.add_argument("--backbone", type=str, default="resnet50", help="Encoder backbone architecture")
     parser.add_argument("--head-a-criterion", type=str, default="asl", choices=["bce", "focal", "asl"])
     parser.add_argument("--head-c-criterion", type=str, default="bce", choices=["bce", "focal", "asl"])
     parser.add_argument("--asl-gamma-neg", type=float, default=4.0)
     parser.add_argument("--asl-gamma-pos", type=float, default=1.0)
     parser.add_argument("--asl-clip", type=float, default=0.05)
-    parser.add_argument("--max-batches", type=int, default=600, help="Max train batches per epoch (0 = full)")
-    parser.add_argument("--max-val-batches", type=int, default=120, help="Max val batches per head (0 = full)")
+    parser.add_argument("--max-batches", type=int, default=0, help="Max train batches per epoch (0 = full)")
+    parser.add_argument("--max-val-batches", type=int, default=0, help="Max val batches per head (0 = full)")
     parser.add_argument("--save-name", type=str, default="best_resnet50.pth")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--allow-missing", action="store_true")
@@ -60,12 +61,25 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def set_seed(seed: int = 42) -> None:
+    import random
+    import numpy as np
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+
 def main() -> None:
     args = parse_args()
+    set_seed(args.seed)
     print("=" * 65, flush=True)
     print(" LUNGRAY: RESNET-50 MULTI-TASK TRAINING (KAGGLE GPU)", flush=True)
     print("=" * 65, flush=True)
-    print(f"[*] Backbone: {args.backbone.upper()} | Criterion A: {args.head_a_criterion.upper()} | Epochs: {args.epochs}", flush=True)
+    print(f"[*] Backbone: {args.backbone.upper()} | Criterion A: {args.head_a_criterion.upper()} | Epochs: {args.epochs} | Seed: {args.seed}", flush=True)
 
     paths = resolve_dataset_paths()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -119,6 +133,18 @@ def main() -> None:
         log_interval=50,
     )
 
+    resume_path = None
+    if args.resume:
+        candidates = [
+            os.path.join(str(paths["output_dir"]), "last_resnet50.pth"),
+            os.path.join(str(paths["output_dir"]), "last_model.pth"),
+        ]
+        resume_path = next((p for p in candidates if os.path.isfile(p)), None)
+        if resume_path:
+            print(f"[*] Resuming ResNet-50 training from {resume_path}", flush=True)
+        else:
+            print("[!] Warning: --resume requested but no previous checkpoint found. Starting from scratch.", flush=True)
+
     print(f"\n[*] Starting ResNet-50 Multi-Task Training Loop ({args.epochs} epochs)...", flush=True)
     history_df = trainer.fit(
         train_loader=loaders["train_loader"],
@@ -127,12 +153,16 @@ def main() -> None:
         val_loader_c=loaders["val_loader_c"],
         epochs=args.epochs,
         save_name=args.save_name,
-        resume_from=(
-            os.path.join(str(paths["output_dir"]), "last_resnet50.pth")
-            if args.resume
-            else None
-        ),
+        resume_from=resume_path,
     )
+
+    # Sync last_model.pth to last_resnet50.pth for reliable resume tracking
+    last_model_src = os.path.join(str(paths["output_dir"]), "last_model.pth")
+    last_resnet_dst = os.path.join(str(paths["output_dir"]), "last_resnet50.pth")
+    if os.path.isfile(last_model_src):
+        import shutil
+        shutil.copy2(last_model_src, last_resnet_dst)
+        print(f"[OK] Checkpoint resume artifact synced to {last_resnet_dst}", flush=True)
 
     best_path = os.path.join(str(paths["output_dir"]), args.save_name)
     if os.path.isfile(best_path):
@@ -147,7 +177,7 @@ def main() -> None:
 
     if not args.no_calibrate:
         print("[*] Calibrating Youden J Decision Thresholds for ResNet-50...", flush=True)
-        thresholds = calibrate_thresholds(
+        thresholds = train_kaggle.calibrate_thresholds(
             model,
             loaders,
             device,
@@ -158,6 +188,10 @@ def main() -> None:
         thresholds_out = os.path.join(project_root, "configs", "optimal_thresholds_resnet50.json")
         save_thresholds_json(thresholds, thresholds_out)
         print(f"[OK] ResNet-50 optimal thresholds saved to {thresholds_out}", flush=True)
+        # Also copy to output_dir so it sits directly in /kaggle/working/
+        thresholds_working = os.path.join(str(paths["output_dir"]), "optimal_thresholds_resnet50.json")
+        save_thresholds_json(thresholds, thresholds_working)
+        print(f"[OK] Optimal thresholds replicated to output directory: {thresholds_working}", flush=True)
 
     print("\n[SUCCESS] ResNet-50 Multi-Task Training pipeline completed successfully!", flush=True)
 
