@@ -95,7 +95,7 @@ def main() -> None:
         backbone_name=args.backbone,
         pretrained=True,
         head_norm="layernorm",
-        dropout=0.2,
+        dropout_rate=0.2,
     ).to(device)
 
     total_params = sum(p.numel() for p in model.parameters())

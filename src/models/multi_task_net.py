@@ -80,8 +80,11 @@ class MultiTaskChestXrayNet(nn.Module):
         num_classes_b: int = 1,
         num_classes_c: int = 1,
         head_norm: str = "layernorm",
+        dropout: Optional[float] = None,
     ):
         super().__init__()
+        if dropout is not None:
+            dropout_rate = float(dropout)
         self.backbone_name = backbone_name.lower()
         self.img_size = img_size
         self.num_classes_a = num_classes_a
