@@ -323,7 +323,9 @@ class CombinedSegmentationLoss(nn.Module):
     def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         pred = pred.float().clamp(min=self.eps, max=1.0 - self.eps)
         target = target.float()
-        bce_loss = F.binary_cross_entropy(pred, target)
+        # Direct analytical BCE in FP32: avoids PyTorch's torch.cuda.amp runtime assertion
+        # against torch.nn.functional.binary_cross_entropy while remaining 100% mathematically exact
+        bce_loss = -(target * torch.log(pred) + (1.0 - target) * torch.log(1.0 - pred)).mean()
         dice_loss = self.dice(pred, target)
         return self.alpha * bce_loss + (1.0 - self.alpha) * dice_loss
 
