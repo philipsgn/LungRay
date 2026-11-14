@@ -26,6 +26,8 @@
    Không dừng lại ở việc xem bản đồ nhiệt bằng mắt thường. Hệ thống chuyển đổi heatmap liên tục thành mặt nạ nhị phân thông qua ngưỡng thích nghi và đo đạc định lượng chỉ số IoU so với Bounding Box chuyên gia trên VinDr-CXR (0.6049) và RSNA (0.7631).
 5. **Decoupled Production Architecture**:
    Phân tách hoàn toàn giữa lõi tính toán AI (Python/PyTorch/FastAPI) và giao diện trải nghiệm người dùng (Next.js 14 mô phỏng trạm đọc phim y tế PACS) với trình khởi chạy 1-Click Native Launcher (`scripts/start_local.ps1`).
+6. **Anatomical Inductive Bias & Receptive Field Adaptation (Tiền xử lý dữ liệu chuẩn y tế & thích nghi trường tiếp nhận)**:
+   Toàn bộ ảnh lưu trữ trên đĩa bảo toàn độ phân giải nguyên bản $512 \times 512$ chống suy hao điểm ảnh vi thể (solitary nodule, pneumothorax). Khi huấn luyện và suy luận, DataLoader tự động letterbox bảo toàn tỷ lệ khung hình với phép nội suy `cv2.INTER_AREA`, nhân bản ảnh xám 1 kênh thành 3 kênh RGB theo đúng chuẩn ImageNet (`mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]`), áp dụng CLAHE cân bằng phơi sáng và lọc nhiễu qua Cổng Giải phẫu Dense-UNet (Dice 0.9450, IoU 0.8974). Cơ chế huấn luyện vi phân 2 giai đoạn (Warmup 2 epochs đóng băng backbone $\to$ 18 epochs mở khóa toàn bộ với LR vi phân $1\times 10^{-5}$ kèm gradient accumulation) giúp các bộ lọc tích chập thích nghi mượt mà với trường tiếp nhận rộng mà không làm mất trí nhớ bệnh học.
 
 ---
 

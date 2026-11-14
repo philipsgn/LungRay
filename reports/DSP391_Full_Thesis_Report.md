@@ -314,23 +314,32 @@ LungRay aggregates six standardized radiography cohorts comprising over 150,000 
 | **Stanford CheXpert**| Generalization Benchmark | 5,000 holdout images | 0 (No Training) | 0 (No Training) | 5,000 images | Unseen Out-of-Domain Contrast Evaluation |
 
 ### 2.2. Preprocessing & Contrast Alignment Pipeline
-Every radiograph undergoes a deterministic, four-stage medical preprocessing sequence:
-1. **Dynamic Native Format Decoding**: Support for 16-bit DICOM and standard 8-bit PNG/JPEG formats with automatic photometric interpretation inversion (`MONOCHROME1` to `MONOCHROME2`).
-2. **Contrast Limited Adaptive Histogram Equalization (CLAHE)**: Applied locally with a clip limit of 2.0 and grid size of 8×8 pixels. CLAHE normalizes contrast variations between digital and computed radiography, preventing scanner-specific bias.
-3. **Anatomical Dilated Lung Masking**: An automated multi-threshold Otsu segmenter extracts the thoracic boundaries. To prevent clipping pleural and pericardial boundaries (critical for diagnosing Pleural Thickening and Cardiomegaly), the binary mask is expanded using an elliptical morphological dilation kernel of size 25×25:
-   <div class="equation-block"><span class="equation-text"><i>M</i><sub>dilated</sub> = <i>M</i><sub>lung</sub> &oplus; <i>K</i><sub>25&times;25</sub></span><span class="equation-num">(1)</span></div>
-   All pixels outside <i>M</i><sub>dilated</sub> (including hospital labels, patient tags, and external detector borders) are clamped to zero.
-4. **Spatial Standardization**: Bilinear interpolation resizing to 512×512×3 followed by ImageNet mean-variance normalization (μ = [0.485, 0.456, 0.406], σ = [0.229, 0.224, 0.225]).
+Every radiograph undergoes a deterministic, five-stage medical preprocessing sequence designed for maximum anatomical fidelity and noise suppression:
+1. **Dynamic Native Format Decoding & 512×512 Native Preservation**: Support for 16-bit DICOM and standard 8-bit PNG/JPEG formats with automatic photometric interpretation inversion (`MONOCHROME1` to `MONOCHROME2`). All images are preserved on disk at 512×512 resolution to prevent lossy pixel decimation of subtle lesions (solitary pulmonary nodules, pneumothorax visceral pleural lines).
+2. **Medical Letterboxing & Aspect-Ratio Preservation**: To feed convolutional networks without anatomical distortion, radiographs are padded symmetrically with constant borders rather than squashed. When downsampling on-the-fly for accelerated mini-batching, `cv2.INTER_AREA` interpolation is strictly applied to suppress aliasing moiré artifacts.
+3. **Contrast Limited Adaptive Histogram Equalization (CLAHE)**: Applied locally with a clip limit of 2.0 and grid size of 8×8 pixels. CLAHE normalizes exposure disparities between computed radiography (CR) and direct digital radiography (DR), preventing scanner-specific intensity bias.
+4. **Three-Channel Grayscale Replication & ImageNet Normalization**: DenseNet pretrained encoders require three-channel input tensors. Single-channel grayscale radiographs are replicated across three identical channels (np.stack([gray, gray, gray], axis=-1)) and normalized using ImageNet population statistics (mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]).
+5. **Stage 1 Dense-UNet Anatomical Gating & Dilated Soft Masking**: To eradicate non-anatomical shortcut learning (hospital watermark letters R/L, machine boundaries), an inference-time anatomical gate powered by Dense-UNet (Dubey et al., BMC 2026; empirical Val Dice 0.9450, Val IoU 0.8974) produces a lung segmentation mask. An elliptical morphological dilation kernel expanding 6% of spatial dimensions prevents clipping peripheral costophrenic recesses:
+   <div class="equation-block"><span class="equation-text"><i>M</i><sub>dilated</sub> = <i>M</i><sub>lung</sub> &oplus; <i>K</i><sub>6%</sub></span><span class="equation-num">(1)</span></div>
+   Extra-thoracic noise is attenuated by 90% (soft weighting = 0.10 + 0.90 &times; blurred_mask), preserving 100% of intra-pulmonary parenchyma.
+   - **White-out Lung Clinical Fail-Safe**: In severe pathologies presenting with near-total opacity (massive atelectasis, total pleural effusion, white-out lung), segmented area drops below 18% of the thoracic bounding box. The gate autonomously activates a bypass rule (coverage &lt; 0.18 &rarr; preserve raw radiograph), eliminating the risk of erasing life-threatening opacifications.
 
-## 3. Multi-Task Batch Sampling Strategy
+## 3. Multi-Task Batch Sampling & Differential Optimization Strategy
 To train a single shared encoder across three distinct datasets with highly skewed sizes (NIH: 78k, COVIDx: 15k, TB: 3k), a standard random sampler would cause severe **Task Starvation**: Head B (TB) would only appear in 3% of training batches, causing its gradients to vanish.
 
-We engineered the `WeightedMultiTaskBatchSampler`. For each training step, the sampler constructs a batch of size <i>B</i> = 8 by sampling exactly:
-- 60% samples (5 images) from NIH ChestX-ray14 (Head A).
-- 25% samples (2 images) from COVIDx CXR-4 (Head C).
-- 15% samples (1 image) from TB Chest Radiography Database (Head B).
+We engineered the `WeightedMultiTaskBatchSampler`. For each training step, the sampler constructs balanced mini-batches by strictly sampling:
+- 60% samples from NIH ChestX-ray14 (Head A: 14 pathologies).
+- 25% samples from COVIDx CXR-4 (Head C: COVID-19 differential screening).
+- 15% samples from TB Chest Radiography Database (Head B: Tuberculosis).
 
-This guarantees stable, continuous gradient backpropagation across all three heads throughout every epoch.
+### 3.1. Two-Stage Differential Learning Rate & Receptive Field Adaptation
+Because DenseNet-121 filters were originally pretrained on ImageNet at 224&times;224, ingesting radiographs at 512&times;512 (or 256&times;256) causes deep convolutional receptive fields to cover a smaller fraction of the global thoracic cage. Linear probing (freezing the entire backbone) impairs diagnostic generalization. We implement a two-stage differential fine-tuning schedule:
+1. **Stage 1 Warmup (Epochs 1–2)**: The shared backbone is frozen (requires_grad = False). The three classification heads are warmed up at learning rate 1e-4 using AdamW to establish stable task-specific linear decision boundaries under Asymmetric Focal Loss.
+2. **Stage 2 Differential Adaptation (Epochs 3–20)**: The entire shared backbone is unfrozen (requires_grad = True). Differential learning rates are assigned:
+   - Shared Backbone: 1e-5 (fine-tuning convolutional receptive fields without catastrophic forgetting).
+   - Task Classification Heads: 1e-4 (rapid convergence on multi-task gradients).
+   - Learning Rate Scheduler: Cosine Annealing scheduler with eta_min = 1e-6.
+   - Gradient Accumulation: Dynamic micro-batch scaling (effective batch size = 16) when running native 512&times;512 training.
 
 ## 4. MultiTaskChestXrayNet Architecture & Parameter Breakdown
 

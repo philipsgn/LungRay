@@ -377,12 +377,20 @@ To eliminate patient data leakage, an automated hash-partitioning algorithm oper
 ![Figure 4.5: Tuberculosis Dataset Distribution (Shenzhen & Montgomery County Cohorts)](../results/eda/05_tb_class_distribution.png)  
 *Figure 4.5: Tuberculosis Dataset Distribution (Shenzhen & Montgomery County Cohorts). Summarizes the balanced distribution between confirmed pulmonary tuberculosis cases and healthy controls across the Shenzhen and Montgomery County clinical registries.*
 
-### Medical Preprocessing Pipeline
-1. **Contrast-Limited Adaptive Histogram Equalization (CLAHE)**: Operates with a clip limit of 2.0 over an 8 × 8 tile grid to enhance subtle parenchymal textures in under-penetrated retrocardiac and retrodiaphragmatic zones.
-2. **Dilated Anatomical Lung Masking**: A pre-trained semantic segmentation network extracts bilateral lung masks. To prevent clipping pleural and pericardial margins (vital for detecting Cardiomegaly and Pleural Thickening), the mask is dilated using an elliptical structuring kernel of size 25 × 25:
-   `M_dilated = M_lung (+) K_25x25`
-   All pixels outside `M_dilated` (patient tags, detector boundaries, hospital watermarks) are clamped to zero.
-3. **Medical Data Augmentations**: Random horizontal flipping (p = 0.5), random affine rotations within ±7 degrees, and mild scaling (0.95 to 1.05). **Vertical flipping is strictly prohibited** as it violates human anatomical invariants (dextrocardia, gastric bubble position).
+### Medical Preprocessing & Anatomical Noise Mitigation Pipeline
+1. **Dynamic Format Decoding & 512 × 512 Native Preservation**: Ingests 16-bit DICOM and standard 8-bit PNG/JPEG formats with automated photometric inversion (`MONOCHROME1` to `MONOCHROME2`). All radiographs are stored at native 512 × 512 resolution on disk to prevent irreversible pixel decimation of subtle parenchymal textures.
+2. **Medical Letterboxing & Aspect-Ratio Preservation**: Symmetrical constant padding preserves physiological aspect ratios without geometric distortion. Downsampling for fast batching strictly utilizes `cv2.INTER_AREA` interpolation to suppress aliasing artifacts.
+3. **Contrast-Limited Adaptive Histogram Equalization (CLAHE)**: Operates with a clip limit of 2.0 over an 8 × 8 tile grid to enhance subtle parenchymal textures in under-penetrated retrocardiac and retrodiaphragmatic zones.
+4. **Three-Channel Grayscale Replication & ImageNet Standardization**: Single-channel grayscale CXRs are replicated into three identical channels (np.stack([gray, gray, gray], axis=-1)) and normalized using standard ImageNet parameters (mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]) to match pretrained DenseNet convolutional kernels.
+5. **Stage 1 Dense-UNet Anatomical Gating & Dilated Soft Masking**: Eliminates hospital watermark shortcuts (R/L markers, edge collimator bars) via a frozen Dense-UNet gate (Dubey et al., BMC 2026; Val Dice 0.9450, Val IoU 0.8974). A 6% elliptical morphological dilation prevents clipping peripheral costophrenic recesses, attenuating extra-thoracic noise by 90% while retaining 100% intra-pulmonary features.
+   - **White-Out Lung Clinical Fail-Safe**: When lung segmentation coverage falls below 18% (e.g., severe white-out lung, massive atelectasis), the system autonomously bypasses masking to protect opaque diagnostic findings from accidental erasure.
+6. **Medical Data Augmentations**: Random horizontal flipping (p = 0.5), random affine rotations within ±7 degrees, and mild scaling (0.95 to 1.05). **Vertical flipping is strictly prohibited** as it violates human anatomical invariants (dextrocardia, gastric bubble position).
+
+### Two-Stage Differential Optimization & Receptive Field Adaptation
+To address the receptive field shift when ingesting 512 × 512 inputs into an ImageNet 224 × 224 pretrained backbone, LungRay enforces a two-stage differential fine-tuning schedule:
+- **Stage 1 (Head Warmup, Epochs 1–2)**: Backbone encoder frozen; task heads trained at learning rate 1e-4 under Asymmetric Focal Loss.
+- **Stage 2 (Differential Fine-Tuning, Epochs 3–20)**: Full network unfrozen with differential learning rates (1e-5 for backbone, 1e-4 for heads) and Cosine Annealing, enabling convolutional receptive field expansion without catastrophic forgetting.
+- **Dynamic Micro-Batch Scaling**: Utilizes gradient accumulation (effective batch size = 16) when operating on native 512 × 512 inputs to maintain gradient stability within GPU VRAM constraints.
 
 ![Figure 4.6: WeightedMultiTaskBatchSampler Dynamic Sampling Equilibrium Ratio](../results/eda/06_multi_task_sampler_ratio.png)  
 *Figure 4.6: WeightedMultiTaskBatchSampler Dynamic Sampling Equilibrium Ratio. Confirms the exact 60% NIH : 25% COVIDx : 15% TB equilibrium maintained across heterogeneous batch sampling.*
