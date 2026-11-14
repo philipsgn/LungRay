@@ -270,8 +270,9 @@ class MaskedMultiTaskLoss(nn.Module):
     Head criteria:
     - Head A: ``'bce'`` (dynamic ``pos_weight``), ``'focal'`` (Focal Loss with
       optional ``focal_pos_weight_a``), or ``'asl'`` (Asymmetric Loss).
-    - Head B: ``BCEWithLogitsLoss`` (threshold tau_B calibrated separately with
-      Youden's J statistic in ``src.utils.threshold_tuning``).
+    - Head B: ``BCEWithLogitsLoss`` with optional ``head_b_pos_weight`` for
+      tuberculosis prevalence imbalance (threshold tau_B calibrated separately
+      with Youden's J statistic in ``src.utils.threshold_tuning``).
     - Head C: ``'bce'`` (binary screening), ``'ce'`` (3-class COVIDx with
       optional ``ce_weight_c`` class weights), ``'focal'``, or ``'asl'``.
     """
@@ -279,6 +280,7 @@ class MaskedMultiTaskLoss(nn.Module):
     def __init__(
         self,
         weights: Optional[Dict[str, float]] = None,
+        head_b_pos_weight: Optional[Union[float, torch.Tensor]] = None,
         head_a_criterion: str = "bce",  # 'bce', 'focal', or 'asl'
         pos_weight_a: Optional[torch.Tensor] = None,
         focal_pos_weight_a: Optional[Union[float, Sequence[float], torch.Tensor]] = None,
@@ -304,6 +306,14 @@ class MaskedMultiTaskLoss(nn.Module):
                 )
             resolved_weights[key] = weight
         self.weights = resolved_weights
+
+        # Head B: optional positive-class weighting for TB screening imbalance.
+        self.register_buffer(
+            "head_b_pos_weight",
+            self._prepare_pos_weight(
+                head_b_pos_weight, name="head_b_pos_weight", allowed_numels=(1,)
+            ),
+        )
 
         self.head_a_criterion_name = str(head_a_criterion).strip().lower()
         if self.head_a_criterion_name not in {"bce", "focal", "asl"}:
@@ -572,7 +582,9 @@ class MaskedMultiTaskLoss(nn.Module):
                 targets, "head_b", mask_b, batch_size, device
             ).float()
             y_b = self._match_binary_shape(logits_b, y_b, "Head B")
-            loss_b = F.binary_cross_entropy_with_logits(logits_b, y_b)
+            loss_b = F.binary_cross_entropy_with_logits(
+                logits_b, y_b, pos_weight=self.head_b_pos_weight
+            )
             weighted_losses.append(
                 self.weights.get("head_b", 0.8) * loss_b
             )

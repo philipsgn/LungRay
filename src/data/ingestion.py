@@ -279,7 +279,16 @@ def resolve_dataset_paths(kaggle_base: str = "/kaggle/input") -> Dict[str, objec
 
     if is_kaggle:
         nih_dir = find_kaggle_dataset(
-            ["lungray-nih-512", "nih-512", "nih_512", "chestxray14", "chest-xray14"],
+            [
+                "lungray-nih-512",
+                "nih-512",
+                "nih_512",
+                "nih-chest-xrays-512",
+                "nih-chest-xray-512",
+                "nih-chest-x-rays-512",
+                "chestxray14",
+                "chest-xray14",
+            ],
             base_dir=kaggle_base,
             require_images=True,
         )
@@ -295,7 +304,20 @@ def resolve_dataset_paths(kaggle_base: str = "/kaggle/input") -> Dict[str, objec
                 require_images=True,
             )
         tb_dir = find_kaggle_dataset(
-            ["tuberculosis-tb-chest-xray-dataset", "tb-chest-xray", "tb-chest", "tuberculosis"],
+            [
+                "tuberculosis-tb-chest-xray-dataset",
+                "tb-chest-xray-dataset",
+                "tb-chest-radiography-database",
+                "tb-chest-radiography",
+                "tb-chest-xray",
+                "tb-chest",
+                "tuberculosis",
+                # Last-resort alias: some workspaces mount the Montgomery+Shenzhen
+                # segmentation export under this slug. It is accepted only if the
+                # loader can locate Normal/Tuberculosis class folders inside it.
+                "montgo-shenzhen-resize",
+                "montgo-shenzhen",
+            ],
             base_dir=kaggle_base,
             require_images=True,
         )
@@ -331,11 +353,14 @@ def resolve_dataset_paths(kaggle_base: str = "/kaggle/input") -> Dict[str, objec
             os.path.join(project_root, "data", "processed", "covidx_512"),
             os.path.join(project_root, "dataset", "lungray-covidx-512"),
             os.path.join(project_root, "dataset", "covidx_cxr4"),
+            os.path.join(project_root, "dataset", "covid19_meta", "COVID-19_Radiography_Dataset"),
+            os.path.join(project_root, "dataset", "covid19_meta"),
             os.path.join(project_root, "dataset", "covid19_radiography"),
         ]
         local_tb = [
             os.path.join(project_root, "dataset", "tb_chestxray"),
             os.path.join(project_root, "dataset", "tb-chestxray"),
+            os.path.join(project_root, "dataset", "tb_meta", "TB_Chest_Radiography_Database"),
             os.path.join(project_root, "dataset", "tb_meta"),
         ]
         nih_dir = next((p for p in local_nih if os.path.isdir(p)), local_nih[-1])
