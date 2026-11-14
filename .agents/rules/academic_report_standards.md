@@ -46,3 +46,9 @@ Mọi bảng số liệu khoa học trong bài báo cáo bắt buộc phải the
 ### 1.5. Văn Phong & Ngôn Ngữ Học Thuật
 - Sử dụng đại từ nhân xưng khách quan, thể thụ động hoặc ngôi thứ ba trang trọng ("Nghiên cứu này thực hiện...", "Mô hình được huấn luyện...", "Dữ liệu được phân chia...").
 - Tránh tuyệt đối các từ ngữ mang tính cảm thán, tiếp thị hoặc phóng đại ("thần thánh", "siêu đỉnh", "bất bại"). Trình bày trung thực, điềm tĩnh và dựa trên số liệu thực chứng.
+
+### 1.6. Chuẩn Hóa Thuật Ngữ Học Thuật Y Khoa & Loại Bỏ Từ Lóng Kỹ Thuật
+Tuyệt đối không sử dụng các từ ngữ mang tính tranh đấu hoặc từ lóng phi học thuật trong toàn bộ luận văn, bài thuyết trình slide, tài liệu kỹ thuật và báo cáo khoa học:
+1. **Cấm dùng `đấu trường`, `đấu trường kiến trúc`** $\to$ Bắt buộc thay bằng: `Phân tích So sánh Đa Kiến trúc` (*Multi-Architecture Comparative Analysis*) hoặc `Khảo sát Đối chiếu Hiệu năng Mô hình`.
+2. **Cấm dùng `Gate`, `Cổng chất lượng`, `Delivery Gate` trong văn bản báo cáo học thuật** $\to$ Bắt buộc thay bằng: `Mốc nghiệm thu giai đoạn` (*Delivery Milestone*) hoặc `Tiêu chuẩn bàn giao kỹ thuật` (*Acceptance Checkpoint*).
+3. **Cấm dùng `test pass`, `PASS` dạng informal** $\to$ Bắt buộc thay bằng: `Đạt chuẩn kiểm thử`, `Đã xác nhận kiểm tra`, hoặc `Đáp ứng tiêu chuẩn kỹ thuật`.

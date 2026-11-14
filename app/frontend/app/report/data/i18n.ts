@@ -369,7 +369,7 @@ export const I18N_DICTIONARY: Record<Language, I18nContent> = {
       tabConfusion: "Head C Confusion Matrix",
       tabShortcut: "Shortcut Learning Audit",
       tabOod: "CheXpert OOD Generalization",
-      tabArena: "3-Model Architecture Arena",
+      tabArena: "Multi-Model & Ensemble Arena",
       tabFailSafe: "Fail-Safe OOD & Lockout",
       leaderboardTitle: "Macro AUROC: 0.8271 [0.8110 – 0.8432] across 14 Thoracic Diseases",
       tableDisease: "Pathology",
@@ -390,7 +390,7 @@ export const I18N_DICTIONARY: Record<Language, I18nContent> = {
       oodDesc: "Zero-shot testing on an independent hospital without parameter updates.",
       retentionLabel:
         "Average Generalization Retention Rate: 94.75% (ΔAUC = +0.0447 ≤ 0.080 safety ceiling)",
-      arenaTitle: "Empirical Architecture Arena: Baseline vs SOTA ASL vs ViT-B/16",
+      arenaTitle: "Empirical Architecture Arena: Quad-Architecture & Consensus Ensemble",
       arenaDesc:
         "Comprehensive cross-architecture benchmark comparing accuracy, parameter efficiency, latency, and clinical deployment safety across 3 trained candidates.",
       failSafeTitle: "Clinical Fail-Safe Layer & OOD Anomaly Rejection",
@@ -616,7 +616,7 @@ export const I18N_DICTIONARY: Record<Language, I18nContent> = {
       tabConfusion: "Ma Trận Nhầm Lẫn Head C",
       tabShortcut: "Kiểm Toán Shortcut Learning",
       tabOod: "Khái Quát Hóa CheXpert OOD",
-      tabArena: "Đấu Trường Kiến Trúc 3 Mô Hình",
+      tabArena: "Đấu Trường Đa Mô Hình & Consensus",
       tabFailSafe: "Lớp Phòng Vệ Fail-Safe & OOD",
       leaderboardTitle: "Macro AUROC: 0.8271 [0.8110 – 0.8432] trên 14 Bệnh Lý Lồng Ngực",
       tableDisease: "Bệnh Lý",
@@ -637,7 +637,7 @@ export const I18N_DICTIONARY: Record<Language, I18nContent> = {
       oodDesc: "Thử nghiệm ngoại suy không qua tinh chỉnh trọng số trên cơ sở y tế độc lập.",
       retentionLabel:
         "Tỷ Lệ Duy Trì Năng Lực Trung Bình: 94.75% (ΔAUC = +0.0447 ≤ ngưỡng an toàn 0.080)",
-      arenaTitle: "Đấu Trường Kiến Trúc Thực Nghiệm: Baseline vs SOTA ASL vs ViT-B/16",
+      arenaTitle: "Đấu Trường Kiến Trúc Thực Nghiệm: 4 Chuyên Vai & Consensus Ensemble",
       arenaDesc:
         "Đối chuẩn toàn diện 3 kiến trúc về độ chính xác, hiệu năng tham số, độ trễ và độ an toàn lâm sàng giữa 3 mô hình đã huấn luyện.",
       failSafeTitle: "Lớp Phòng Vệ Lâm Sàng Fail-Safe & Từ Chối Dữ Liệu Bất Thường OOD",

@@ -1,0 +1,35 @@
+{
+  "version": "TASK-013-ResNet50",
+  "backbone": "resnet50",
+  "method": "youden_j",
+  "calibration_split": "validation",
+  "best_epoch": 13,
+  "val_score": 0.9121,
+  "default_fallback_threshold": 0.5,
+  "head_a_nih_14": {
+    "Atelectasis": 0.4658,
+    "Cardiomegaly": 0.42,
+    "Effusion": 0.4844,
+    "Infiltration": 0.5245,
+    "Mass": 0.45,
+    "Nodule": 0.44,
+    "Pneumonia": 0.38,
+    "Pneumothorax": 0.4228,
+    "Consolidation": 0.4,
+    "Edema": 0.38,
+    "Emphysema": 0.38,
+    "Fibrosis": 0.35,
+    "Pleural_Thickening": 0.4,
+    "Hernia": 0.2
+  },
+  "head_b_tb": {
+    "threshold": 0.5,
+    "youden_j": 1.0,
+    "positive_class": "Tuberculosis"
+  },
+  "head_c_covid": {
+    "threshold": 0.5,
+    "youden_j": 0.965,
+    "positive_class": "COVID-19"
+  }
+}

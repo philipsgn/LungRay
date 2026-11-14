@@ -259,7 +259,37 @@ class ClinicalReportGenerator:
             has_pneumonia = any(x["disease"] in ["Pneumonia", "Consolidation", "Infiltration"] for x in active_items)
             has_pneu_thorax = any(x["disease"] == "Pneumothorax" for x in active_items)
 
-            if has_effusion and has_cardio:
+            # Smart Clinical Report Guardrail:
+            # Rule: Acute infectious pulmonary diseases (TB or COVID-19) strictly require
+            # parenchymal airspace infiltration / consolidation / pneumonia. If parenchymal
+            # lung fields are completely clear, or if shortcut audit fails (< 80%),
+            # suppress false positive diagnosis and alert the clinician.
+            has_parenchymal_infiltrate = any(
+                predictions_a.get(p, 0.0) >= thresholds_a.get(p, 0.45)
+                for p in ["Infiltration", "Consolidation", "Pneumonia"]
+            )
+            is_shortcut_alarm = (in_lung_ratio is not None and in_lung_ratio < 0.80)
+            only_infection_positive = (has_tb or has_covid) and not has_parenchymal_infiltrate
+
+            if is_shortcut_alarm or only_infection_positive:
+                findings = [
+                    "Phế trường hai bên <u>không ghi nhận tổn thương thực thể</u> dạng đông đặc hay thâm nhiễm nhu mô phế nang đối ứng.",
+                    f"⚠️ <u>CẢNH BÁO AN TOÀN AI (NGHI NGỜ DƯƠNG TÍNH GIẢ / SHORTCUT HOẶC TỔN THƯƠNG KÍNH MỜ GGO)</u>: "
+                    f"Hệ thống ghi nhận kích hoạt cao ở nhánh nhiễm trùng ({'COVID-19 ' if has_covid else ''}{'Lao phổi' if has_tb else ''}) "
+                    f"nhưng <u>nhu mô phổi chưa có đông đặc phế nang tương ứng</u>"
+                    f"{f' (năng lượng trong phổi chỉ đạt {in_lung_ratio * 100:.1f}%, dưới chuẩn 80%)' if in_lung_ratio is not None else ' (không có thâm nhiễm nhu mô đối ứng)'}. "
+                    f"Nghi ngờ kết quả chịu ảnh hưởng bởi ký tự đánh dấu thành ngực (chữ R/L), viền máy chụp ngoại lai, hoặc tổn thương kính mờ (GGO) ngoại vi giai đoạn sớm."
+                ]
+                narrative_lead = (
+                    "PHIM X-QUANG CHƯA GHI NHẬN TỔN THƯƠNG THỰC THỂ NỘI NHU MÔ PHỔI (NGHI NGỜ DƯƠNG TÍNH GIẢ DO NHIỄU MÁY CHỤP / SHORTCUT). "
+                    "Khuyến nghị bác sĩ lâm sàng loại trừ chẩn đoán nhiễm trùng cấp tính dựa trên hình ảnh này nếu có dấu hiệu nhiễu ký tự; "
+                    "trường hợp bệnh nhân có triệu chứng hô hấp nghi ngờ COVID-19 thể kính mờ (GGO) hoặc Lao tiềm ẩn, cần chỉ định chụp CT lồng ngực và xét nghiệm vi sinh (RT-PCR / GeneXpert) để xác chẩn."
+                )
+                recommendations = [
+                    "<u>Khuyến nghị an toàn</u>: Đề nghị bác sĩ kiểm tra phim gốc nhằm loại trừ dương tính giả do ký tự ngoài thành ngực hoặc viền máy chụp.",
+                    "<u>Tầm soát lâm sàng</u>: Trường hợp nghi ngờ thể kính mờ (GGO) sớm do COVID-19, thực hiện xét nghiệm RT-PCR hoặc chụp CT độ phân giải cao (HRCT).",
+                ]
+            elif has_effusion and has_cardio:
                 narrative_lead = (
                     f"Hình ảnh X-quang ghi nhận dấu hiệu gợi ý <u>Tràn dịch màng phổi (Effusion)</u> kết hợp "
                     f"<u>Bóng tim to (Cardiomegaly)</u>, phù hợp với hội chứng <u>suy tim sung huyết</u> hoặc ứ trệ tuần hoàn phổi tiến triển. "
@@ -297,10 +327,11 @@ class ClinicalReportGenerator:
             # Clean clinician impression
             impression = narrative_lead
 
-            recommendations = [
-                f"<u>Đối chiếu hình ảnh</u>: Đề nghị bác sĩ lâm sàng đối chiếu tổn thương {top_items[0]['name_vn']} với phim cắt lớp vi tính (CT Thorax) nếu cần xác định rõ ranh giới giải phẫu.",
-                "<u>Hướng xử trí tiếp theo</u>: Hội chẩn chuyên khoa Hô hấp / Tim mạch và theo dõi đáp ứng điều trị lâm sàng.",
-            ]
+            if not (is_shortcut_alarm or only_infection_positive):
+                recommendations = [
+                    f"<u>Đối chiếu hình ảnh</u>: Đề nghị bác sĩ lâm sàng đối chiếu tổn thương {top_items[0]['name_vn']} với phim cắt lớp vi tính (CT Thorax) nếu cần xác định rõ ranh giới giải phẫu.",
+                    "<u>Hướng xử trí tiếp theo</u>: Hội chẩn chuyên khoa Hô hấp / Tim mạch và theo dõi đáp ứng điều trị lâm sàng.",
+                ]
 
         return ClinicalReport(
             status="GENERATED",

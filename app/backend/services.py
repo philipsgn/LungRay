@@ -24,6 +24,7 @@ from src.explainability import (
     extract_adaptive_contour,
     render_contour_overlay,
 )
+from src.models.dense_unet import DenseUNet
 from src.models.multi_task_net import MultiTaskChestXrayNet
 from src.safety.ood_scores import compute_sigmoid_energy, compute_shannon_entropy
 from src.safety.reject_policy import SafetyPolicy
@@ -73,11 +74,81 @@ class LungRayService:
         self._load_hybrid_models()
         self.model = self.models.get("standard") or next(iter(self.models.values()))
         self.transform = get_val_transforms(img_size=self.img_size)
-        self.segmenter = LungSegmenter()
+        self.dense_unet = self._load_dense_unet()
+        if self.dense_unet is not None:
+            self.segmenter = LungSegmenter(dense_unet=self.dense_unet)
+        else:
+            self.segmenter = LungSegmenter()
+        self.anatomical_gate_enabled = bool(
+            self.dense_unet is not None
+            and os.getenv("LUNGRAY_ANATOMICAL_GATE", "0") == "1"
+        )
         self.audit_engine = ShortcutAuditEngine(self.segmenter)
         self.safety_policy = SafetyPolicy()
         self.report_generator = ClinicalReportGenerator()
         self._initialized = True
+
+    def _load_dense_unet(self) -> DenseUNet | None:
+        """
+        Loads the Dense-UNet segmentation engine as a frozen inference-time gate.
+
+        Returns ``None`` when no trained checkpoint is available so the service
+        transparently falls back to the deterministic morphology segmenter
+        instead of gating on randomly-initialised weights. The network is put in
+        ``eval`` mode with all parameters frozen, so it never participates in
+        any gradient computation or weight update.
+
+        Environment overrides:
+            DENSE_UNET_CHECKPOINT: path to the trained lung-segmentation weights
+                (default ``checkpoints/dense_unet.pth``).
+        """
+        checkpoint = os.getenv("DENSE_UNET_CHECKPOINT", "checkpoints/dense_unet.pth")
+        if not os.path.exists(checkpoint):
+            logger.info(
+                "Dense-UNet checkpoint '%s' not found; anatomical gate stays off "
+                "(classical LungSegmenter active).",
+                checkpoint,
+            )
+            return None
+
+        model = DenseUNet(pretrained=False)
+        state = torch.load(checkpoint, map_location=self.device, weights_only=False)
+        if isinstance(state, dict):
+            for key in ("model_state_dict", "state_dict"):
+                if key in state:
+                    state = state[key]
+                    break
+        model.load_state_dict(state, strict=False)
+        model.to(self.device)
+        model.eval()
+        for parameter in model.parameters():
+            parameter.requires_grad_(False)
+        logger.info("Loaded frozen Dense-UNet segmentation gate from %s", checkpoint)
+        return model
+
+    @torch.inference_mode()
+    def _anatomical_gate(self, image_np: np.ndarray) -> np.ndarray:
+        """
+        Inference-time Dilated Soft Anatomical Masking gate (Dilation 6%,
+        attenuation 10% on the outer thoracic background).
+
+        The gate runs detached, in numpy space and under ``torch.inference_mode``,
+        so no autograd graph is ever attached to the returned image. Grad-CAM
+        gradients therefore still flow only through the diagnostic backbone and
+        never leak into the segmentation network, and the diagnostic weights are
+        never modified.
+        """
+        if not getattr(self, "anatomical_gate_enabled", False):
+            return image_np
+        try:
+            return self.segmenter.generate_dilated_soft_mask(
+                image_np,
+                dilation_margin_pct=0.06,
+                background_attenuation=0.10,
+            )
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            logger.warning("Anatomical gate failed (%s); using raw image.", exc)
+            return image_np
 
     def _load_thresholds(self) -> dict[str, Any]:
         try:
@@ -173,10 +244,10 @@ class LungRayService:
                 "role": "Deep residual representations & multi-scale gradient flow (ResNet-50 23.5M params)",
                 "checkpoint": self.resnet_path,
                 "metrics": {
-                    "head_a_auc": 0.8290,
-                    "head_b_tb_auc": 0.9380,
-                    "head_c_covid_auc": 0.9480,
-                    "mean_auc": 0.9050,
+                    "head_a_auc": 0.7885,
+                    "head_b_tb_auc": 1.0000,
+                    "head_c_covid_auc": 0.9891,
+                    "mean_auc": 0.9259,
                 },
             }
 
@@ -188,9 +259,9 @@ class LungRayService:
             "checkpoint": "multi-backbone consensus",
             "metrics": {
                 "head_a_auc": 0.8410,
-                "head_b_tb_auc": 0.9710,
-                "head_c_covid_auc": 0.9580,
-                "mean_auc": 0.9233,
+                "head_b_tb_auc": 1.0000,
+                "head_c_covid_auc": 0.9910,
+                "mean_auc": 0.9440,
             },
         }
 
@@ -209,10 +280,10 @@ class LungRayService:
                 "role": "Deep residual representations & multi-scale gradient flow (ResNet-50 23.5M params)",
                 "checkpoint": self.resnet_path,
                 "metrics": {
-                    "head_a_auc": 0.8290,
-                    "head_b_tb_auc": 0.9380,
-                    "head_c_covid_auc": 0.9480,
-                    "mean_auc": 0.9050,
+                    "head_a_auc": 0.7885,
+                    "head_b_tb_auc": 1.0000,
+                    "head_c_covid_auc": 0.9891,
+                    "mean_auc": 0.9259,
                 },
             }
             reloaded.append("resnet50")
@@ -267,6 +338,7 @@ class LungRayService:
 
         image = image.convert("RGB")
         image_np = np.array(image)
+        image_np = self._anatomical_gate(image_np)
         transformed = self.transform(image=image_np)["image"]
         return transformed.unsqueeze(0).to(self.device)
 
@@ -284,6 +356,10 @@ class LungRayService:
 
         image = image.convert("RGB")
         image_np = np.array(image)
+
+        # Anatomical gate applied once to the base image; all TTA passes are
+        # derived from the already-masked image for geometric consistency.
+        image_np = self._anatomical_gate(image_np)
 
         # Pass 1: Standard
         t1 = self.transform(image=image_np)["image"]
@@ -315,7 +391,12 @@ class LungRayService:
         batch_tensor = torch.stack([t1, t2, t3], dim=0).to(self.device)
         return batch_tensor
 
-    def predict(self, image_bytes: bytes, model_name: str = "standard") -> dict[str, Any]:
+    def predict(
+        self,
+        image_bytes: bytes,
+        model_name: str = "standard",
+        failsafe_enabled: bool = True,
+    ) -> dict[str, Any]:
         # Dynamic hot-reload check
         self.check_and_reload_checkpoints()
 
@@ -413,7 +494,9 @@ class LungRayService:
 
             energy_val = float(compute_sigmoid_energy(combined_logits_a).item())
             entropy_val = float(compute_shannon_entropy(torch.from_numpy(prob_a).unsqueeze(0).to(self.device)).item())
-            safety_decision = self.safety_policy.evaluate(energy_val, entropy_val)
+            safety_decision = self.safety_policy.evaluate(
+                energy_val, entropy_val, failsafe_enabled=failsafe_enabled
+            )
 
             head_a = {disease: float(prob_a[i]) for i, disease in enumerate(NIH_14_DISEASES)}
             tb_threshold = self.thresholds.get("head_b_tb", {}).get("threshold", 0.5)
@@ -481,7 +564,9 @@ class LungRayService:
         # 2. Fail-Safe OOD & Uncertainty Evaluation
         energy_val = float(compute_sigmoid_energy(logits_a).item())
         entropy_val = float(compute_shannon_entropy(torch.from_numpy(prob_a).unsqueeze(0).to(self.device)).item())
-        safety_decision = self.safety_policy.evaluate(energy_val, entropy_val)
+        safety_decision = self.safety_policy.evaluate(
+            energy_val, entropy_val, failsafe_enabled=failsafe_enabled
+        )
 
         head_a = {disease: float(prob_a[i]) for i, disease in enumerate(NIH_14_DISEASES)}
 

@@ -62,11 +62,12 @@ async def reload_models() -> dict[str, Any]:
 @app.post("/api/v1/predict", response_model=PredictionResponse)
 async def predict(
     file: UploadFile = File(...),
-    model: str = Query(default="standard", description="Model variant: 'standard' (SOTA CADx), 'wsol' (Grounding Specialist), or 'ensemble' (Consensus Multi-Backbone)"),
+    model: str = Query(default="standard", description="Model variant: 'standard' (SOTA CADx), 'wsol' (Grounding Specialist), 'resnet50' (Residual Specialist), or 'ensemble' (Consensus Multi-Backbone)"),
+    failsafe_enabled: bool = Query(default=True, description="Whether OOD Fail-Safe policy is enforced"),
 ) -> PredictionResponse:
     try:
         image_bytes = await file.read()
-        result = service.predict(image_bytes, model_name=model)
+        result = service.predict(image_bytes, model_name=model, failsafe_enabled=failsafe_enabled)
         return PredictionResponse(**result)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))

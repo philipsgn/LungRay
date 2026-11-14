@@ -8,6 +8,8 @@ from src.models.backbones import build_backbone, interpolate_vit_pos_embed_for_5
 from src.models.multi_task_net import MultiTaskChestXrayNet
 from src.models.losses import MaskedMultiTaskLoss, FocalLoss
 from src.models.trainer import MultiTaskTrainer, multitask_collate_fn
+from src.models.dense_unet import DenseUNet, apply_dilated_soft_mask
+from src.models.asymmetric_loss import AsymmetricFocalLoss
 
 __all__ = [
     "build_backbone",
@@ -17,4 +19,7 @@ __all__ = [
     "FocalLoss",
     "MultiTaskTrainer",
     "multitask_collate_fn",
+    "DenseUNet",
+    "apply_dilated_soft_mask",
+    "AsymmetricFocalLoss",
 ]

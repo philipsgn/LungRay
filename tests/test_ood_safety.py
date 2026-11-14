@@ -128,6 +128,16 @@ def test_safety_policy_reject_hyper_energy():
     assert any("bão hòa" in r for r in decision.rejection_reasons)
 
 
+def test_safety_policy_bypass_mode():
+    """When failsafe_enabled is False, decisions are marked ACCEPT (Bypassed) and is_safe is True."""
+    policy = SafetyPolicy(energy_threshold=9.04, energy_upper_threshold=22.0, entropy_threshold=0.62)
+    # Energy is low (normally rejected), but failsafe_enabled=False
+    decision = policy.evaluate(energy_score=3.5, entropy_score=0.20, failsafe_enabled=False)
+    assert decision.decision == "ACCEPT (Bypassed)"
+    assert decision.is_safe is True
+    assert any("Chế độ bỏ qua" in r for r in decision.rejection_reasons)
+
+
 def test_anatomical_zone_extraction():
     """Heatmap peaks correctly map to lateral and vertical lung zones."""
     # Test Right Lung Upper Zone (peak in top-left: y=50, x=50 on 512x512)
@@ -190,3 +200,41 @@ def test_clinical_report_generator_rejection_lockout():
     assert report.is_blocked is True
     assert "KHÓA AN TOÀN" in report.impression
     assert len(report.icd10_codes) == 0
+
+
+def test_smart_clinical_report_guardrail_shortcut_suppression():
+    """
+    Smart Clinical Report Guardrail:
+    When infectious disease (COVID-19 / TB) is triggered without parenchymal airspace infiltration,
+    or when in_lung_ratio < 0.80, suppress false positive narrative and issue safety alert.
+    """
+    generator = ClinicalReportGenerator()
+    preds_a = {"Infiltration": 0.20, "Consolidation": 0.25, "Pneumonia": 0.22, "Atelectasis": 0.60}
+    threshs_a = {"Infiltration": 0.50, "Consolidation": 0.45, "Pneumonia": 0.45, "Atelectasis": 0.46}
+    head_b = {"tb_probability": 0.84, "is_positive": True}
+    head_c = {"covid_probability": 0.99, "is_positive": True}
+    decision = SafetyDecision("ACCEPT", True, 14.0, 0.15)
+
+    # Test 1: Parenchymal clear -> Suppress false positive
+    report = generator.generate(
+        predictions_a=preds_a,
+        thresholds_a=threshs_a,
+        head_b_result=head_b,
+        head_c_result=head_c,
+        safety_decision=decision,
+    )
+    assert report.status == "GENERATED"
+    assert "DƯƠNG TÍNH GIẢ DO NHIỄU MÁY CHỤP / SHORTCUT" in report.impression
+    assert any("CẢNH BÁO AN TOÀN AI" in f for f in report.findings)
+
+    # Test 2: In-lung ratio < 0.80 -> Suppress false positive even if one marker is borderline
+    report_xai = generator.generate(
+        predictions_a=preds_a,
+        thresholds_a=threshs_a,
+        head_b_result=head_b,
+        head_c_result=head_c,
+        safety_decision=decision,
+        in_lung_ratio=0.201,
+    )
+    assert "DƯƠNG TÍNH GIẢ DO NHIỄU MÁY CHỤP / SHORTCUT" in report_xai.impression
+    assert any("20.1%" in f for f in report_xai.findings)

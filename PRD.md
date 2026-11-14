@@ -108,6 +108,11 @@ Xây dựng **LungRay** — hệ sinh thái phần mềm **Hỗ trợ Ra Quyết
 - **FR1.5.3 — Khóa Tự Động Báo Cáo Sơ Bộ (ICD-10 Diagnostic Lockout)**:
   - Khi phát hiện OOD hoặc mẫu bất định cao: Trạng thái hệ thống chuyển sang `REJECTED_OOD`, kích hoạt viền cảnh báo đỏ phẫu thuật, đóng dấu watermark `INVALID - OOD ANOMALY DETECTED` lên bản đồ nhiệt và khóa hoàn toàn bảng kết luận ICD-10 để triệt tiêu 100% nguy cơ ảo tưởng chẩn đoán (AI Diagnostic Hallucination).
 
+### FR1.7 — Phase 8.1: Anatomical Lung Grounding & Shortcut Mitigation Gate (BMC Infectious Diseases 2026)
+- **FR1.7.1 — Dense-UNet Segmentation Backbone**: Tích hợp mô hình Dense-UNet (kiến trúc chuẩn Dubey et al., *BMC Infectious Diseases* 2026, Dice 0.9848, IoU 0.9700) làm cổng tiền lọc giải phẫu không phá hủy (non-destructive anatomical gate).
+- **FR1.7.2 — Dilated Soft Masking**: Áp dụng mặt nạ phế trường giãn nở 6% và suy giảm 90% cường độ tín hiệu ngoài phổi (attenuation factor 0.10), bảo toàn 100% nhu mô phổi bên trong đồng thời triệt tiêu các đặc trưng học vẹt (watermark chữ R/L, mép viền thiết bị chụp).
+- **FR1.7.3 — Smart Clinical Report Guardrail**: Khi In-Lung Activation Ratio $< 0.80$ hoặc tổn thương thâm nhiễm phế nang (`Infiltration`, `Consolidation`, `Pneumonia`) xung đột lâm sàng với kết luận phổi sáng bình thường, cơ chế guardrail lập tức triệt tiêu cảnh báo dương tính giả và phát cờ kiểm toán lâm sàng.
+
 ### FR2: Explainable AI & Quantitative WSOL Heatmap Generator
 - **FR2.1 — Sinh bản đồ nhiệt Grad-CAM & Grad-CAM++**:
   - Tự động sinh activation map tại tầng tích chập cuối cùng (`denseblock4`/`norm5`) cho từng lớp bệnh lý được yêu cầu.
@@ -155,7 +160,7 @@ Xây dựng **LungRay** — hệ sinh thái phần mềm **Hỗ trợ Ra Quyết
 - **WSOL Grounding Accuracy**: Mean Box-IoU đạt **0.7631** trên RSNA Pneumonia và **0.6049** trên VinDr-CXR (kiểm định định lượng trên tập mẫu chuẩn $n=50$ ca có Bounding Box chuyên gia từ bác sĩ).
 - **Shortcut Audit & Lớp Fail-Safe**: Mô hình gốc có In-lung Energy Ratio đạt trung bình **38.49%** (0/150 ca đạt ngưỡng 80%); sau khi áp dụng Clinical Anatomical Projection đạt **94.92% $\pm$ 1.60%** (149/150 ca đạt $\ge 80\%$). Đây là căn cứ khoa học quyết định triển khai thêm Lớp Fail-Safe OOD (Phase 8).
 - **Độ ổn định Ngoại vi (Domain Shift)**: $\Delta \text{AUC} = +0.0447$ trên CheXpert-small-v1 (chỉ tiêu $\le 0.080$).
-- **Quy chuẩn Kiểm thử Tự động**: **138 / 138 Unit Tests PASS** tuyệt đối qua lệnh kiểm tra `scripts/verify.ps1` (100% tỷ lệ vượt qua cổng kiểm tra kỹ thuật).
+- **Quy chuẩn Kiểm thử Tự động**: **151 / 151 Unit Tests PASS** tuyệt đối qua lệnh kiểm tra `scripts/verify.ps1` (100% tỷ lệ vượt qua cổng kiểm tra kỹ thuật).
 
 ### NFR3: An toàn, Bảo mật & Liêm chính dữ liệu (Data Integrity & Safety)
 - **Zero Data Leakage**: Tuyệt đối không để ảnh của cùng một bệnh nhân xuất hiện ở cả tập Train và Test (phân chia nghiêm ngặt theo `Patient_ID`, $Train \cap Test = \emptyset$).

@@ -28,18 +28,19 @@
      | **Root** | [PHASES.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/PHASES.md) | WBS 7 Phase, 31 Task chi tiết, theo dõi tiến độ và trạng thái thực thi thực tế (96.8%). |
      | **Root** | [PLAN.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/PLAN.md) | Kế hoạch triển khai tổng thể v7.0, 6 Cổng kiểm soát chất lượng (Gates 1–6). |
      | **Root** | [AGENTS.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/AGENTS.md) | Khung điều phối Multi-Agent, Rule 0 tiền kiểm, 9 Ràng buộc sống còn. |
+     | **reports/** | [reports/DSP391_Full_Thesis_Report.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/reports/DSP391_Full_Thesis_Report.md) | Bản Official 1: Báo cáo Toàn văn Luận văn Đồ án Tốt nghiệp DSP391 (chuẩn IEEE/MICCAI). |
+     | **docs/** | [docs/DEMO_PRESENTATION_GUIDE.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/docs/DEMO_PRESENTATION_GUIDE.md) | Bản Official 2: Cẩm nang Bảo vệ, Kịch bản Slide, Live Demo & Bộ 28 câu hỏi phản biện. |
      | **docs/** | [docs/EXECUTIVE_SUMMARY.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/docs/EXECUTIVE_SUMMARY.md) | Báo cáo tóm tắt điều hành v7.0 (Scope, Quyết định kiến trúc & Kết quả). |
-     | **docs/** | [docs/defense_faq.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/docs/defense_faq.md) | 15 câu hỏi - đáp phản biện lâm sàng & kỹ thuật sống còn cho buổi bảo vệ luận án. |
      | **docs/** | [docs/KAGGLE_EXECUTION_GUIDE.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/docs/KAGGLE_EXECUTION_GUIDE.md) | Hướng dẫn vận hành huấn luyện trên Kaggle GPU (Notebooks 02, 03, 04, 05). |
      | **docs/** | [docs/literature_review.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/docs/literature_review.md) | Tổng quan 5 bài báo học thuật nền tảng (ChestX-ray14, CheXNet, Grad-CAM, Shortcut). |
      | **.agents/** | [rules/](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/.agents/rules/) & [skills/](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/.agents/skills/) | Quy chuẩn lập trình, kiểm toán dữ liệu, chuẩn báo cáo đơn sắc và kỹ năng phối hợp. |
 2. **Bước 2 — Đối chiếu 9 Ràng Buộc Sống Còn của Nền tảng LungRay (The 9 Inviolable Constraints)**:
-   - 🔴 **Ràng buộc 1 (Kiến trúc 3-Head)**: Dùng chung 1 backbone (DenseNet-121 / ResNet-50 / ViT) cho đồng thời: Head A (14 bệnh lồng ngực NIH), Head B (Sàng lọc Lao phổi TB), Head C (COVIDx CXR-4 3 lớp).
+   - 🔴 **Ràng buộc 1 (Kiến trúc 3-Head & Pre-processing Gate)**: Dùng chung 1 backbone (DenseNet-121 / ResNet-50 / ViT) cho đồng thời: Head A (14 bệnh lồng ngực NIH), Head B (Sàng lọc Lao phổi TB), Head C (COVIDx CXR-4 3 lớp). Tiền xử lý giải phẫu tích hợp Dense-UNet Anatomical Gate (Dice 0.985, Dubey et al. BMC 2026) với Dilated Soft Masking (6% dilation, 10% attenuation) và hàm mất mát Asymmetric Focal Loss (ASL) giải quyết mất cân bằng nhãn cực đoan.
    - 🔴 **Ràng buộc 2 (Zero Data Leakage)**: Với NIH ChestX-ray14, **bắt buộc chia train/val/test theo `Patient_ID` (70/10/20)**. Tuyệt đối cấm chia ngẫu nhiên theo ảnh.
    - 🔴 **Ràng buộc 3 (Chống Shortcut Learning)**: Với COVIDx CXR-4 Benchmark, **bắt buộc phân tầng theo nguồn ảnh gốc (`data_source`) và kiểm soát theo `patient_id`**. Tuyệt đối cấm chia ngẫu nhiên.
    - 🔴 **Ràng buộc 4 (Phân vai trò Bounding Box)**: Bounding Box **CHỈ** dùng cho tập đánh giá để tính chỉ số IoU (VinDr-CXR, RSNA Pneumonia). Các tập huấn luyện (NIH, TB, COVID) **KHÔNG** cần Bounding Box vì WSOL học từ nhãn mức ảnh.
    - 🔴 **Ràng buộc 5 (Cân bằng Batch Multi-Task)**: Bắt buộc dùng `WeightedMultiTaskBatchSampler` cố định tỷ lệ 60% NIH : 25% COVID : 15% TB trong mỗi batch để chống Task Starvation.
-   - 🔴 **Ràng buộc 6 (Kiểm toán bắt buộc cho Head C)**: Bắt buộc thực hiện **Shortcut Learning Audit** bằng Grad-CAM trên các ca dương tính COVID-19; năng lượng kích hoạt trong phế trường phổi phải đạt $\ge 80\%$.
+   - 🔴 **Ràng buộc 6 (Kiểm toán bắt buộc cho Head C & Smart Guardrail)**: Bắt buộc thực hiện **Shortcut Learning Audit** bằng Grad-CAM trên các ca dương tính COVID-19; năng lượng kích hoạt trong phế trường phổi phải đạt $\ge 80\%$. Tích hợp **Smart Clinical Report Guardrail** tự động khóa và hạ cờ chẩn đoán dương tính giả khi năng lượng trong phổi $< 80\%$ hoặc khi phế nang Head A hoàn toàn âm tính.
    - 🔴 **Ràng buộc 7 (Chuẩn Nghiên cứu Thực nghiệm Sống & Cấm Tuyệt đối Fake/Display Ảnh Tĩnh)**: Mọi phân tích dữ liệu (EDA), đánh giá mô hình, ma trận nhầm lẫn (Confusion Matrix), Grad-CAM heatmap hay định vị IoU trong Jupyter Notebooks (`notebooks/*.ipynb`) **BẮT BUỘC phải viết bằng code Python/PyTorch tương tác sống** (`pandas`, `seaborn`, `matplotlib`, `zipfile`, `cv2`, `PIL`), tính toán trực tiếp từ dữ liệu thực tế và xuất đồ thị/ảnh live trong phiên làm việc. **TUYỆT ĐỐI CẤM** hành vi dùng `display(Image("...png"))` hay nhúng ảnh tĩnh dựng sẵn vào notebook để giả lập kết quả.
    - 🔴 **Ràng buộc 8 (Dọn dẹp Tệp Tạm & Tinh gọn Không gian Dự án - Lean Workspace & Immediate Scratch Cleanup)**: Khi tạo tệp tạm thời (scratch scripts, runner helpers, debug logs, test dumps) để hỗ trợ quá trình thực thi: **BẮT BUỘC phải xóa sạch ngay lập tức sau khi hoàn thành nhiệm vụ**. Tuyệt đối không để lại mã nguồn rác, tệp mồ côi trong `scripts/`, `src/` hoặc thư mục gốc. Workspace phải luôn ở trạng thái tinh gọn chuẩn Enterprise.
    - 🔴 **Ràng buộc 9 (Chuẩn Báo Cáo Nghiên Cứu Khoa Học & Luận Án Đơn Sắc - Academic Report Rigor & Monochrome Standards)**: Mọi tài liệu báo cáo nghiệm thu, tài liệu kỹ thuật, bài báo khoa học và kết xuất PDF (`reports/`, `results/*.md`, `results/*.pdf`) **BẮT BUỘC** phải tuân thủ nghiêm ngặt [.agents/rules/academic_report_standards.md](file:///c:/Users/TanPhat/Documents/AI_E/Chest%20X-rays/.agents/rules/academic_report_standards.md): Tuyệt đối cấm sử dụng icon/emoji, bắt buộc dùng phông chữ Times New Roman trang trọng, bảng biểu Booktabs 3 đường kẻ đen, tone màu đơn sắc đen trắng, và văn phong nghiên cứu khoa học khách quan.
@@ -56,6 +57,10 @@
      - 5. `reports/docs_report.md`: Cập nhật bản sao tài liệu luận văn chuẩn copy-paste vào Word (0 ký tự raw LaTeX `$`).
      - 6. `reports/LANDING_PAGE_REPORT.html`: Cập nhật các thẻ chỉ số tóm tắt, biểu đồ động Chart.js và bảng đối chiếu đa mô hình.
      - 7. `docs/DEMO_PRESENTATION_GUIDE.md`: Cập nhật kịch bản trình diễn 5 ca bệnh và hướng dẫn nạp checkpoint mới.
+   - 🔴 **Ràng buộc 11 (Chuẩn hóa Thuật ngữ Học thuật Y khoa - Academic Terminology Standardization)**: Mọi tài liệu nghiên cứu, kịch bản thuyết minh slide, báo cáo luận văn và chỉ đạo Agent **TUYỆT ĐỐI KHÔNG SỬ DỤNG** các từ ngữ mang tính tranh đấu hoặc từ lóng phi học thuật:
+     - Cấm dùng: `đấu trường`, `đấu trường kiến trúc` $\to$ Bắt buộc thay bằng: `Phân tích So sánh Đa Kiến trúc` (*Multi-Architecture Comparative Analysis*) hoặc `Khảo sát Đối chiếu Hiệu năng Mô hình`.
+     - Cấm dùng: `Gate`, `Cổng chất lượng`, `Delivery Gate` trong văn bản báo cáo $\to$ Bắt buộc thay bằng: `Mốc nghiệm thu giai đoạn` (*Delivery Milestone*) hoặc `Tiêu chuẩn bàn giao kỹ thuật` (*Acceptance Checkpoint*).
+     - Cấm dùng: `test pass`, `PASS` dạng informal $\to$ Bắt buộc thay bằng: `Đạt chuẩn kiểm thử`, `Đã xác nhận kiểm tra`, hoặc `Đáp ứng tiêu chuẩn kỹ thuật`.
 3. **Bước 3 — Thực thi nhất quán (Execution with Integrity)**:
    - Không tự ý bổ sung dataset ngoài phạm vi đã duyệt (ví dụ: không tải MIMIC-CXR 570GB).
    - Không tự ý thay đổi taxonomy hoặc loại bỏ nhiệm vụ khi chưa có phê duyệt từ `Lead AI Orchestrator`.
@@ -168,12 +173,13 @@ graph TD
 - **Trách nhiệm cốt lõi**:
   1. Xây dựng kiến trúc Multi-Task 3-Head với Shared Encoder (DenseNet-121, ResNet-50, ViT).
   2. Hiện thực cơ chế Masked Backpropagation và Masked Loss Engine, đảm bảo cách ly gradient giữa các heads.
-  3. Triển khai Focal Loss và Positive Class Weighting để khắc phục mất cân bằng lớp cực hạn trên Head A.
-  4. Tối ưu hóa vòng lặp huấn luyện với PyTorch Mixed Precision (`autocast`), Early Stopping và Cosine Annealing LR.
-  5. Tối ưu hóa ngưỡng quyết định $\tau_c$ theo từng lớp bệnh bằng Youden's J statistic.
+  3. Triển khai Asymmetric Focal Loss (ASL) và Positive Class Weighting để khắc phục mất cân bằng lớp cực hạn (95%+ mẫu âm tính) trên Head A.
+  4. Hiện thực hóa kiến trúc Dense-UNet (BMC Infectious Diseases 2026) cho phân đoạn phế trường chuẩn xác cao (Dice 0.9848, IoU 0.9700).
+  5. Tối ưu hóa vòng lặp huấn luyện với PyTorch Mixed Precision (`autocast`), Early Stopping và Cosine Annealing LR.
+  6. Tối ưu hóa ngưỡng quyết định $\tau_c$ theo từng lớp bệnh bằng Youden's J statistic.
 - **Artifacts đầu ra**:
-  - `src/models/multi_task_net.py`, `src/models/losses.py`, `src/models/trainer.py`
-  - `checkpoints/best_model.pth`, `configs/optimal_thresholds.json`
+  - `src/models/multi_task_net.py`, `src/models/losses.py`, `src/models/asymmetric_loss.py`, `src/models/dense_unet.py`
+  - `checkpoints/best_model.pth`, `checkpoints/best_resnet50.pth`, `configs/optimal_thresholds.json`
 
 ---
 
@@ -184,10 +190,11 @@ graph TD
   2. Xây dựng thuật toán Adaptive Binarization để chuyển đổi heatmap liên tục thành mặt nạ nhị phân tổn thương.
   3. Thực hiện đo đạc định lượng chỉ số IoU so với Bounding Box chuyên gia trên VinDr-CXR và RSNA Pneumonia Detection.
   4. Thực hiện kiểm toán rủi ro Shortcut Learning Audit cho Head C (COVID-19), xác minh tỷ lệ năng lượng kích hoạt nằm trong phế trường phổi $\ge 80\%$.
-  5. Đánh giá độ tổng quát hóa ngoại vi (Generalization) trên CheXpert-small-v1.
+  5. Hiện thực hóa Hàng rào Khóa Báo cáo Thông minh (Smart Clinical Report Guardrail) triệt tiêu dương tính giả do ký tự chữ (R/L) hoặc viền máy chụp.
+  6. Đánh giá độ tổng quát hóa ngoại vi (Generalization) trên CheXpert-small-v1 và VinDr-CXR.
 - **Artifacts đầu ra**:
   - `src/explainability/grad_cam.py`, `src/explainability/metrics.py`, `src/explainability/shortcut_audit.py`
-  - `results/iou_evaluation.csv`, `results/shortcut_learning_audit.csv`
+  - `src/safety/report_generator.py`, `results/iou_evaluation.csv`, `results/shortcut_learning_audit.csv`
 
 ---
 
@@ -214,7 +221,7 @@ graph TD
   4. Thiết kế Slide thuyết trình bảo vệ (35–45 slides) và Poster khoa học khổ A1.
 - **Artifacts đầu ra**:
   - `reports/Final_Thesis_Report.pdf`, `reports/Defense_Presentation.pptx`, `reports/Poster_Scientific_A1.pdf`
-  - `docs/defense_faq.md`, `results/model_comparison_table.csv`, `results/baseline/BASELINE_REPORT.pdf`
+  - `docs/DEMO_PRESENTATION_GUIDE.md`, `reports/DSP391_Full_Thesis_Report.md`, `results/multi_architecture_pathology_matrix.csv`
 
 ---
 

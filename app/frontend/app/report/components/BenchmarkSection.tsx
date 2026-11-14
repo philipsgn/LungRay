@@ -176,18 +176,20 @@ export function BenchmarkSection({ dict, lang }: BenchmarkSectionProps) {
                   {dict.section6_evaluation.arenaDesc}
                 </p>
               </div>
-              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                Triple Empirical Verification (Holdout Set)
+              <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                Quad-Architecture &amp; Consensus Verification
               </span>
             </div>
 
-            {/* 3 Model Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Model Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {MODEL_SPECS.map((spec) => (
                 <div
                   key={spec.architecture}
                   className={`backdrop-blur-md bg-white/90 border shadow-xl rounded-3xl p-5 flex flex-col justify-between transition-all hover:shadow-2xl ${
-                    spec.isProduction
+                    spec.architecture.includes("Consensus")
+                      ? "border-purple-400 ring-2 ring-purple-500/20"
+                      : spec.isProduction
                       ? "border-emerald-400 ring-2 ring-emerald-500/20"
                       : "border-slate-200/90"
                   }`}
@@ -200,7 +202,11 @@ export function BenchmarkSection({ dict, lang }: BenchmarkSectionProps) {
                       </span>
                       <span
                         className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                          spec.badgeColor === "emerald"
+                          spec.badgeColor === "purple"
+                            ? "bg-purple-100 text-purple-900 border border-purple-300"
+                            : spec.badgeColor === "amber"
+                            ? "bg-amber-100 text-amber-900 border border-amber-300"
+                            : spec.badgeColor === "emerald"
                             ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
                             : spec.badgeColor === "sky"
                             ? "bg-sky-100 text-sky-900 border border-sky-300"
@@ -295,7 +301,16 @@ export function BenchmarkSection({ dict, lang }: BenchmarkSectionProps) {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {MODEL_SPECS.map((spec) => (
-                      <tr key={spec.architecture} className={spec.isProduction ? "bg-emerald-50/60 font-semibold" : "hover:bg-slate-50"}>
+                      <tr
+                        key={spec.architecture}
+                        className={
+                          spec.architecture.includes("Consensus")
+                            ? "bg-purple-50/70 font-semibold"
+                            : spec.isProduction
+                            ? "bg-emerald-50/50 font-semibold"
+                            : "hover:bg-slate-50"
+                        }
+                      >
                         <td className="py-2.5 px-3 font-sans font-bold text-slate-900">
                           {spec.architecture}
                         </td>
@@ -310,7 +325,11 @@ export function BenchmarkSection({ dict, lang }: BenchmarkSectionProps) {
                         <td className="py-2.5 px-3">
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              spec.badgeColor === "emerald"
+                              spec.badgeColor === "purple"
+                                ? "bg-purple-100 text-purple-900"
+                                : spec.badgeColor === "amber"
+                                ? "bg-amber-100 text-amber-900"
+                                : spec.badgeColor === "emerald"
                                 ? "bg-emerald-100 text-emerald-900"
                                 : spec.badgeColor === "sky"
                                 ? "bg-sky-100 text-sky-900"

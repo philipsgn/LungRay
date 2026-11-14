@@ -77,6 +77,8 @@ out/
 !/docs/*.md
 !/reports/**/*.md
 !/reports/*.md
+!/papers/**/*.md
+!/papers/*.md
 !/app/**/*.md
 
 # OS specific files

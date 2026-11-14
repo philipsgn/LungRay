@@ -28,6 +28,7 @@ interface DiagnosisDashboardProps {
   onSelectPathology: (head: string, classIdx: number, diseaseName: string) => void;
   onToggleGrounding: (grounded: boolean) => void;
   onNavigateToScan?: () => void;
+  onBypassFailsafe?: () => void;
   isExplaining?: boolean;
 }
 
@@ -82,6 +83,7 @@ export default function DiagnosisDashboard({
   onSelectPathology,
   onToggleGrounding,
   onNavigateToScan,
+  onBypassFailsafe,
   isExplaining = false,
 }: DiagnosisDashboardProps) {
   const [lang] = useLungRayLanguage();
@@ -328,7 +330,7 @@ export default function DiagnosisDashboard({
                         {prediction.safety.energy_score.toFixed(4)}
                       </span>
                       <span className="text-[9px] text-slate-500 block">
-                        &lt; 9.0421 (Reject)
+                        &lt; 5.50 (Reject)
                       </span>
                     </div>
                     <div>
@@ -337,7 +339,7 @@ export default function DiagnosisDashboard({
                         {prediction.safety.entropy_score.toFixed(4)}
                       </span>
                       <span className="text-[9px] text-slate-500 block">
-                        &gt; 0.6275 (Reject)
+                        &gt; 0.6800 (Reject)
                       </span>
                     </div>
                   </div>
@@ -347,6 +349,27 @@ export default function DiagnosisDashboard({
                       <strong>{t.clinicalRecLabel}</strong> {t.clinicalRecRejectText}
                     </span>
                   </div>
+                  <p className="text-[10px] text-slate-400 mt-1.5 leading-snug">
+                    💡 <span className="text-slate-300 font-semibold">{lang === "vi" ? "Gợi ý kỹ thuật:" : "Technical Tip:"}</span>{" "}
+                    {lang === "vi"
+                      ? "Ảnh tải lên nên có độ phân giải ≥ 512×512 px và tỷ lệ gần vuông chuẩn ngực thẳng (PA/AP) để tránh bị phân loại nhầm là ngoài phân phối."
+                      : "Uploaded radiograph should have resolution ≥ 512×512 px with a near-square frontal PA/AP aspect ratio to prevent false OOD rejection."}
+                  </p>
+                  {onBypassFailsafe && (
+                    <div className="mt-3 pt-2.5 border-t border-rose-900/40 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400">
+                        Xác nhận đây là phim X-quang hợp lệ của bệnh nhân?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={onBypassFailsafe}
+                        className="px-3 py-1 bg-amber-900/50 hover:bg-amber-800/60 text-amber-200 border border-amber-600/60 rounded text-[10px] font-bold transition-all shadow-sm flex items-center gap-1.5"
+                      >
+                        <ShieldAlert className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Bỏ qua khóa an toàn & Phân tích tiếp</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="bg-slate-900 border border-slate-700/80 rounded-xl p-3 shadow-md flex items-center justify-between">
@@ -392,6 +415,23 @@ export default function DiagnosisDashboard({
                 </div>
               ) : (
                 <div className="space-y-3 text-[11px] text-slate-300 bg-slate-950/70 p-3.5 rounded-lg border border-slate-850">
+                  {/* Shortcut Guardrail Warning Banner */}
+                  {((auditRatio !== null && auditRatio < 0.80) || auditPass === false) && (
+                    <div className="p-2.5 rounded-lg bg-amber-950/50 border border-amber-600/80 text-amber-200 flex items-start gap-2 animate-in fade-in">
+                      <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <div className="text-[11px] leading-relaxed">
+                        <span className="font-bold text-amber-300 block uppercase tracking-wide">
+                          {lang === "vi" ? "CẢNH BÁO AN TOÀN AI (SHORTCUT LEARNING / DƯƠNG TÍNH GIẢ)" : "AI SAFETY GUARDRAIL (SHORTCUT LEARNING / FALSE POSITIVE)"}
+                        </span>
+                        <span>
+                          {lang === "vi"
+                            ? `Tỷ lệ năng lượng trong phế trường chỉ đạt ${(auditRatio! * 100).toFixed(1)}% (< 80%). Trọng tâm kích hoạt mô hình tập trung vào ký tự chữ (R/L) hoặc viền máy chụp ngoại vi thay vì tổn thương nhu mô phổi.`
+                            : `In-lung energy ratio is only ${(auditRatio! * 100).toFixed(1)}% (< 80%). Model activation attended to external markers (R/L) or thoracic borders instead of lung parenchyma.`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Executive Impression (Narrative Synthesis) */}
                   <div className="pb-2 border-b border-slate-900">
                     <span className="font-bold text-slate-400 block text-[10px] uppercase tracking-wider mb-1">

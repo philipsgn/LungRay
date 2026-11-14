@@ -54,10 +54,11 @@ explainer = GradCAMExplainer(model=model, target_layer=model.backbone.features.d
                                --output results/shortcut_learning_audit.csv
    ```
 2. Thuật toán phân tích:
-   - Trích xuất mặt nạ phổi $P_{\text{lung}}$.
+   - Trích xuất mặt nạ phổi $P_{\text{lung}}$ bằng **Dense-UNet** (BMC Infectious Diseases 2026, Dice 0.9848, IoU 0.9700) kết hợp Dilated Soft Masking (dilation 6%, attenuation 10%).
    - Tính tỷ lệ năng lượng nhiệt Grad-CAM nằm trong phổi:
      $$\text{In-Lung Ratio} = \frac{\sum_{P_{\text{lung}}} M_{\text{COVID}}}{\sum_{\text{Total}} M_{\text{COVID}}}$$
 3. **Tiêu chuẩn vượt qua**: Tỷ lệ trung bình $\ge 80\%$. Không có sự kích hoạt tập trung tại góc có watermark hoặc viền đen máy chụp.
+4. **Smart Clinical Report Guardrail**: Khi $\text{In-Lung Ratio} < 80\%$ hoặc phế nang Head A âm tính, hệ thống tự động khóa và hạ cờ chẩn đoán dương tính giả, phát cảnh báo nghi ngờ nhiễu ký tự ngoài thành ngực (chữ R/L).
 
 ### Bước 4: Kiểm định Tổng quát hóa Ngoại vi (External Generalization)
 1. Đánh giá Head A trên tập `CheXpert-small-v1`:

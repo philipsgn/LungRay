@@ -309,9 +309,24 @@ Khi hệ thống chạy ở môi trường chưa nạp trọng số ResNet-50 (`
 - Head B: $0.70 \cdot \hat{y}_{\text{wsol}} + 0.30 \cdot \hat{y}_{\text{dense}}$
 - Head C: $0.90 \cdot \hat{y}_{\text{dense}} + 0.10 \cdot \hat{y}_{\text{wsol}}$
 
+### 3.7. Hàm Mất Mát Asymmetric Focal Loss (ASL) Cho Chẩn Đoán Đa Nhãn (Multi-Label)
+Nhằm giải quyết sự mất cân bằng lớp cực đoan (95%+ mẫu âm tính) trong bộ dữ liệu NIH 14 bệnh lý, hệ thống triển khai Asymmetric Focal Loss (ASL):
+$$L_{ASL} = - y (1 - p_m)^{\gamma_+} \log(p_m) - (1 - y) (p_m - m)^{\gamma_-} \log(1 - p_m + m)$$
+- $\gamma_+ = 0$, $\gamma_- = 4$: Tập trung học các ca dương tính khó, triệt tiêu gradient từ các ca âm tính dễ.
+- Shifting margin $m = 0.05$: Tự động loại bỏ các ca âm tính có xác suất dự đoán cực thấp ($< 5\%$) ra khỏi tính toán hàm mất mát, giúp mô hình ổn định trên dữ liệu nhiễu.
+
+### 3.8. Dense-UNet (BMC 2026) & Dilated Soft Anatomical Masking
+**Dense-UNet** (Dice 0.9848, IoU 0.9700) được tích hợp làm Core Grounding Engine. Chiến lược **Dilated Soft Anatomical Masking** đảm bảo:
+1. **Dilation (5-8%)**: Mở rộng mặt nạ phổi, bảo toàn các vùng giải phẫu lâm sàng trọng yếu (tràn dịch góc sườn hoành, dày màng phổi, bóng tim).
+2. **Soft Attenuation (90%)**: Giảm 90% cường độ ánh sáng vùng ngoài phổi (chữ R/L, viền máy chụp) thay vì cắt đen tuyệt đối.
+
+### 3.9. Chốt Chặn An Toàn Lâm Sàng (Smart Clinical Report Guardrail)
+Đối chiếu chéo giữa kết quả phân đoạn giải phẫu (Dense-UNet) và kết luận từ Head B/C. Nếu Head B/C dương tính nhưng không có tổn thương thâm nhiễm/đông đặc ở Head A, đồng thời năng lượng hoạt động (XAI Audit) tập trung $< 80\%$ trong phổi $\to$ **Khóa báo cáo (Lockout)** và cảnh báo nhiễu máy chụp.
+
 ---
 
-### 3.7. Kỹ Thuật Tăng Cường Lúc Suy Luận Chuẩn Lâm Sàng (3-Pass Clinical TTA) & Hiệu Chuẩn Nhiệt Độ (Temperature Scaling)
+### 3.10. Kỹ Thuật Tăng Cường Lúc Suy Luận Chuẩn Lâm Sàng (3-Pass Clinical TTA) & Hiệu Chuẩn Nhiệt Độ (Temperature Scaling)
+
 
 Nhằm giải quyết triệt để bài toán **Dịch chuyển miền dữ liệu liên bệnh viện (Cross-Hospital Domain Shift)** và ngăn ngừa suy luận quá tự tin (Overconfidence) trên dữ liệu ngoại vi, LungRay tích hợp quy trình 2 tầng thích nghi:
 

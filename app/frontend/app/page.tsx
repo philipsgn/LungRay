@@ -24,6 +24,7 @@ export default function Home() {
   // Two-Section Navigation State: "scan" | "report"
   const [activeSection, setActiveSection] = useState<"scan" | "report">("scan");
   const [selectedModel, setSelectedModel] = useState<string>("standard");
+  const [failsafeEnabled, setFailsafeEnabled] = useState<boolean>(true);
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -138,7 +139,7 @@ export default function Home() {
     setLoading(true);
     try {
       const [predResult, auditResult] = await Promise.all([
-        predictImage(selectedFile, selectedModel),
+        predictImage(selectedFile, selectedModel, failsafeEnabled),
         auditImage(selectedFile),
       ]);
       setPrediction(predResult);
@@ -220,7 +221,7 @@ export default function Home() {
     if (!file) return;
     setLoading(true);
     try {
-      const predResult = await predictImage(file, newModel);
+      const predResult = await predictImage(file, newModel, failsafeEnabled);
       setPrediction(predResult);
       await fetchExplanation(
         file,
@@ -237,9 +238,28 @@ export default function Home() {
     }
   };
 
+  const handleToggleFailsafe = async (enabled: boolean) => {
+    setFailsafeEnabled(enabled);
+    if (!file) return;
+    setLoading(true);
+    try {
+      const predResult = await predictImage(file, selectedModel, enabled);
+      setPrediction(predResult);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to re-evaluate with fail-safe toggle");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#05080E] text-slate-100 font-sans">
-      <PacsHeader selectedModel={selectedModel} onSelectModel={handleModelChange} />
+      <PacsHeader
+        selectedModel={selectedModel}
+        onSelectModel={handleModelChange}
+        failsafeEnabled={failsafeEnabled}
+        onToggleFailsafe={handleToggleFailsafe}
+      />
 
       <main className="max-w-5xl mx-auto p-3 sm:p-5 space-y-4">
         {/* ========================================================================= */}
@@ -434,6 +454,7 @@ export default function Home() {
               onSelectPathology={handleSelectPathology}
               onToggleGrounding={handleToggleGrounding}
               onNavigateToScan={() => setActiveSection("scan")}
+              onBypassFailsafe={() => handleToggleFailsafe(false)}
               isExplaining={isExplaining || loading}
             />
           </div>

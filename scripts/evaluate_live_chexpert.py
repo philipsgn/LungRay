@@ -45,9 +45,13 @@ CHEXPERT_SHARED_5: Dict[str, Tuple[str, int, float]] = {
 }
 
 
-def load_model(weights_path: str = "checkpoints/best_model.pth", device: torch.device = torch.device("cpu")) -> MultiTaskChestXrayNet:
+def load_model(
+    weights_path: str = "checkpoints/best_model.pth",
+    backbone_name: str = "densenet121",
+    device: torch.device = torch.device("cpu"),
+) -> MultiTaskChestXrayNet:
     model = MultiTaskChestXrayNet(
-        backbone_name="densenet121",
+        backbone_name=backbone_name,
         pretrained=False,
         img_size=512,
         num_classes_a=14,
@@ -55,7 +59,7 @@ def load_model(weights_path: str = "checkpoints/best_model.pth", device: torch.d
         num_classes_c=1,
     )
     if os.path.exists(weights_path):
-        print(f"[*] Nạp trọng số mô hình từ {weights_path}...")
+        print(f"[*] Nạp trọng số mô hình {backbone_name} từ {weights_path}...")
         state = torch.load(weights_path, map_location=device, weights_only=False)
         if isinstance(state, dict) and "model_state_dict" in state:
             state = state["model_state_dict"]
@@ -119,6 +123,8 @@ def sample_chexpert_cases(zf: zipfile.ZipFile, n_samples: int = 200, seed: int =
 
 def run_live_chexpert_benchmark(
     zip_path: str = "dataset/cheXpert.zip",
+    weights_path: str = "checkpoints/best_model.pth",
+    backbone: str = "densenet121",
     n_samples: int = 200,
     out_csv: str = "results/live_chexpert_generalization.csv",
     seed: int = 42,
@@ -129,7 +135,7 @@ def run_live_chexpert_benchmark(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[*] Sử dụng thiết bị tính toán: {device}")
 
-    model = load_model("checkpoints/best_model.pth", device=device)
+    model = load_model(weights_path=weights_path, backbone_name=backbone, device=device)
     transform = get_val_transforms(img_size=512)
 
     with zipfile.ZipFile(zip_path, "r") as zf:
@@ -231,6 +237,8 @@ def run_live_chexpert_benchmark(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Live CheXpert OOD Benchmark")
     parser.add_argument("--zip-path", type=str, default="dataset/cheXpert.zip")
+    parser.add_argument("--weights", type=str, default="checkpoints/best_model.pth")
+    parser.add_argument("--backbone", type=str, default="densenet121", choices=["densenet121", "resnet50"])
     parser.add_argument("--n-samples", type=int, default=200)
     parser.add_argument("--out-csv", type=str, default="results/live_chexpert_generalization.csv")
     parser.add_argument("--seed", type=int, default=42)
@@ -238,6 +246,8 @@ if __name__ == "__main__":
 
     run_live_chexpert_benchmark(
         zip_path=args.zip_path,
+        weights_path=args.weights,
+        backbone=args.backbone,
         n_samples=args.n_samples,
         out_csv=args.out_csv,
         seed=args.seed,

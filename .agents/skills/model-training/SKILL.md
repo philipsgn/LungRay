@@ -45,7 +45,10 @@ training:
   early_stopping_patience: 5
 
 loss:
-  head_a_type: "focal" # hoặc "bce"
+  head_a_type: "asymmetric_focal" # hoặc "focal", "bce"
+  asl_gamma_neg: 4.0
+  asl_gamma_pos: 0.0
+  asl_clip: 0.05
   focal_gamma: 2.0
   focal_alpha: 0.25
 ```

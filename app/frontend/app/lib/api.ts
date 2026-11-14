@@ -34,13 +34,20 @@ export async function getModels(): Promise<ModelInfo[]> {
   return handleResponse<ModelInfo[]>(response);
 }
 
-export async function predictImage(file: File, model: string = "standard"): Promise<PredictionResponse> {
+export async function predictImage(
+  file: File,
+  model: string = "standard",
+  failsafeEnabled: boolean = true
+): Promise<PredictionResponse> {
   const formData = new FormData();
   formData.append("file", file);
-  const response = await fetch(`${API_BASE}/api/v1/predict?model=${encodeURIComponent(model)}`, {
-    method: "POST",
-    body: formData,
-  });
+  const response = await fetch(
+    `${API_BASE}/api/v1/predict?model=${encodeURIComponent(model)}&failsafe_enabled=${failsafeEnabled}`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
   return handleResponse<PredictionResponse>(response);
 }
 

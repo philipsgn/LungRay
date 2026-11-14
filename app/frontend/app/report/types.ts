@@ -120,7 +120,7 @@ export interface ModelComparisonSpec {
   lossFunctions?: string;
   trainingStrategy: string;
   statusBadge: BilingualText;
-  badgeColor: "emerald" | "sky" | "rose";
+  badgeColor: "emerald" | "sky" | "rose" | "purple" | "amber";
   isProduction: boolean;
   clinicalFeasibility: BilingualText;
 }

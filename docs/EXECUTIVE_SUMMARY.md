@@ -41,7 +41,7 @@ Xây dựng hệ thống học sâu hoàn chỉnh giải quyết đồng thời 
 ### 2.1. Điểm mạnh công nghệ
 - **Chiến lược dữ liệu tối ưu**: Tập trung vào 6 bộ dữ liệu mở chuẩn quốc tế (NIH ChestX-ray14 112K ảnh, TB Database 7K ảnh, COVIDx CXR-4 16K+ ảnh, VinDr-CXR 3K ảnh test có bbox, RSNA Pneumonia, CheXpert-small). Loại bỏ MIMIC-CXR 570GB để bảo đảm tính khả thi trên hạ tầng đám mây.
 - **Đổi mới toán học (TASK-013)**: Kết hợp Asymmetric Loss suppressing easy negatives, Focal Loss pos_weight động kẹp trần 50x, và LayerNorm parameter-free.
-- **Quy chuẩn kiểm thử tự động**: 114 unit tests kiểm tra toàn diện từ rò rỉ dữ liệu, toán tử loss, kiến trúc mạng, XAI hooks, API backend cho đến kiểm định ngoại vi.
+- **Quy chuẩn kiểm thử tự động**: 151 unit tests kiểm tra toàn diện từ rò rỉ dữ liệu, toán tử loss, kiến trúc mạng, XAI hooks, Cổng giải phẫu Dense-UNet, API backend cho đến kiểm định ngoại vi.
 
 ### 2.2. Thách thức và Biện pháp kiểm soát kỹ thuật
 
@@ -129,7 +129,7 @@ Xây dựng hệ thống học sâu hoàn chỉnh giải quyết đồng thời 
 | **Shortcut Audit (Head C In-lung Ratio)**| $\ge 80.0\%$ | **94.92% $\pm$ 1.60%** (100% ca đạt) | 150 ca COVID dương tính, Clinical Grounding | PASS |
 | **Độ ổn định Ngoại vi (CheXpert OOD)** | $\Delta \text{AUC} \le 0.080$ | **$\Delta \text{AUC} = +0.0447$** (AUC 0.8070) | Stanford CheXpert-small-v1 (5 bệnh chính) | PASS |
 | **Thời gian phản hồi Web PACS** | $\le 2.0$ giây/ảnh | **$\le 1.8$ giây/ảnh** | Tải ảnh $\to$ Inference 3 Heads $\to$ Grad-CAM | PASS |
-| **Quy chuẩn Kiểm thử Tự động** | 100% Pass | **114 / 114 Unit Tests PASS** | `powershell -File scripts/verify.ps1` | PASS |
+| **Quy chuẩn Kiểm thử Tự động** | 100% Đạt chuẩn | **151 / 151 Ca kiểm thử đạt chuẩn** | `powershell -File scripts/verify.ps1` | ĐẠT TIÊU CHUẨN |
 
 ---
 
@@ -163,6 +163,6 @@ Xây dựng hệ thống học sâu hoàn chỉnh giải quyết đồng thời 
 6. [x] **Cải tiến SOTA Toán học (TASK-013 / Phase 4)**: Triển khai Asymmetric Loss, Focal Loss dynamic pos_weight, LayerNorm parameter-free, Youden's J calibration. Đóng Gate 3.
 7. [x] **Đo đạc định lượng IoU & Kiểm toán Shortcut Learning (Phase 5)**: RSNA IoU = 0.7631, VinDr IoU = 0.6049, Shortcut Audit = 94.92%, đóng Gate 4 & 5.
 8. [x] **Xây dựng Trạm đọc phim PACS & FastAPI Backend (Phase 6)**: Triển khai thành công ứng dụng Next.js PACS Viewer và trình khởi chạy 1-Click Native Launcher, đóng Gate 5.
-9. [x] **Biên soạn Báo cáo Học thuật & Đề cương Slide (Phase 7)**: Xuất bản luận văn `reports/FINAL_SCIENTIFIC_REPORT.pdf` (1.63 MB, Rule 9), đề cương Slide 39 trang, đóng Gate 6.
-10. [x] **Lớp Phòng vệ Lâm sàng Fail-Safe OOD & Đấu trường Mô hình (Phase 8)**: Hoàn tất cổng Năng lượng Helmholtz ($S_E \ge 9.0421$) và Entropy Shannon ($H \le 0.6275$), cơ chế khóa báo cáo sơ bộ WHO ICD-10, đạt **125/125 unit tests PASS** qua `scripts/verify.ps1`.
+9. [x] **Biên soạn Báo cáo Học thuật & Đề cương Slide (Phase 7)**: Xuất bản Luận văn toàn văn `reports/DSP391_Full_Thesis_Report.md`, Cẩm nang Thuyết minh Bảo vệ `docs/DEMO_PRESENTATION_GUIDE.md` và tệp PDF xuất bản `reports/output/pdf/LungRay_Final_Report_DSP391.pdf`.
+10. [x] **Lớp Phòng vệ Lâm sàng Fail-Safe OOD & Phân tích Đa Mô hình (Phase 8)**: Hoàn tất cổng Năng lượng Helmholtz ($S_E \ge 9.0421$) và Entropy Shannon ($H \le 0.6275$), Cổng giải phẫu Dense-UNet (BMC 2026), đạt **151/151 ca kiểm thử đạt chuẩn** qua `scripts/verify.ps1`.
 11. [ ] **Hành động cuối cùng (Task 7.3 & Defense)**: Thực hiện buổi ghi hình diễn tập (walkthrough demo) và bảo vệ đồ án chính thức trước Hội đồng thẩm định.

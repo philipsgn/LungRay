@@ -10,7 +10,16 @@ import {
   ChevronDown,
   Layers,
   Sparkles,
+  Info,
 } from "lucide-react";
+
+interface DimensionWarning {
+  width: number;
+  height: number;
+  ratio: number;
+  isSmall: boolean;
+  isRatioDeviant: boolean;
+}
 
 interface UploadDropzoneProps {
   onFileSelect: (file: File) => void;
@@ -30,6 +39,7 @@ export default function UploadDropzone({
   const [showDrawer, setShowDrawer] = useState(!hasFile);
   const [showPresetsMenu, setShowPresetsMenu] = useState(false);
   const [loadingPreset, setLoadingPreset] = useState<string | null>(null);
+  const [dimWarning, setDimWarning] = useState<DimensionWarning | null>(null);
 
   const presetsMenuRef = useRef<HTMLDivElement>(null);
 
@@ -57,35 +67,73 @@ export default function UploadDropzone({
     setIsDragging(false);
   }, []);
 
+  const inspectAndSelectFile = useCallback(
+    (file: File) => {
+      setDimWarning(null);
+
+      // Pre-check dimension on image formats
+      if (file.type.startsWith("image/") || file.name.match(/\.(png|jpe?g|webp)$/i)) {
+        const objectUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          const w = img.naturalWidth;
+          const h = img.naturalHeight;
+          URL.revokeObjectURL(objectUrl);
+
+          const isSmall = w < 256 || h < 256;
+          const ratio = h > 0 ? Number((w / h).toFixed(2)) : 1.0;
+          const isRatioDeviant = ratio > 2.0 || ratio < 0.5;
+
+          if (isSmall || isRatioDeviant) {
+            setDimWarning({
+              width: w,
+              height: h,
+              ratio,
+              isSmall,
+              isRatioDeviant,
+            });
+          }
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+        };
+        img.src = objectUrl;
+      }
+
+      onFileSelect(file);
+      setShowDrawer(false); // Auto-collapse drawer once an image is ingested
+    },
+    [onFileSelect]
+  );
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragging(false);
       const droppedFile = e.dataTransfer.files?.[0];
       if (droppedFile) {
-        onFileSelect(droppedFile);
-        setShowDrawer(false); // Auto-collapse drawer once an image is ingested
+        inspectAndSelectFile(droppedFile);
       }
     },
-    [onFileSelect]
+    [inspectAndSelectFile]
   );
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const selectedFile = e.target.files?.[0];
       if (selectedFile) {
-        onFileSelect(selectedFile);
-        setShowDrawer(false); // Auto-collapse drawer once an image is ingested
+        inspectAndSelectFile(selectedFile);
       }
       e.target.value = ""; // Reset input so same file can be reloaded
     },
-    [onFileSelect]
+    [inspectAndSelectFile]
   );
 
   const handleLoadPreset = async (fileName: string) => {
     if (disabled || loadingPreset) return;
     try {
       setLoadingPreset(fileName);
+      setDimWarning(null);
       const res = await fetch(`/demo_samples/${fileName}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
@@ -269,6 +317,43 @@ export default function UploadDropzone({
         </div>
       </div>
 
+      {/* Soft Pre-Validation Dimension Warning Banner */}
+      {dimWarning && (
+        <div className="bg-amber-950/40 border border-amber-600/60 rounded-xl p-3 px-3.5 flex items-start gap-2.5 text-xs text-amber-200 animate-in fade-in slide-in-from-top-1 shadow-sm">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="font-bold text-amber-300">
+                {t.dimWarningTitle} {dimWarning.width} × {dimWarning.height} px (Tỷ lệ {dimWarning.ratio}:1)
+              </span>
+              <button
+                type="button"
+                onClick={() => setDimWarning(null)}
+                className="text-[10px] text-amber-400/80 hover:text-amber-200 uppercase font-semibold"
+              >
+                ✕ Đóng
+              </button>
+            </div>
+            <div className="text-[11px] text-amber-200/90 space-y-0.5 leading-relaxed">
+              {dimWarning.isSmall && (
+                <div>
+                  • {t.dimWarningSmall.replace("{width}", String(dimWarning.width)).replace("{height}", String(dimWarning.height))}
+                </div>
+              )}
+              {dimWarning.isRatioDeviant && (
+                <div>
+                  • {t.dimWarningRatio.replace("{ratio}", String(dimWarning.ratio))}
+                </div>
+              )}
+              <div className="mt-1 font-medium text-amber-100 flex items-center gap-1">
+                <Info className="w-3 h-3 text-amber-400 shrink-0" />
+                <span>{t.dimWarningAdvice}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Collapsible Drag & Drop Ingestion Drawer */}
       {showDrawer && (
         <div
@@ -289,6 +374,44 @@ export default function UploadDropzone({
             <p className="text-[10px] text-slate-500 max-w-md">
               {t.formatsText}
             </p>
+          </div>
+
+          {/* CXR Technical Standards & Dimension Guidelines */}
+          <div className="mt-3.5 pt-3 border-t border-slate-800/80 text-left">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{t.guidelinesTitle}</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              <div className="bg-slate-900/90 border border-slate-800/90 rounded-lg p-2.5 shadow-sm">
+                <div className="text-[10px] font-bold text-cyan-300 uppercase flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                  <span>1. Độ phân giải</span>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1 leading-snug font-normal">{t.guideDimensions}</div>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800/90 rounded-lg p-2.5 shadow-sm">
+                <div className="text-[10px] font-bold text-emerald-300 uppercase flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  <span>2. Tỷ lệ khung hình</span>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1 leading-snug font-normal">{t.guideRatio}</div>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800/90 rounded-lg p-2.5 shadow-sm">
+                <div className="text-[10px] font-bold text-amber-300 uppercase flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                  <span>3. Tư thế chiếu chụp</span>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1 leading-snug font-normal">{t.guideProjection}</div>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800/90 rounded-lg p-2.5 shadow-sm">
+                <div className="text-[10px] font-bold text-purple-300 uppercase flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                  <span>4. Mẹo tránh OOD</span>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1 leading-snug font-normal">{t.guideOodTip}</div>
+              </div>
+            </div>
           </div>
         </div>
       )}

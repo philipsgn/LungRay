@@ -61,9 +61,13 @@ VINDR_TO_NIH: Dict[str, Tuple[str, int]] = {
 }
 
 
-def load_model(weights_path: str = "checkpoints/best_model.pth", device: torch.device = torch.device("cpu")) -> MultiTaskChestXrayNet:
+def load_model(
+    weights_path: str = "checkpoints/best_model.pth",
+    backbone_name: str = "densenet121",
+    device: torch.device = torch.device("cpu"),
+) -> MultiTaskChestXrayNet:
     model = MultiTaskChestXrayNet(
-        backbone_name="densenet121",
+        backbone_name=backbone_name,
         pretrained=False,
         img_size=512,
         num_classes_a=14,
@@ -71,7 +75,7 @@ def load_model(weights_path: str = "checkpoints/best_model.pth", device: torch.d
         num_classes_c=1,
     )
     if os.path.exists(weights_path):
-        print(f"[*] Nạp trọng số mô hình từ {weights_path}...")
+        print(f"[*] Nạp trọng số mô hình {backbone_name} từ {weights_path}...")
         state = torch.load(weights_path, map_location=device, weights_only=False)
         if isinstance(state, dict) and "model_state_dict" in state:
             state = state["model_state_dict"]
@@ -153,6 +157,7 @@ def run_live_vindr_benchmark(
     out_csv: str = "results/live_vindr_iou_benchmark.csv",
     seed: int = 42,
     weights_path: str = "checkpoints/best_model.pth",
+    backbone: str = "densenet121",
 ) -> pd.DataFrame:
     if not os.path.exists(zip_path):
         raise FileNotFoundError(f"Không tìm thấy file zip VinDr tại {zip_path}")
@@ -160,7 +165,7 @@ def run_live_vindr_benchmark(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[*] Sử dụng thiết bị tính toán: {device}")
 
-    model = load_model(weights_path, device=device)
+    model = load_model(weights_path, backbone_name=backbone, device=device)
     explainer = MultiScaleGradCAMPlusPlus(model)
     segmenter = LungSegmenter()
     audit_engine = ShortcutAuditEngine(segmenter)
@@ -322,6 +327,13 @@ if __name__ == "__main__":
         default="checkpoints/best_model.pth",
         help="Checkpoint to benchmark (e.g. checkpoints/best_wsol_finetune.pth).",
     )
+    parser.add_argument(
+        "--backbone",
+        type=str,
+        default="densenet121",
+        choices=["densenet121", "resnet50"],
+        help="Backbone architecture of the checkpoint.",
+    )
     args = parser.parse_args()
 
     run_live_vindr_benchmark(
@@ -330,5 +342,6 @@ if __name__ == "__main__":
         out_csv=args.out_csv,
         seed=args.seed,
         weights_path=args.weights,
+        backbone=args.backbone,
     )
 

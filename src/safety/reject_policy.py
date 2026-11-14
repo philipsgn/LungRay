@@ -14,9 +14,9 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 # Empirical safety thresholds calibrated on Adult Frontal CXR (NIH holdout)
-DEFAULT_ENERGY_THRESHOLD = 9.0421
-DEFAULT_ENERGY_UPPER_THRESHOLD = 22.0
-DEFAULT_ENTROPY_THRESHOLD = 0.6275
+DEFAULT_ENERGY_THRESHOLD = 5.50
+DEFAULT_ENERGY_UPPER_THRESHOLD = 24.0
+DEFAULT_ENTROPY_THRESHOLD = 0.6800
 
 
 @dataclass
@@ -93,7 +93,12 @@ class SafetyPolicy:
                     self.entropy_threshold,
                 )
 
-    def evaluate(self, energy_score: float, entropy_score: float) -> SafetyDecision:
+    def evaluate(
+        self,
+        energy_score: float,
+        entropy_score: float,
+        failsafe_enabled: bool = True,
+    ) -> SafetyDecision:
         """
         Evaluates energy and entropy against calibrated safety thresholds.
 
@@ -104,6 +109,8 @@ class SafetyPolicy:
            evaluated on adult model triggering massive false co-activations across all heads).
         3. Entropy > tau_H: Multi-label probability distribution exhibits excessive
            predictive ambiguity / conflict.
+        4. If failsafe_enabled is False: Safety evaluation remains available for audit,
+           but decision is marked as "ACCEPT (Bypassed)" and is_safe is True.
         """
         reasons: List[str] = []
 
@@ -124,8 +131,14 @@ class SafetyPolicy:
                 "Mức độ bất định dự đoán vượt ngưỡng an toàn lâm sàng cho phép."
             )
 
-        is_safe = len(reasons) == 0
-        decision = "ACCEPT" if is_safe else "REJECT"
+        if not failsafe_enabled:
+            is_safe = True
+            decision = "ACCEPT (Bypassed)"
+            if reasons:
+                reasons = ["[Chế độ bỏ qua khóa an toàn] " + r for r in reasons]
+        else:
+            is_safe = len(reasons) == 0
+            decision = "ACCEPT" if is_safe else "REJECT"
 
         return SafetyDecision(
             decision=decision,

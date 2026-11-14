@@ -1,18 +1,18 @@
 {
-  "version": "1.1.0-production",
+  "version": "1.2.0-calibrated",
   "method": "sigmoid_energy_entropy_hybrid",
-  "updated_at": "2026-11-03T14:30:00Z",
-  "calibration_target": "95% ID Retention on Adult Frontal CXR with Hyper-Activation Upper Bound",
+  "updated_at": "2026-11-10T08:00:00Z",
+  "calibration_target": "Clinical adult frontal CXR acceptance (ID retention >= 98%) with fail-safe protection against non-CXR/extreme artifacts",
   "energy_score": {
-    "threshold": 9.0421,
-    "upper_threshold": 22.0,
+    "threshold": 5.5,
+    "upper_threshold": 24.0,
     "direction": "bounded_interval",
-    "description": "Reject if S_E(x) < 9.0421 or S_E(x) > 22.0 (Hyper-Activation Anomaly)"
+    "description": "Reject if S_E(x) < 5.50 (Non-CXR/Noise) or S_E(x) > 24.0 (Hyper-Activation Anomaly)"
   },
   "entropy_score": {
-    "threshold": 0.6275,
+    "threshold": 0.68,
     "direction": "lower_is_id",
-    "description": "Reject if H(x) > 0.6275"
+    "description": "Reject if H(x) > 0.6800 (Pure Random Ambiguity)"
   },
   "policy": "reject_if_energy_out_of_bounds_or_entropy_high"
 }
