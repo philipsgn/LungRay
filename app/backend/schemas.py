@@ -34,7 +34,7 @@ class ReportResponse(BaseModel):
 
 
 class ModelInfo(BaseModel):
-    id: str = Field(..., description="Model identifier ('standard' or 'wsol')")
+    id: str = Field(..., description="Model identifier ('standard', 'wsol', 'resnet50', 'ensemble', 'ag_mtcnet')")
     name: str = Field(..., description="Human-readable model name")
     role: str = Field(..., description="Clinical specialization and primary domain")
     checkpoint: str = Field(..., description="Underlying PyTorch weights checkpoint")

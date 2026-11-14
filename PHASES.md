@@ -10,7 +10,7 @@
 | **Tiến độ Hiện tại** | **36 / 36 Tasks Hoàn Thành (100.0%) — Delivery Gate 6 Approved (Final Defense Milestone Closed)** |
 | **Độ sẵn sàng sản phẩm**| **100/100** (Full Academic Suite: 4 Thí nghiệm SOTA, Fail-Safe OOD Layer, 3-Pass Clinical TTA, Consensus Ensemble, Grounded Report, Native PACS) |
 | **Tiêu chuẩn** | Senior AI Engineer / Staff AI Architect (10+ YOE) |
-| **Quy chuẩn kiểm thử** | Tự động hóa qua PyTest, Script CLI & Metric Thresholds (`powershell -File scripts/verify.ps1`: 151/151 Tests PASS) |
+| **Quy chuẩn kiểm thử** | Tự động hóa qua PyTest, Script CLI & Metric Thresholds (`powershell -File scripts/verify.ps1`: 156/156 Tests PASS) |
 
 ---
 
@@ -39,9 +39,11 @@
 | **Shortcut Learning Audit** | 150 ca COVID-19 Dương tính | **In-lung Energy = 94.92% $\pm$ 1.60%** (100% ca đạt) | $\ge 80.0\%$ | PASS |
 | **OOD Detection (Free Energy)** | Synthetic Far/Near OOD vs ID | **AUROC = 1.0000** (Noise/Invert/Blur), $\tau_E = 9.0421$, $\tau_H = 0.6275$ | AUROC $\ge 0.85$ | PASS |
 | **Clinical Grounded Report** | ICD-10 Rules + Spatial Zones | Báo cáo cấu trúc hóa 4 phần, Rejection Lockout tự động khi OOD | Không hallucination, khóa an toàn | PASS |
+| **Anatomical Gate (Dense-UNet)** | Montgomery + Shenzhen (Real Masks) | **Val Dice = 0.9450, Val IoU = 0.8974** | Dice $\ge 0.90$ | PASS |
+| **AG-MTCNet SOTA Pipeline** | Stage 1 Gate + Multi-Task Backbone | Tích hợp 5 mô hình lâm sàng + White-out Fail-Safe | SOTA Chống Học Vẹt | PASS |
 | **Fullstack Inference API** | FastAPI Backend (`app/backend/`) | Latency $\le 1.8$s/ảnh, 6 endpoints chuẩn + Fail-Safe/TTA/Reload | $\le 2.0$s | PASS |
-| **Medical PACS Viewer** | Next.js 14 (`app/frontend/`) | Alpha Slider tương tác (0–100%), Safety Banner, TTA 3-Pass Pill | Mượt mà, chuẩn PACS | PASS |
-| **Quy chuẩn Kiểm thử** | Toàn bộ Repository | **151 / 151 Unit Tests PASS** | 100% PASS qua `scripts/verify.ps1` | PASS |
+| **Medical PACS Viewer** | Next.js 14 (`app/frontend/`) | Alpha Slider tương tác (0–100%), Safety Banner, 5-Model Selector | Mượt mà, chuẩn PACS | PASS |
+| **Quy chuẩn Kiểm thử** | Toàn bộ Repository | **156 / 156 Unit Tests PASS** | 100% PASS qua `scripts/verify.ps1` | PASS |
 | **Báo cáo Khoa học Final** | `reports/FINAL_SCIENTIFIC_REPORT.pdf` | **1.63 MB (20–25 trang in chuẩn MICCAI/IEEE, Rule 9)** | Hoàn thiện cuốn luận văn | PASS |
 
 ---

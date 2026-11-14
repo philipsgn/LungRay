@@ -91,6 +91,18 @@ export default function PacsHeader({
             >
               Consensus Ensemble
             </button>
+            <button
+              type="button"
+              onClick={() => onSelectModel("ag_mtcnet")}
+              title="AG-MTCNet Flagship (Anatomically-Gated Multi-Task Network, Dilated Soft Mask 6%, 10% attenuation)"
+              className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
+                selectedModel === "ag_mtcnet"
+                  ? "bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 shadow-sm ring-1 ring-emerald-500/30"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              AG-MTCNet (SOTA Gate)
+            </button>
           </div>
         )}
 

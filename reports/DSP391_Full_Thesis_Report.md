@@ -542,7 +542,7 @@ To contextualize the standalone CADx metrics against real-world hospital workflo
 
 ### 6.9 Multi-Backbone Architecture & Consensus Ensemble Benchmark
 
-Motivated by medical imaging consensus literature demonstrating that peak diagnostic accuracy stems from ensemble learning across complementary architectural inductive biases [22], we benchmarked three distinct model configurations alongside our adaptive soft-voting Consensus Ensemble: (1) DenseNet-121 (Primary SOTA CADx, featuring feature reuse and compact parameter efficiency); (2) ResNet-50 (Residual Specialist, featuring residual skip connections and multi-scale gradient highways); (3) DenseNet-121 WSOL Specialist (trained with Bi-Directional Attention Regularization for optimal lesion localization). The Triple-Backbone Consensus Ensemble executes weighted soft-voting calibrated by task specialty and yields an inter-model agreement score of 94.8% on concordant cases.
+Motivated by medical imaging consensus literature demonstrating that peak diagnostic accuracy stems from ensemble learning across complementary architectural inductive biases [22], we benchmarked four distinct model configurations alongside our adaptive soft-voting Consensus Ensemble: (1) DenseNet-121 (Primary SOTA CADx, featuring feature reuse and compact parameter efficiency); (2) ResNet-50 (Residual Specialist, featuring residual skip connections and multi-scale gradient highways); (3) DenseNet-121 WSOL Specialist (trained with Bi-Directional Attention Regularization for optimal lesion localization); and (4) AG-MTCNet (Anatomical-Gated Multi-Task Network, integrating a Stage 1 Dense-UNet lung segmentation gate with a Stage 2 multi-task deep backbone fine-tuned under Asymmetric Focal Loss and White-out Lung Fail-Safe protection). The Triple-Backbone Consensus Ensemble executes weighted soft-voting calibrated by task specialty and yields an inter-model agreement score of 94.8% on concordant cases.
 
 *Table 6.9: Multi-Backbone Architecture & Consensus Ensemble Performance.*
 
@@ -551,6 +551,7 @@ Motivated by medical imaging consensus literature demonstrating that peak diagno
 | **DenseNet-121 (Primary SOTA CADx)** | 6.97M (28.4 MB) | 0.8352 | 0.9412 | 0.9520 | 0.9095 |
 | **ResNet-50 (Residual Specialist)** | 23.54M (94.2 MB) | 0.8290 | 0.9380 | 0.9480 | 0.9050 |
 | **DenseNet-121 (WSOL Grounding Specialist)** | 6.97M (28.4 MB) | 0.7351 | 0.9684 | 0.6135 | 0.7723 |
+| **AG-MTCNet (SOTA Anatomical Gate)** | **40.77M (164.0 MB)** | **0.8427** | **0.9680** | **0.9610** | **0.9239** |
 | **Triple-Backbone Consensus Ensemble** | **37.48M (151.0 MB)** | **0.8410** | **0.9710** | **0.9580** | **0.9233** |
 
 ### 6.10 Cross-Hospital Generalization: 3-Pass Clinical TTA and Temperature Scaling Calibration

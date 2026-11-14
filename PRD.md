@@ -86,14 +86,16 @@ Xây dựng **LungRay** — hệ sinh thái phần mềm **Hỗ trợ Ra Quyết
   - Tầng chiếu đặc trưng tích hợp **LayerNorm parameter-free** (`elementwise_affine=False`) đặt sau GAP và trước Dropout(0.2), bảo đảm 100% tương thích nghiêm ngặt với checkpoint `checkpoints/best_model.pth` (không sinh key lạ trong `state_dict`).
   - Hỗ trợ gọi suy luận riêng lẻ từng head qua tham số `task_id` (`'head_a'`, `'head_b'`, `'head_c'`) để tiết kiệm FLOPs hoặc gộp toàn diện cả 3 heads trong 1 lần forward pass.
   - Bảo đảm cơ chế Zero Gradient Leakage giữa các heads trong quá trình huấn luyện.
-- **FR1.6 — Multi-Backbone Consensus Serving, 3-Pass Clinical TTA & Temperature Scaling Calibration (Phase 2 & Phase 7)**:
-  - Hỗ trợ chuyển đổi linh hoạt giữa 3 chế độ suy luận:
+- **FR1.6 — Multi-Backbone Consensus Serving, 3-Pass Clinical TTA & Temperature Scaling Calibration (Phase 2, Phase 7 & Phase 8.1)**:
+  - Hỗ trợ chuyển đổi trực tiếp trên thanh điều khiển PACS giữa 5 mô hình lâm sàng chuyên biệt:
     1. `standard`: Mô hình DenseNet-121 SOTA CADx (`best_model.pth`, Mean AUC 0.9095) phục vụ triaging khẩn cấp 16 bệnh.
     2. `wsol`: Mô hình DenseNet-121 WSOL Attention Specialist (`best_wsol_finetune.pth`, RSNA Box-IoU 0.2454, TB AUC 0.9684) tối ưu định vị tổn thương khu trú.
-    3. `ensemble`: Động cơ đồng thuận kết hợp liên minh 3 mô hình (DenseNet-121 + ResNet-50 + WSOL Specialist) qua thuật toán bỏ phiếu mềm thích ứng.
+    3. `resnet50`: Mô hình ResNet-50 Specialist (`best_resnet50.pth`, Mean AUC 0.8258, độ trễ 42ms) cung cấp góc nhìn đối chứng kiến trúc Residual.
+    4. `ensemble`: Động cơ đồng thuận kết hợp liên minh 3 mô hình (DenseNet-121 + ResNet-50 + WSOL Specialist) qua thuật toán bỏ phiếu mềm thích ứng với chỉ số `ensemble_agreement`.
+    5. `ag_mtcnet`: Mô hình Đỉnh cao AG-MTCNet (Anatomical-Gated Multi-Task Network) kết hợp 2 giai đoạn: Cổng phân đoạn giải phẫu Dense-UNet (Stage 1, Dice 0.9450, IoU 0.8974 trên tập nhãn phổi thật) tiền xử lý lọc nhiễu không phá hủy + Mạng đa nhiệm DenseNet-121/ResNet-50 fine-tune với Asymmetric Focal Loss (Stage 2) và White-out Lung Fail-Safe tự động.
   - **Tự động 3-Pass Clinical TTA (Test-Time Augmentation)**: Tự động kết hợp 3 góc nhìn (Chuẩn, CLAHE chống chênh lệch tương phản, và Multi-Scale 1.03x Center View) xếp chồng tensor `(3, 3, 512, 512)` thực thi song song trong 1 lượt forward pass GPU ($\le 0.35$s overhead) giúp triệt tiêu triệt để rủi ro dịch chuyển máy chụp (Cross-hospital domain shift).
   - **Hiệu chuẩn nhiệt độ Platt / Temperature Scaling ($T = 1.20$)**: Làm mềm các dự đoán xác suất cực đoan trên dữ liệu ngoại vi, bảo đảm tính bất biến ranh giới quyết định ($p = 0.5 \implies z/T = 0 \implies p = 0.5$).
-  - **Zero-Downtime Model Hot-Reloading (`POST /api/v1/models/reload`)**: Tự động nhận diện và nạp tức thì checkpoint `best_resnet50.pth` khi có sẵn trên đĩa mà không cần khởi động lại dịch vụ backend.
+  - **Zero-Downtime Model Hot-Reloading (`POST /api/v1/models/reload`)**: Tự động nhận diện và nạp tức thì checkpoint `best_resnet50.pth` và `ag_mtcnet_best.pth` khi có sẵn trên đĩa mà không cần khởi động lại dịch vụ backend.
   - Tự động tính toán điểm số đồng thuận đa mô hình `ensemble_agreement` $\in [0, 1]$ và hiển thị huy hiệu Consensus trên trạm đọc PACS Next.js.
   - Đối chiếu kiểm chứng thực nghiệm lâm sàng theo nghiên cứu công bố trên *The Lancet Digital Health* (PubMed 34219054): Hợp tác Bác sĩ X-quang và trợ lý AI giúp nâng độ chính xác từ 0.713 lên 0.808 ROC-AUC (+0.095 AUC) đồng thời giảm 48.6% thời gian đọc mỗi ca bệnh.
   - Xác minh độ bao quát lâm sàng đạt 100% các bệnh lý lồng ngực khả dĩ trên ảnh X-quang ngực phẳng theo chuẩn quốc tế *The Radiology Assistant Chest Index*.
@@ -109,7 +111,7 @@ Xây dựng **LungRay** — hệ sinh thái phần mềm **Hỗ trợ Ra Quyết
   - Khi phát hiện OOD hoặc mẫu bất định cao: Trạng thái hệ thống chuyển sang `REJECTED_OOD`, kích hoạt viền cảnh báo đỏ phẫu thuật, đóng dấu watermark `INVALID - OOD ANOMALY DETECTED` lên bản đồ nhiệt và khóa hoàn toàn bảng kết luận ICD-10 để triệt tiêu 100% nguy cơ ảo tưởng chẩn đoán (AI Diagnostic Hallucination).
 
 ### FR1.7 — Phase 8.1: Anatomical Lung Grounding & Shortcut Mitigation Gate (BMC Infectious Diseases 2026)
-- **FR1.7.1 — Dense-UNet Segmentation Backbone**: Tích hợp mô hình Dense-UNet (kiến trúc chuẩn Dubey et al., *BMC Infectious Diseases* 2026, Dice 0.9848, IoU 0.9700) làm cổng tiền lọc giải phẫu không phá hủy (non-destructive anatomical gate).
+- **FR1.7.1 — Dense-UNet Segmentation Backbone**: Tích hợp mô hình Dense-UNet (kiến trúc chuẩn Dubey et al., *BMC Infectious Diseases* 2026) làm cổng tiền lọc giải phẫu không phá hủy (non-destructive anatomical gate). Đạt hiệu năng phân đoạn phế trường thực nghiệm thực tế Val Dice 0.9450 và Val IoU 0.8974 trên tập nhãn phổi chuyên gia (Montgomery & Shenzhen), kèm cơ chế White-out Lung Fail-Safe tự động bỏ qua cổng lọc khi thể tích phổi dưới 18% (tránh làm mất thông tin ở các ca tràn dịch toàn bộ hoặc xẹp phổi nặng).
 - **FR1.7.2 — Dilated Soft Masking**: Áp dụng mặt nạ phế trường giãn nở 6% và suy giảm 90% cường độ tín hiệu ngoài phổi (attenuation factor 0.10), bảo toàn 100% nhu mô phổi bên trong đồng thời triệt tiêu các đặc trưng học vẹt (watermark chữ R/L, mép viền thiết bị chụp).
 - **FR1.7.3 — Smart Clinical Report Guardrail**: Khi In-Lung Activation Ratio $< 0.80$ hoặc tổn thương thâm nhiễm phế nang (`Infiltration`, `Consolidation`, `Pneumonia`) xung đột lâm sàng với kết luận phổi sáng bình thường, cơ chế guardrail lập tức triệt tiêu cảnh báo dương tính giả và phát cờ kiểm toán lâm sàng.
 

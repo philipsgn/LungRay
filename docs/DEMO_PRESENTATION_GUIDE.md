@@ -43,6 +43,7 @@ Mở một cửa sổ PowerShell hoặc Terminal mới tại thư mục gốc d�
     "status": "healthy",
     "active_models": [
       {"id": "ensemble", "name": "Triple-Backbone Consensus Ensemble (Soft-Voting)", "ready": true},
+      {"id": "ag_mtcnet", "name": "AG-MTCNet (SOTA Anatomical Gated 2-Stage CADx)", "ready": true},
       {"id": "resnet50", "name": "ResNet-50 Residual Specialist", "ready": true},
       {"id": "wsol", "name": "WSOL Fine-Tuned Specialist (DenseNet-121)", "ready": true},
       {"id": "standard", "name": "Standard Multi-Task CADx (DenseNet-121 Baseline)", "ready": true}
@@ -80,7 +81,7 @@ npm run dev
     5. *Mốc nghiệm thu Giai đoạn 5*: Bản đồ nhiệt Grad-CAM, định vị IoU và kiểm toán kháng đường tắt (Shortcut Learning Audit).
     6. *Mốc nghiệm thu Giai đoạn 6*: Triển khai trạm đọc phim PACS Next.js và hoàn thiện bộ hồ sơ luận văn tốt nghiệp.
 - **Lời thoại thuyết minh của người trình bày**:
-  > *"Kính thưa Thầy Chủ tịch và Quý Thầy/Cô trong Hội đồng thẩm định, Đề tài LungRay được tổ chức thực hiện nghiêm ngặt theo mô hình quản lý dự án công nghệ cao với 8 giai đoạn phân rã thành 36 nhiệm vụ kỹ thuật chi tiết. Đến thời điểm báo cáo, nhóm đã hoàn thành toàn bộ 36 nhiệm vụ, đạt tỷ lệ 100%. Toàn bộ hệ thống mã nguồn được bảo vệ bởi 151 ca kiểm thử đơn vị tự động, bảo đảm tính tái tạo và độ tin cậy tuyệt đối tại cả 6 mốc nghiệm thu kỹ thuật quan trọng của đề tài. Chúng em tự tin rằng hệ thống không dừng lại ở mức độ nghiên cứu thử nghiệm mà đã hoàn thiện ở cấp độ phần mềm y tế sẵn sàng chuyển giao."*
+  > *"Kính thưa Thầy Chủ tịch và Quý Thầy/Cô trong Hội đồng thẩm định, Đề tài LungRay được tổ chức thực hiện nghiêm ngặt theo mô hình quản lý dự án công nghệ cao với 8 giai đoạn phân rã thành 36 nhiệm vụ kỹ thuật chi tiết. Đến thời điểm báo cáo, nhóm đã hoàn thành toàn bộ 36 nhiệm vụ, đạt tỷ lệ 100%. Toàn bộ hệ thống mã nguồn được bảo vệ bởi 156 ca kiểm thử đơn vị tự động, bảo đảm tính tái tạo và độ tin cậy tuyệt đối tại cả 6 mốc nghiệm thu kỹ thuật quan trọng của đề tài. Chúng em tự tin rằng hệ thống không dừng lại ở mức độ nghiên cứu thử nghiệm mà đã hoàn thiện ở cấp độ phần mềm y tế sẵn sàng chuyển giao."*
 
 ### Slide 2: Phân tích So sánh Đa Kiến trúc trên 16 Bệnh lý Lồng ngực
 - **Nội dung hiển thị trên Slide**:
@@ -242,11 +243,11 @@ Dữ liệu được trích xuất từ tệp kiểm định thực nghiệm `re
 - **Điểm yếu**: Độ trễ tăng lên 0.78s (vẫn đáp ứng chuẩn y tế $\le 2.0$s).
 - **Lời thoại**: *"Hiện thân số hóa của Hội đồng Hội chẩn Đa chuyên khoa (MDT), kết hợp phán đoán độc lập của các kiến trúc để mang lại độ tin cậy tối thượng cho ca bệnh khó."*
 
-### Mô hình 5: Dense-UNet Anatomical Gate (Dubey et al. BMC 2026)
-- **Kiến trúc**: Dense-UNet (BMC Infectious Diseases 2026) với 33.8M tham số, hoạt động ở chế độ tiền lọc giải phẫu không phá hủy.
-- **Điểm mạnh**: Hệ số Dice 0.9848 và IoU 0.9700. Dilated Soft Masking làm mờ 90% chi tiết ngoài phế trường, loại bỏ hoàn toàn shortcut chữ R/L.
-- **Điểm yếu**: Đòi hỏi tài nguyên tính toán bổ sung trong bước tiền xử lý.
-- **Lời thoại**: *"Lá chắn an toàn giải phẫu của LungRay, bảo đảm các mạng nơ-ron chỉ được phép nhìn vào mô phổi thực thể."*
+### Mô hình 5: AG-MTCNet (SOTA Anatomical-Gated Multi-Task CADx)
+- **Kiến trúc**: Mô hình 2 giai đoạn (2-Stage Cascade): Cổng phân đoạn phế trường Dense-UNet (Stage 1, Dubey et al., BMC 2026) kết hợp Mạng đa nhiệm 3-Head DenseNet-121/ResNet-50 tinh chỉnh chuyên sâu (Stage 2) với Asymmetric Focal Loss (ASL) và White-out Lung Fail-Safe.
+- **Điểm mạnh**: Đạt Dice 0.9450 và IoU 0.8974 trên tập mặt nạ phổi chuyên gia thực tế. Dilated Soft Masking giãn nở 6% và suy giảm 90% tín hiệu ngoài phế trường, loại bỏ hoàn toàn hiện tượng học vẹt (watermark chữ R/L, viền máy chụp), đưa tỷ lệ năng lượng kích hoạt trong phổi đạt 94.92% $\pm$ 1.60%. Tự động bypass khi thể tích phổi dưới 18% để bảo toàn thông tin ca bệnh xẹp phổi/tràn dịch nặng.
+- **Điểm yếu**: Đòi hỏi quy trình tính toán 2 giai đoạn (tăng nhẹ thời gian tiền xử lý 0.15s, tổng độ trễ 0.50s vẫn thấp hơn chuẩn y tế 2.0s).
+- **Lời thoại**: *"Đây là đỉnh cao công nghệ của LungRay — mô hình AG-MTCNet kết hợp hai giai đoạn: lọc giải phẫu thông minh trước rồi mới chẩn đoán chuyên sâu, bảo đảm mạng nơ-ron chỉ tập trung vào tổn thương bệnh học thực thể trong nhu mô phổi mà không bị đánh lừa bởi bất kỳ dị vật nào bên ngoài."*
 
 ---
 

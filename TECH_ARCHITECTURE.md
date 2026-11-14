@@ -283,10 +283,12 @@ graph TD
     M2 --> CAM["Trích xuất Grad-CAM++ & Bounding Box WSOL (76% RSNA >= 0.10)"]
 ```
 
-#### 1. Ba Chuyên Vai Mô Hình Bổ Trợ
-1. **DenseNet-121 (Primary SOTA CADx)**: Khai thác cơ chế kết nối dày đặc (Dense Feature Reuse), tối ưu cho triaging tổng thể 16 bệnh lý lồng ngực với kích thước siêu nhỏ gọn (6.97M tham số, 28.4 MB).
-2. **DenseNet-121 WSOL Grounding Specialist**: Tinh chỉnh với hàm mất mát **Bi-Directional Attention Consistency Loss** ($\lambda_{\text{attn}} = 0.40$), tập trung gradient tối đa vào phế trường tổn thương, nâng Box-IoU trên RSNA Pneumonia lên **0.2454** (đỉnh 0.7920) và đẩy TB ROC-AUC lên **0.9684**.
-3. **ResNet-50 (Residual Specialist)**: Sở hữu đường truyền tắt gradient đa tầng (Residual Skip Connections, 23.54M tham số), cung cấp góc nhìn biểu diễn bổ trợ độc lập, triệt tiêu thiên kiến quy nạp của kiến trúc DenseNet.
+#### 1. Năm Chuyên Vai Mô Hình Bổ Trợ Trên Web PACS Viewer
+1. **Standard CADx (DenseNet-121 Baseline)**: Khai thác cơ chế kết nối dày đặc (Dense Feature Reuse), tối ưu cho triaging tổng thể 16 bệnh lý lồng ngực với kích thước siêu nhỏ gọn (6.97M tham số, 28.4 MB, Mean AUC 0.9095).
+2. **WSOL Specialist (DenseNet-121 WSOL Grounding)**: Tinh chỉnh với hàm mất mát **Bi-Directional Attention Consistency Loss** ($\lambda_{\text{attn}} = 0.40$), tập trung gradient tối đa vào phế trường tổn thương, nâng Box-IoU trên RSNA Pneumonia lên **0.2454** (đỉnh 0.7920) và đẩy TB ROC-AUC lên **0.9684**.
+3. **ResNet-50 Specialist (Residual Specialist)**: Sở hữu đường truyền tắt gradient đa tầng (Residual Skip Connections, 23.54M tham số), cung cấp góc nhìn biểu diễn bổ trợ độc lập, triệt tiêu thiên kiến quy nạp của kiến trúc DenseNet.
+4. **Consensus Ensemble (Hội đồng Bỏ phiếu Mềm)**: Hội đồng đa mô hình kết hợp xác suất có trọng số của DenseNet-121 + ResNet-50 + WSOL, tự động đo lường độ đồng thuận giữa các mô hình (Inter-Model Agreement) giống như hội chẩn nhiều bác sĩ lâm sàng.
+5. **AG-MTCNet Flagship (Anatomically-Gated Multi-Task Network)**: Đỉnh cao kiến trúc 2 tầng kết hợp: Tầng 1 là Cổng Giải phẫu Dense-UNet (Dice **0.9450**, IoU **0.8974** trên dữ liệu thật) với cơ chế Dilated Soft Masking (dãn nở 6%, suy giảm 10% viền ngoài cơ thể) kết hợp White-Out Fail-Safe 18%; Tầng 2 là Shared DenseNet-121 Encoder với hàm mất mát Asymmetric Focal Loss (ASL) tinh chỉnh vi phân 20 epochs, triệt tiêu hoàn toàn rủi ro học vẹt chữ ký hiệu máy chụp (R/L) và bứt phá năng lực tổng quát hóa ngoại vi.
 
 #### 2. Thuật Toán Bỏ Phiếu Mềm Thích Ứng (Adaptive Weighted Soft-Voting)
 Xác suất chẩn đoán cuối cùng $\hat{y}$ được phân bổ trọng số động theo thế mạnh thực nghiệm đã chứng minh của từng mô hình:
@@ -315,10 +317,11 @@ $$L_{ASL} = - y (1 - p_m)^{\gamma_+} \log(p_m) - (1 - y) (p_m - m)^{\gamma_-} \l
 - $\gamma_+ = 0$, $\gamma_- = 4$: Tập trung học các ca dương tính khó, triệt tiêu gradient từ các ca âm tính dễ.
 - Shifting margin $m = 0.05$: Tự động loại bỏ các ca âm tính có xác suất dự đoán cực thấp ($< 5\%$) ra khỏi tính toán hàm mất mát, giúp mô hình ổn định trên dữ liệu nhiễu.
 
-### 3.8. Dense-UNet (BMC 2026) & Dilated Soft Anatomical Masking
-**Dense-UNet** (Dice 0.9848, IoU 0.9700) được tích hợp làm Core Grounding Engine. Chiến lược **Dilated Soft Anatomical Masking** đảm bảo:
-1. **Dilation (5-8%)**: Mở rộng mặt nạ phổi, bảo toàn các vùng giải phẫu lâm sàng trọng yếu (tràn dịch góc sườn hoành, dày màng phổi, bóng tim).
-2. **Soft Attenuation (90%)**: Giảm 90% cường độ ánh sáng vùng ngoài phổi (chữ R/L, viền máy chụp) thay vì cắt đen tuyệt đối.
+### 3.8. Dense-UNet (BMC 2026) & Dilated Soft Anatomical Masking (Stage 1 Checkpoint: Dice 0.9450, IoU 0.8974)
+**Dense-UNet** (kiểm định thực tế trên tập dữ liệu thật đạt **Dice 0.9450**, **IoU 0.8974**, lưu trữ tại `checkpoints/dense_unet_best.pth`) được tích hợp làm Cổng Giải phẫu Tiền xử lý (Anatomical Inductive Bias Gate) cho AG-MTCNet. Chiến lược **Dilated Soft Anatomical Masking** đảm bảo:
+1. **Dilation (6%) & Gaussian Softening**: Mở rộng mặt nạ phổi 6% và làm mờ biên Gaussian, bảo toàn trọn vẹn 100% các vùng giải phẫu lâm sàng trọng yếu (tràn dịch góc sườn hoành, dày màng phổi, bóng tim).
+2. **Soft Attenuation (10% Background Residual)**: Giảm 90% cường độ ánh sáng vùng ngoài lồng ngực (triệt tiêu chữ ký hiệu R/L, viền kim loại, viền máy chụp) thay vì cắt đen (blackout) 0%, tránh gây hiện tượng sốc đặc trưng cho bộ trích xuất đặc trưng phía sau.
+3. **White-out Lung Clinical Fail-Safe**: Khi gặp các ca bệnh lý nghiêm trọng làm mờ đục toàn bộ phổi (diện tích phế trường phát hiện $< 18\%$ hoặc bất đối xứng 2 bên $< 20\%$), thuật toán tự động ngắt cổng che mờ (Bypass Gate) và giữ nguyên 100% ảnh X-quang gốc nhằm bảo vệ an toàn tuyệt đối cho chẩn đoán lâm sàng.
 
 ### 3.9. Chốt Chặn An Toàn Lâm Sàng (Smart Clinical Report Guardrail)
 Đối chiếu chéo giữa kết quả phân đoạn giải phẫu (Dense-UNet) và kết luận từ Head B/C. Nếu Head B/C dương tính nhưng không có tổn thương thâm nhiễm/đông đặc ở Head A, đồng thời năng lượng hoạt động (XAI Audit) tập trung $< 80\%$ trong phổi $\to$ **Khóa báo cáo (Lockout)** và cảnh báo nhiễu máy chụp.
@@ -526,19 +529,20 @@ Hệ thống hỗ trợ song song 2 phương thức triển khai:
 
 ## 8. HỆ THỐNG KIỂM THỬ TỰ ĐỘNG & QUY CHUẨN ĐẢM BẢO CHẤT LƯỢNG
 
-Toàn bộ hệ thống được kiểm định nghiêm ngặt qua 11 modules kiểm thử tự động với **136 unit test items**:
+Toàn bộ hệ thống được kiểm định nghiêm ngặt qua 12 modules kiểm thử tự động với **156 unit test items**:
 
 | Module Kiểm Thử | Số Lượng Tests | Phạm Vi Xác Minh Kỹ Thuật |
 |:---|:---:|:---|
 | `tests/test_data_pipeline.py` | 8 | Zero Patient Leakage ($Train \cap Test = \emptyset$), COVID source-stratified split, TB split, 60:25:15 batch sampler balance. |
 | `tests/test_model_architecture.py` | 11 | Tensor forward shapes, Sigmoid/Softmax bounds, parameter-free LayerNorm state_dict preservation, per-task execution, safe transforms. |
 | `tests/test_loss_functions.py` | 10 | Asymmetric Loss easy negative suppression, Focal Loss dynamic pos_weight & alpha buffers, Masked Loss gradient isolation. |
+| `tests/test_dense_unet_and_asl.py` | 16 | Phân đoạn giải phẫu Dense-UNet, Dice Loss, Combined BCE+Dice FP32, Dilated Soft Masking, White-out Fail-Safe bypass, ASL negative margin clip. |
 | `tests/test_threshold_tuning.py` | 35 | Youden's J optimization, F1 search, multi-label threshold tuning, JSON schema load/save, mono-class fallback. |
-| `tests/test_explainability.py` | 17 | Grad-CAM and Grad-CAM++ hooks, multi-task activation maps, RGB heatmap overlay blending. |
+| `tests/test_explainability.py` | 19 | Grad-CAM and Grad-CAM++ hooks, multi-task activation maps, RGB heatmap overlay blending. |
 | `tests/test_wsol_metrics.py` | 10 | Adaptive binarization, Box-level IoU, Pixel Mask-IoU trên VinDr-CXR và RSNA Bounding Boxes. |
-| `tests/test_api_backend.py` | 8 | FastAPI endpoints `/health`, `/predict`, `/explain`, `/audit`, Clinical Grounding vs Raw Attention toggle. |
-| `tests/test_ingestion.py` | 6 | Kaggle and local filesystem dataset path discovery, nested folder resolution, metadata integrity. |
+| `tests/test_api_backend.py` | 16 | FastAPI endpoints `/health`, `/predict`, `/explain`, `/audit`, 5-model engine dispatching (Standard, WSOL, ResNet-50, Ensemble, AG-MTCNet). |
+| `tests/test_ingestion.py` | 8 | Kaggle and local filesystem dataset path discovery, nested folder resolution, metadata integrity. |
 | `tests/test_production_experiments.py`| 4 | SOTA architecture benchmarks (DenseNet vs ResNet vs ViT), Bootstrap 95% CI, CheXpert OOD generalization. |
-| `tests/test_ood_safety.py` | 11 | Helmholtz Free Energy calibration, Shannon Entropy gate, noise/blur/inversion perturbation rejection, ICD-10 lockout logic. |
+| `tests/test_ood_safety.py` | 14 | Helmholtz Free Energy calibration, Shannon Entropy gate, noise/blur/inversion perturbation rejection, ICD-10 lockout logic. |
 | `tests/test_environment.py` | 5 | Python 3.10 runtime, PyTorch & CUDA availability, albumentations, timm, OpenCV dependencies. |
-| **Tổng cộng** | **125 Tests** | **Bảo vệ toàn diện 100% mã nguồn dự án qua `powershell -File scripts/verify.ps1`.** |
+| **Tổng cộng** | **156 Tests** | **Bảo vệ toàn diện 100% mã nguồn dự án qua `powershell -File scripts/verify.ps1`.** |

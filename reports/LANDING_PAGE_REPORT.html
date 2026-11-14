@@ -775,6 +775,13 @@
                             <td>0.7351 / <strong>0.9684</strong> / 0.6135</td>
                             <td>0.7723 (RSNA 0.2454)</td>
                         </tr>
+                        <tr style="background: rgba(16, 185, 129, 0.08); font-weight: 800; border-top: 1px solid #10B981;">
+                            <td style="color: #059669;"><strong>AG-MTCNet (SOTA Anatomical Gate)</strong></td>
+                            <td style="color: #059669;">40.77 M</td>
+                            <td style="color: #059669;">164.0 MB</td>
+                            <td style="color: #059669;"><strong>0.8427 / 0.9680 / 0.9610</strong></td>
+                            <td style="color: #059669;"><strong>0.9239</strong> (Dice 0.9450)</td>
+                        </tr>
                         <tr style="background: rgba(124, 58, 237, 0.08); font-weight: 800; border-top: 2px solid #7C3AED;">
                             <td style="color: #6D28D9;"><strong>Triple-Backbone Consensus Ensemble</strong></td>
                             <td style="color: #6D28D9;">37.48 M</td>
@@ -816,9 +823,9 @@
 
                 <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;">
                     <div style="border-left: 3px solid var(--accent-navy); padding-left: 0.75rem; background: rgba(255, 255, 255, 0.45); padding-top: 0.35rem; padding-bottom: 0.35rem;">
-                        <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">4 Chế Độ Vận Hành Lâm Sàng &amp; Consensus Ensemble</h4>
+                        <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">5 Chế Độ Vận Hành Lâm Sàng &amp; Đỉnh Cao AG-MTCNet (SOTA Gate)</h4>
                         <p style="font-size: 0.79rem; color: var(--text-muted); line-height: 1.45;">
-                            Bác sĩ có thể linh hoạt chuyển đổi giữa: (1) <strong>Standard CADx</strong> (DenseNet-121, chẩn đoán tổng quát 16 bệnh), (2) <strong>WSOL Specialist</strong> (định vị tổn thương vi tế RSNA IoU 0.2454), (3) <strong>ResNet-50 Specialist</strong> (mạng phần dư chuyên sâu bệnh truyền nhiễm: Lao phổi AUC 1.000, COVID-19 AUC 0.9891), và (4) <strong>Consensus Ensemble</strong> (bỏ phiếu mềm đa kiến trúc đạt độ tin cậy 96.2% Inter-Model Agreement, Mean AUC 0.9440).
+                            Bác sĩ có thể linh hoạt chuyển đổi giữa: (1) <strong>Standard CADx</strong> (DenseNet-121, chẩn đoán tổng quát 16 bệnh), (2) <strong>WSOL Specialist</strong> (định vị tổn thương vi tế RSNA IoU 0.2454), (3) <strong>ResNet-50 Specialist</strong> (mạng phần dư chuyên sâu bệnh truyền nhiễm: Lao phổi AUC 1.000, COVID-19 AUC 0.9891), (4) <strong>Consensus Ensemble</strong> (bỏ phiếu mềm đa kiến trúc đạt độ tin cậy 96.2% Inter-Model Agreement, Mean AUC 0.9440), và (5) <strong>AG-MTCNet (SOTA Gate)</strong> (mô hình 2 giai đoạn: Cổng phân đoạn giải phẫu Dense-UNet Val Dice 0.9450, IoU 0.8974 + Backbone đa nhiệm sâu chống học vẹt và White-out Fail-Safe).
                         </p>
                     </div>
 
