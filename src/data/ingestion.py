@@ -151,13 +151,16 @@ def find_kaggle_dataset(
 
     # Kaggle mounts are shallow: /kaggle/input/<slug>,
     # /kaggle/input/<user>/<slug>, /kaggle/input/datasets/<user>/<slug>.
-    # Glob only directory names; never walk full image trees (can take hours).
+    # Glob directory names up to 5 levels to reach nested datasets.
     search_dirs = {os.path.normpath(base_dir)}
     patterns = [
         os.path.join(base_dir, "*"),
         os.path.join(base_dir, "*", "*"),
+        os.path.join(base_dir, "*", "*", "*"),
+        os.path.join(base_dir, "*", "*", "*", "*"),
         os.path.join(base_dir, "datasets", "*", "*"),
         os.path.join(base_dir, "datasets", "*", "*", "*"),
+        os.path.join(base_dir, "datasets", "*", "*", "*", "*"),
     ]
     for pattern in patterns:
         for path in glob.glob(pattern):
@@ -306,21 +309,44 @@ def resolve_dataset_paths(kaggle_base: str = "/kaggle/input") -> Dict[str, objec
         tb_dir = find_kaggle_dataset(
             [
                 "tuberculosis-tb-chest-xray-dataset",
+                "tuberculosis-tb-chest-x-ray-database",
+                "tuberculosis-tb-chest-xray-database",
+                "tuberculosis-chest-x-ray-database",
+                "tuberculosis-chest-xray-dataset",
+                "tuberculosis-chest-xray",
+                "tuberculosis-chest-x-rays",
                 "tb-chest-xray-dataset",
                 "tb-chest-radiography-database",
                 "tb-chest-radiography",
                 "tb-chest-xray",
                 "tb-chest",
                 "tuberculosis",
-                # Last-resort alias: some workspaces mount the Montgomery+Shenzhen
-                # segmentation export under this slug. It is accepted only if the
-                # loader can locate Normal/Tuberculosis class folders inside it.
+                "tb",
+                "montgomery-shenzhen-512x512",
+                "montgomery-shenzhen",
                 "montgo-shenzhen-resize",
                 "montgo-shenzhen",
             ],
             base_dir=kaggle_base,
             require_images=True,
         )
+
+        # Fallback: scan any directory under kaggle_base for Normal/Tuberculosis
+        # or TB_Chest_Radiography_Database folders
+        if tb_dir is None:
+            for root, dirs, _ in os.walk(kaggle_base):
+                lower_dirs = {d.lower(): d for d in dirs}
+                if "tuberculosis" in lower_dirs and "normal" in lower_dirs:
+                    tb_dir = root
+                    break
+                if "tb_chest_radiography_database" in lower_dirs:
+                    tb_dir = os.path.join(root, lower_dirs["tb_chest_radiography_database"])
+                    break
+
+        if tb_dir:
+            nested_db = os.path.join(tb_dir, "TB_Chest_Radiography_Database")
+            if os.path.isdir(nested_db):
+                tb_dir = nested_db
 
         missing = [
             name
