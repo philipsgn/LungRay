@@ -235,18 +235,20 @@ class AsymmetricLoss(nn.Module):
         if logits.numel() == 0:
             return logits.sum() if self.reduction != "none" else logits
 
-        targets = targets.to(device=logits.device, dtype=logits.dtype)
+        logits = logits.float()
+        targets = targets.to(device=logits.device, dtype=torch.float32)
         probs = torch.sigmoid(logits)
-        probs_neg = (probs - self.clip).clamp(min=0.0)
+        eps = max(float(self.eps), 1e-6)
+        probs_neg = (probs - self.clip).clamp(min=0.0, max=1.0 - eps)
 
         pos_term = (
             targets
-            * torch.log(probs.clamp(min=self.eps))
+            * torch.log(probs.clamp(min=eps))
             * torch.pow((1.0 - probs).clamp(min=0.0), self.gamma_pos)
         )
         neg_term = (
             (1.0 - targets)
-            * torch.log((1.0 - probs_neg).clamp(min=self.eps))
+            * torch.log((1.0 - probs_neg).clamp(min=eps))
             * torch.pow(probs_neg, self.gamma_neg)
         )
         loss = -(pos_term + neg_term)
