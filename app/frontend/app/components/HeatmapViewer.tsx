@@ -9,7 +9,9 @@ import { LesionMetadata } from "../types";
 interface HeatmapViewerProps {
   original: string | null;
   heatmap: string | null;
+  heatmapHasAlpha?: boolean;
   contour?: string | null;
+  contourHasAlpha?: boolean;
   lesions?: LesionMetadata[];
   lesionAreaRatio?: number;
   camResolution?: string;
@@ -25,7 +27,9 @@ interface HeatmapViewerProps {
 export default function HeatmapViewer({
   original,
   heatmap,
+  heatmapHasAlpha = false,
   contour,
+  contourHasAlpha = false,
   lesions,
   lesionAreaRatio,
   camResolution,
@@ -41,12 +45,14 @@ export default function HeatmapViewer({
   const t = translations[lang];
 
   // Visualizer display mode: "both" | "heatmap" | "contour" | "raw"
-  const [viewMode, setViewMode] = useState<"both" | "heatmap" | "contour" | "raw">("both");
+  const [viewMode, setViewMode] = useState<"both" | "heatmap" | "contour" | "raw">("heatmap");
+  const [inverted, setInverted] = useState(false);
+  const [zoom, setZoom] = useState(1);
 
   return (
     <div
-      className={`relative w-full aspect-square bg-[#05080E] rounded-xl overflow-hidden border shadow-2xl transition-all duration-200 select-none ${
-        isRejected ? "border-rose-600 ring-2 ring-rose-600/40" : "border-slate-800"
+      className={`relative w-full aspect-square bg-[#FBFBF9] rounded-xl overflow-hidden border shadow-2xl transition-all duration-200 select-none ${
+        isRejected ? "border-rose-600 ring-2 ring-rose-600/40" : "border-slate-200"
       }`}
     >
       {/* Background X-ray */}
@@ -56,14 +62,15 @@ export default function HeatmapViewer({
           alt="Chest Radiograph"
           fill
           className="object-contain"
+          style={{ filter: inverted ? "invert(1)" : undefined, transform: `scale(${zoom})` }}
           priority
         />
       ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-600 gap-2 font-mono">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-600 gap-2 font-sans">
           <svg className="w-12 h-12 stroke-current opacity-30" viewBox="0 0 24 24" fill="none" strokeWidth="1.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
           </svg>
-          <span className="text-xs tracking-wider uppercase font-semibold text-slate-400">
+          <span className="text-xs tracking-wider uppercase font-semibold text-slate-600">
             {t.noImageTitle}
           </span>
           <span className="text-[10px] text-slate-600">
@@ -79,7 +86,7 @@ export default function HeatmapViewer({
           alt="Grad-CAM activation overlay"
           fill
           className="object-contain transition-opacity duration-150"
-          style={{ opacity: alpha / 100, mixBlendMode: "screen" }}
+          style={{ opacity: alpha / 100, mixBlendMode: heatmapHasAlpha ? "normal" : "screen", transform: `scale(${zoom})` }}
           priority
         />
       )}
@@ -91,7 +98,7 @@ export default function HeatmapViewer({
           alt="Clinical lesion iso-contour overlay"
           fill
           className="object-contain transition-opacity duration-150 pointer-events-none"
-          style={{ mixBlendMode: "lighten" }}
+          style={{ mixBlendMode: contourHasAlpha ? "normal" : "lighten", transform: `scale(${zoom})` }}
           priority
         />
       )}
@@ -134,24 +141,22 @@ export default function HeatmapViewer({
       {/* DICOM PACS Viewport HUD Overlays */}
       {original && (
         <>
-          {/* Top-Left: Patient & Acquisition Telemetry */}
-          <div className="absolute top-2.5 left-3 text-[10px] font-mono text-slate-400 select-none pointer-events-none drop-shadow space-y-0.5 z-10">
-            <div className="font-bold text-slate-200">{t.patientAnon}</div>
-            <div>{t.seriesPA}</div>
-            <div>{t.matrix512}</div>
+          <div className="absolute bottom-2 right-2 z-30 flex gap-2">
+            <button type="button" onClick={() => setInverted(!inverted)} className="rounded bg-white px-3 py-1 text-xs text-slate-900">Đảo màu</button>
+            <button type="button" onClick={() => setZoom(Math.min(zoom + 0.25, 2))} className="rounded bg-white px-3 py-1 text-xs text-slate-900">Phóng to</button>
+            <button type="button" onClick={() => setZoom(1)} className="rounded bg-white px-3 py-1 text-xs text-slate-900">Reset Zoom</button>
           </div>
-
-          {/* Top-Right: Anatomical Right Marker (Patient Right is Viewer Left in Radiography) & Dual View Controls */}
+          {/* Controls for the actual returned explanation layers. */}
           <div className="absolute top-2.5 right-3 flex items-center gap-2 z-20">
             {original && !isRejected && (heatmap || contour) && (
-              <div className="inline-flex rounded-lg border border-slate-800 bg-slate-950/90 p-0.5 text-[10px] font-mono shadow-md backdrop-blur-md">
+              <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100/90 p-0.5 text-[10px] font-sans shadow-md backdrop-blur-md">
                 <button
                   type="button"
                   onClick={() => setViewMode("both")}
                   className={`px-2 py-0.5 rounded transition-colors ${
                     viewMode === "both"
-                      ? "bg-slate-800 text-cyan-300 font-bold"
-                      : "text-slate-400 hover:text-slate-200"
+                      ? "bg-slate-200 text-sky-700 font-bold"
+                      : "text-slate-600 hover:text-slate-800"
                   }`}
                 >
                   {t.dualViewBoth}
@@ -161,8 +166,8 @@ export default function HeatmapViewer({
                   onClick={() => setViewMode("heatmap")}
                   className={`px-2 py-0.5 rounded transition-colors ${
                     viewMode === "heatmap"
-                      ? "bg-slate-800 text-cyan-300 font-bold"
-                      : "text-slate-400 hover:text-slate-200"
+                      ? "bg-slate-200 text-sky-700 font-bold"
+                      : "text-slate-600 hover:text-slate-800"
                   }`}
                 >
                   {t.dualViewHeatmap}
@@ -172,8 +177,8 @@ export default function HeatmapViewer({
                   onClick={() => setViewMode("contour")}
                   className={`px-2 py-0.5 rounded transition-colors ${
                     viewMode === "contour"
-                      ? "bg-slate-800 text-cyan-300 font-bold"
-                      : "text-slate-400 hover:text-slate-200"
+                      ? "bg-slate-200 text-sky-700 font-bold"
+                      : "text-slate-600 hover:text-slate-800"
                   }`}
                 >
                   {t.dualViewContour}
@@ -183,30 +188,22 @@ export default function HeatmapViewer({
                   onClick={() => setViewMode("raw")}
                   className={`px-2 py-0.5 rounded transition-colors ${
                     viewMode === "raw"
-                      ? "bg-slate-800 text-cyan-300 font-bold"
-                      : "text-slate-400 hover:text-slate-200"
+                      ? "bg-slate-200 text-sky-700 font-bold"
+                      : "text-slate-600 hover:text-slate-800"
                   }`}
                 >
                   {t.dualViewRaw}
                 </button>
               </div>
             )}
-            <div className="text-sm font-bold text-slate-300 px-2 py-0.5 rounded bg-slate-900/80 border border-slate-700 pointer-events-none select-none">
-              L
-            </div>
-          </div>
-
-          {/* Left-Center: Patient Right Marker */}
-          <div className="absolute top-1/2 left-3 -translate-y-1/2 text-sm font-bold text-slate-300 px-2 py-0.5 rounded bg-slate-900/80 border border-slate-700 select-none pointer-events-none z-10">
-            R
           </div>
 
           {/* Lesion Telemetry HUD */}
           {original && !isRejected && lesions && lesions.length > 0 && (viewMode === "both" || viewMode === "contour") && (
-            <div className="absolute bottom-11 left-3 bg-slate-950/90 backdrop-blur-md border border-cyan-800/80 rounded-md px-2.5 py-1 text-[10px] font-mono text-slate-300 flex items-center gap-2 shadow z-10 pointer-events-none">
-              <Crosshair className="w-3.5 h-3.5 text-cyan-400" />
+            <div className="absolute bottom-11 left-3 bg-slate-100/90 backdrop-blur-md border border-cyan-800/80 rounded-md px-2.5 py-1 text-[10px] font-sans text-slate-700 flex items-center gap-2 shadow z-10 pointer-events-none">
+              <Crosshair className="w-3.5 h-3.5 text-sky-700" />
               <span>
-                <strong className="text-cyan-300">{lesions.length}</strong> {t.lesionFoci}
+                <strong className="text-sky-700">{lesions.length}</strong> {t.lesionFoci}
               </span>
               <span className="text-slate-600">|</span>
               <span>
@@ -215,33 +212,21 @@ export default function HeatmapViewer({
               {camResolution && (
                 <>
                   <span className="text-slate-600">|</span>
-                  <span className="text-cyan-400/80 text-[9px] font-bold">{camResolution}</span>
+                  <span className="text-sky-700/80 text-[9px] font-bold">{camResolution}</span>
                 </>
               )}
             </div>
           )}
 
-          {/* Bottom-Left: Window Level / Window Width HUD */}
-          <div className="absolute bottom-2.5 left-3 text-[10px] font-mono text-slate-400 select-none pointer-events-none drop-shadow space-y-0.5 z-10">
-            <div className="text-slate-300">{t.windowLung}</div>
-            <div>{t.gsdfCalibrated}</div>
-          </div>
-
-          {/* Bottom-Right: 5cm Physical Scale Bar */}
-          <div className="absolute bottom-2.5 right-3 text-[10px] font-mono text-slate-400 select-none pointer-events-none drop-shadow flex flex-col items-end z-10">
-            <div className="w-16 h-1 border-b-2 border-l-2 border-r-2 border-slate-300 mb-0.5" />
-            <span className="text-[9px] text-slate-300">{t.scale5cm}</span>
-          </div>
-
           {/* Top Floating Target & Grounding Badges */}
           <div className="absolute top-11 inset-x-3 flex flex-col gap-1.5 pointer-events-none z-10">
             <div className="flex items-center justify-between">
-              {diseaseName && !isRejected && (
-                <div className="bg-slate-950/80 backdrop-blur-md border border-slate-700 px-2.5 py-1 rounded text-[11px] font-mono font-semibold text-slate-200 flex items-center gap-1.5 shadow">
+              {heatmap && diseaseName && !isRejected && (
+                <div className="bg-slate-100/80 backdrop-blur-md border border-slate-300 px-2.5 py-1 rounded text-[11px] font-sans font-semibold text-slate-800 flex items-center gap-1.5 shadow">
                   <span className={`w-1.5 h-1.5 rounded-full ${isTargetPositive ? "bg-cyan-400" : "bg-amber-400"}`} />
-                  {t.targetPrefix} <span className={isTargetPositive ? "text-cyan-300 font-bold" : "text-amber-300 font-bold"}>{diseaseName}</span>
+                  {t.targetPrefix} <span className={isTargetPositive ? "text-sky-700 font-bold" : "text-amber-300 font-bold"}>{diseaseName}</span>
                   {!isTargetPositive && (
-                    <span className="text-[9px] px-1 py-0.2 rounded bg-amber-900/60 text-amber-200 border border-amber-700/60 font-sans ml-1">
+                    <span className="text-[9px] px-1 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-700/60 font-sans ml-1">
                       {lang === "vi" ? "ÂM TÍNH" : "NEGATIVE"}
                     </span>
                   )}
@@ -250,18 +235,18 @@ export default function HeatmapViewer({
 
               {inLungRatio !== undefined && inLungRatio !== null && !isRejected && (
                 <div
-                  className={`px-2.5 py-1 rounded text-[11px] font-mono font-semibold flex items-center gap-1.5 shadow backdrop-blur-md border ${
+                  className={`px-2.5 py-1 rounded text-[11px] font-sans font-semibold flex items-center gap-1.5 shadow backdrop-blur-md border ${
                     inLungRatio < 0.80
-                      ? "bg-rose-950/80 border-rose-600/80 text-rose-200"
+                      ? "bg-rose-50 border-rose-600/80 text-rose-200"
                       : isGrounded
-                      ? "bg-slate-950/80 border-slate-700 text-slate-200"
-                      : "bg-slate-950/80 border-slate-700 text-slate-400"
+                      ? "bg-slate-100/80 border-slate-300 text-slate-800"
+                      : "bg-slate-100/80 border-slate-300 text-slate-600"
                   }`}
                 >
                   {inLungRatio < 0.80 ? (
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-700" />
                   ) : isGrounded ? (
-                    <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                    <ShieldCheck className="w-3.5 h-3.5 text-sky-700" />
                   ) : (
                     <ShieldAlert className="w-3.5 h-3.5 text-slate-500" />
                   )}
@@ -273,7 +258,7 @@ export default function HeatmapViewer({
 
             {/* If target is clinically negative, alert user that heatmap is model baseline audit */}
             {!isTargetPositive && !isRejected && (
-              <div className="bg-amber-950/90 border border-amber-700/80 text-amber-200 text-[10px] px-2.5 py-1 rounded shadow backdrop-blur-md font-sans">
+              <div className="bg-amber-50 border border-amber-700/80 text-amber-800 text-[10px] px-2.5 py-1 rounded shadow backdrop-blur-md font-sans">
                 ⚠️ {t.negativeTargetNotice}
               </div>
             )}
@@ -283,11 +268,11 @@ export default function HeatmapViewer({
 
       {/* Fail-Safe OOD Lockout Center Watermark */}
       {isRejected && (
-        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 z-20 pointer-events-none">
-          <div className="px-4 py-2 rounded bg-rose-950/90 border-2 border-rose-600 text-rose-300 font-mono text-xs md:text-sm font-bold tracking-widest shadow-2xl mb-2 uppercase">
+        <div className="absolute inset-0 bg-slate-100/85 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 z-20 pointer-events-none">
+          <div className="px-4 py-2 rounded bg-rose-50 border-2 border-rose-600 text-rose-700 font-sans text-xs md:text-sm font-bold tracking-widest shadow-2xl mb-2 uppercase">
             {t.oodLockoutTitle}
           </div>
-          <p className="text-xs text-rose-200/90 max-w-sm font-mono leading-relaxed">
+          <p className="text-xs text-rose-200/90 max-w-sm font-sans leading-relaxed">
             {t.oodLockoutDesc}
           </p>
         </div>
@@ -295,7 +280,7 @@ export default function HeatmapViewer({
 
       {/* Subtle Bottom Processing Pill */}
       {isExplaining && (
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-slate-700 px-3 py-1 rounded-full text-[10px] font-mono text-cyan-300 flex items-center gap-2 shadow-lg z-20">
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-slate-100/90 border border-slate-300 px-3 py-1 rounded-full text-[10px] font-sans text-sky-700 flex items-center gap-2 shadow-lg z-20">
           <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
           {t.extractingCam}
         </div>

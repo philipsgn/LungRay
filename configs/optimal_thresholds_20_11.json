@@ -1,0 +1,28 @@
+{
+  "model": "DenseNet-121 LungRay Tri-Head",
+  "checkpoint": "best_model_20_11.pth",
+  "checkpoint_sha256": "15cb9b1db56f57048fae489caf8648aed09c4568bbbef5789ad2ca981e3ddf4c",
+  "calibration_split": "validation",
+  "seed": 42,
+  "head_a": {
+    "Atelectasis": 0.3929876983165741,
+    "Cardiomegaly": 0.18556353449821472,
+    "Effusion": 0.4423869550228119,
+    "Infiltration": 0.4824499487876892,
+    "Mass": 0.4447276294231415,
+    "Nodule": 0.4053550064563751,
+    "Pneumonia": 0.11821740865707397,
+    "Pneumothorax": 0.26930320262908936,
+    "Consolidation": 0.48905181884765625,
+    "Edema": 0.23041240870952606,
+    "Emphysema": 0.12392838299274445,
+    "Fibrosis": 0.14804601669311523,
+    "Pleural_Thickening": 0.3689516484737396,
+    "Hernia": 0.0030003876890987158
+  },
+  "head_b_tb": 0.20992349088191986,
+  "head_c_covid_binary": 0.3644193708896637,
+  "note": "Thresholds are calibrated on validation only; the independent test set was not used for selection.",
+  "source_archive_sha256": "e94f030383bb2fd0351531c8ee59c59ca60653b695423ece6047872f7dae5d75",
+  "provenance_note": "The packaged source checkpoint hash differed from the local copy after artifact packaging; model_state_dict tensors were verified exactly equal against the checkpoint bundled with the stored result artifacts."
+}

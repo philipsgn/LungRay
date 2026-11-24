@@ -1,12 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #0f172a;
-  --foreground: #f8fafc;
+  --background: #FBFBF9;
+  --foreground: #0F172A;
   --accent: #0ea5e9;
   --danger: #ef4444;
   --warning: #f59e0b;
@@ -25,3 +23,8 @@ body {
     text-wrap: balance;
   }
 }
+
+h1,h2,h3,h4 { font-family: "Be Vietnam Pro", sans-serif; }
+body { font-family: Inter, sans-serif; }
+.font-mono { font-family: Inter, sans-serif; }
+@media print { header, button, input { display: none !important; } body { background: white; } }

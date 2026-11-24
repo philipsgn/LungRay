@@ -1,0 +1,48 @@
+{
+  "head_a_nih_14": {
+    "Atelectasis": 0.42055219411849976,
+    "Cardiomegaly": 0.2602696120738983,
+    "Effusion": 0.47667235136032104,
+    "Infiltration": 0.5295091271400452,
+    "Mass": 0.4248473346233368,
+    "Nodule": 0.47920411825180054,
+    "Pneumonia": 0.32615330815315247,
+    "Pneumothorax": 0.47895535826683044,
+    "Consolidation": 0.41214799880981445,
+    "Edema": 0.32746419310569763,
+    "Emphysema": 0.20698387920856476,
+    "Fibrosis": 0.3760819733142853,
+    "Pleural_Thickening": 0.3627796769142151,
+    "Hernia": 0.15235012769699097
+  },
+  "head_b_tb": {
+    "tb": 0.8116877675056458
+  },
+  "head_c_covid": {
+    "strategy": "argmax",
+    "classes": [
+      "Normal",
+      "Non-COVID Pneumonia",
+      "COVID-19"
+    ]
+  },
+  "img_size": 256,
+  "selection": {
+    "criterion": "val_combined_auc",
+    "score": 0.8390295711923575,
+    "source": "ema",
+    "epoch": 5
+  },
+  "normalization": {
+    "mean": [
+      0.48500001430511475,
+      0.4560000002384186,
+      0.4059999883174896
+    ],
+    "std": [
+      0.2290000021457672,
+      0.2240000069141388,
+      0.22499999403953552
+    ]
+  }
+}

@@ -1,0 +1,83 @@
+[{"stream_name":"stderr","time":11.902224454,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":11.902279112,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":11.902283581,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":11.902286265,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stderr","time":12.659716521,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":12.659794771,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":12.659801997,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":12.65980688,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stdout","time":14.073972452,"data":"Writing test_full_benchmark_kaggle.py\n"}
+,{"stream_name":"stdout","time":48.66048442,"data":"================================================================================\r\n"}
+,{"stream_name":"stdout","time":48.660525157,"data":"LUNGRAY RAW DATASET BENCHMARK ENGINE (KAGGLE GPU)\r\n"}
+,{"stream_name":"stdout","time":48.660530678,"data":"Device: cuda | Output Directory: /kaggle/working/benchmark_results\r\n"}
+,{"stream_name":"stdout","time":48.660535118,"data":"================================================================================\r\n"}
+,{"stream_name":"stdout","time":136.122399734,"data":"\r\n"}
+,{"stream_name":"stdout","time":136.122446381,"data":"[*] Detected Dataset Candidates:\r\n"}
+,{"stream_name":"stdout","time":136.122454794,"data":" -\u003e NIH Search Paths   : ['/kaggle/input/datasets', '/kaggle/input/datasets/nih-chest-xrays', '/kaggle/input/datasets/nih-chest-xrays/data', '/kaggle/input/datasets/tawsifurrahman/covid19-radiography-database', '/kaggle/input/datasets/tawsifurrahman/covid19-radiography-database/COVID-19_Radiography_Dataset', '/kaggle/input/datasets/tawsifurrahman/tuberculosis-tb-chest-xray-dataset', '/kaggle/input/datasets/tawsifurrahman/tuberculosis-tb-chest-xray-dataset/TB_Chest_Radiography_Database']\r\n"}
+,{"stream_name":"stdout","time":136.122463371,"data":" -\u003e TB Search Paths    : ['/kaggle/input/datasets/tawsifurrahman/tuberculosis-tb-chest-xray-dataset', '/kaggle/input/datasets/tawsifurrahman/tuberculosis-tb-chest-xray-dataset/TB_Chest_Radiography_Database', '/kaggle/input/datasets/tawsifurrahman/tuberculosis-tb-chest-xray-dataset/TB_Chest_Radiography_Database/Tuberculosis']\r\n"}
+,{"stream_name":"stdout","time":136.122469136,"data":" -\u003e COVID Search Paths : ['/kaggle/input/datasets/tawsifurrahman/covid19-radiography-database', '/kaggle/input/datasets/tawsifurrahman/covid19-radiography-database/COVID-19_Radiography_Dataset', '/kaggle/input/datasets/tawsifurrahman/covid19-radiography-database/COVID-19_Radiography_Dataset/COVID']\r\n"}
+,{"stream_name":"stdout","time":136.122474156,"data":" -\u003e RSNA Search Paths  : ['/kaggle/input/competitions/rsna-pneumonia-detection-challenge', '/kaggle/input/datasets/tawsifurrahman/covid19-radiography-database/COVID-19_Radiography_Dataset/Viral Pneumonia']\r\n"}
+,{"stream_name":"stdout","time":136.122478894,"data":"[*] Indexing images across directories: ['/kaggle/input/datasets', '/kaggle/input/datasets/nih-chest-xrays', '/kaggle/input/datasets/nih-chest-xrays/data', '/kaggle/input/datasets/tawsifurrahman/covid19-radiography-database', '/kaggle/input/datasets/tawsifurrahman/covid19-radiography-database/COVID-19_Radiography_Dataset', '/kaggle/input/datasets/tawsifurrahman/tuberculosis-tb-chest-xray-dataset', '/kaggle/input/datasets/tawsifurrahman/tuberculosis-tb-chest-xray-dataset/TB_Chest_Radiography_Database']...\r\n"}
+,{"stream_name":"stdout","time":137.133649136,"data":"[+] Total indexed images: 133,985\r\n"}
+,{"stream_name":"stdout","time":137.437959894,"data":"[+] Loaded NIH Metadata from: /kaggle/input/datasets/nih-chest-xrays/data/Data_Entry_2017.csv\r\n"}
+,{"stream_name":"stdout","time":139.262848145,"data":"[+] Loaded official test_list.txt: 25,596 test filenames\r\n"}
+,{"stream_name":"stdout","time":139.416084541,"data":"[+] NIH Test DataLoader created: 2,000 raw images to evaluate.\r\n"}
+,{"stream_name":"stdout","time":139.416130415,"data":"[+] TB DataLoader created: 400 raw images (Tuberculosis \u0026 Normal).\r\n"}
+,{"stream_name":"stdout","time":140.882003876,"data":"[*] Loading model DenseNet-121 Baseline (densenet121) from: /kaggle/input/models/phanphat/multi-model-test/pytorch/default/1/best_model.pth\r\n"}
+,{"stream_name":"stdout","time":162.089568551,"data":"[*] Loading model ResNet-50 (resnet50) from: /kaggle/input/models/phanphat/multi-model-test/pytorch/default/1/best_resnet50.pth\r\n"}
+,{"stream_name":"stdout","time":166.346305567,"data":"[*] Loading model AG-MTCNet SOTA (densenet121) from: /kaggle/input/models/phanphat/multi-model-test/pytorch/default/1/ag_mtcnet_best.pth\r\n"}
+,{"stream_name":"stdout","time":168.57340141,"data":"[*] Loading model WSOL Fine-tuned (densenet121) from: /kaggle/input/models/phanphat/multi-model-test/pytorch/default/1/best_wsol_finetune.pth\r\n"}
+,{"stream_name":"stdout","time":169.686520019,"data":"\r\n"}
+,{"stream_name":"stdout","time":169.686551431,"data":"======================================================================\r\n"}
+,{"stream_name":"stdout","time":169.686557437,"data":"[*] Evaluating Head A (NIH ChestX-ray14 14 Pathologies)...\r\n"}
+,{"stream_name":"stdout","time":169.686562857,"data":"======================================================================\r\n"}
+,{"stream_name":"stdout","time":251.187829175,"data":"\rNIH-14 Inference:   0%|                                  | 0/32 [00:00\u003c?, ?it/s]\rNIH-14 Inference:   3%|▊                         | 1/32 [00:18\u003c09:34, 18.52s/it]\rNIH-14 Inference:   6%|█▋                        | 2/32 [00:20\u003c04:24,  8.81s/it]\rNIH-14 Inference:   9%|██▍                       | 3/32 [00:22\u003c02:45,  5.72s/it]\rNIH-14 Inference:  12%|███▎                      | 4/32 [00:24\u003c01:59,  4.26s/it]\rNIH-14 Inference:  16%|████                      | 5/32 [00:26\u003c01:33,  3.46s/it]\rNIH-14 Inference:  19%|████▉                     | 6/32 [00:28\u003c01:17,  2.98s/it]\rNIH-14 Inference:  22%|█████▋                    | 7/32 [00:30\u003c01:06,  2.67s/it]\rNIH-14 Inference:  25%|██████▌                   | 8/32 [00:32\u003c00:59,  2.48s/it]\rNIH-14 Inference:  28%|███████▎                  | 9/32 [00:34\u003c00:53,  2.34s/it]\rNIH-14 Inference:  31%|███████▊                 | 10/32 [00:36\u003c00:49,  2.26s/it]\rNIH-14 Inference:  34%|████████▌                | 11/32 [00:38\u003c00:46,  2.20s/it]\rNIH-14 Inference:  38%|█████████▍               | 12/32 [00:40\u003c00:43,  2.15s/it]\rNIH-14 Inference:  41%|██████████▏              | 13/32 [00:43\u003c00:40,  2.13s/it]\rNIH-14 Inference:  44%|██████████▉              | 14/32 [00:45\u003c00:38,  2.11s/it]\rNIH-14 Inference:  47%|███████████▋             | 15/32 [00:47\u003c00:35,  2.10s/it]\rNIH-14 Inference:  50%|████████████▌            | 16/32 [00:49\u003c00:33,  2.09s/it]\rNIH-14 Inference:  53%|█████████████▎           | 17/32 [00:51\u003c00:31,  2.09s/it]\rNIH-14 Inference:  56%|██████████████           | 18/32 [00:53\u003c00:29,  2.08s/it]\rNIH-14 Inference:  59%|██████████████▊          | 19/32 [00:55\u003c00:27,  2.08s/it]\rNIH-14 Inference:  62%|███████████████▋         | 20/32 [00:57\u003c00:25,  2.09s/it]\rNIH-14 Inference:  66%|████████████████▍        | 21/32 [00:59\u003c00:22,  2.09s/it]\rNIH-14 Inference:  69%|█████████████████▏       | 22/32 [01:01\u003c00:20,  2.09s/it]\rNIH-14 Inference:  72%|█████████████████▉       | 23/32 [01:03\u003c00:18,  2.09s/it]\rNIH-14 Inference:  75%|██████████████████▊      | 24/32 [01:06\u003c00:16,  2.10s/it]\rNIH-14 Inference:  78%|███████████████████▌     | 25/32 [01:08\u003c00:14,  2.10s/it]\rNIH-14 Inference:  81%|████████████████████▎    | 26/32 [01:10\u003c00:12,  2.10s/it]\rNIH-14 Inference:  84%|█████████████████████    | 27/32 [01:12\u003c00:10,  2.09s/it]\rNIH-14 Inference:  88%|█████████████████████▉   | 28/32 [01:14\u003c00:08,  2.09s/it]\rNIH-14 Inference:  91%|██████████████████████▋  | 29/32 [01:16\u003c00:06,  2.09s/it]\rNIH-14 Inference:  94%|███████████████████████▍ | 30/32 [01:18\u003c00:04,  2.10s/it]\rNIH-14 Inference:  97%|████████████████████████▏| 31/32 [01:20\u003c00:02,  2.10s/it]\rNIH-14 Inference: 100%|█████████████████████████| 32/32 [01:21\u003c00:00,  1.69s/it]\rNIH-14 Inference: 100%|█████████████████████████| 32/32 [01:21\u003c00:00,  2.55s/it]\r\n"}
+,{"stream_name":"stdout","time":251.290271681,"data":" -\u003e DenseNet-121 Baseline     | NIH Macro AUROC: 0.7881 | Macro F1: 0.1779\r\n"}
+,{"stream_name":"stdout","time":251.39057869,"data":" -\u003e ResNet-50                 | NIH Macro AUROC: 0.7686 | Macro F1: 0.2693\r\n"}
+,{"stream_name":"stdout","time":251.492462445,"data":" -\u003e AG-MTCNet SOTA            | NIH Macro AUROC: 0.7670 | Macro F1: 0.2246\r\n"}
+,{"stream_name":"stdout","time":251.593704424,"data":" -\u003e WSOL Fine-tuned           | NIH Macro AUROC: 0.5341 | Macro F1: 0.0750\r\n"}
+,{"stream_name":"stdout","time":251.696085665,"data":" -\u003e Consensus Ensemble        | NIH Macro AUROC: 0.7897 | Macro F1: 0.2293\r\n"}
+,{"stream_name":"stdout","time":251.6961202,"data":"\r\n"}
+,{"stream_name":"stdout","time":251.696125027,"data":"======================================================================\r\n"}
+,{"stream_name":"stdout","time":251.696129853,"data":"[*] Evaluating Head B (Tuberculosis Binary Triage)...\r\n"}
+,{"stream_name":"stdout","time":251.696134056,"data":"======================================================================\r\n"}
+,{"stream_name":"stdout","time":270.885572412,"data":"\rTB Inference:   0%|                                       | 0/7 [00:00\u003c?, ?it/s]\rTB Inference:  14%|████▍                          | 1/7 [00:08\u003c00:48,  8.02s/it]\rTB Inference:  29%|████████▊                      | 2/7 [00:10\u003c00:22,  4.55s/it]\rTB Inference:  43%|█████████████▎                 | 3/7 [00:12\u003c00:13,  3.45s/it]\rTB Inference:  57%|█████████████████▋             | 4/7 [00:14\u003c00:08,  2.92s/it]\rTB Inference:  71%|██████████████████████▏        | 5/7 [00:16\u003c00:05,  2.62s/it]\rTB Inference:  86%|██████████████████████████▌    | 6/7 [00:18\u003c00:02,  2.45s/it]\rTB Inference: 100%|███████████████████████████████| 7/7 [00:19\u003c00:00,  1.83s/it]\rTB Inference: 100%|███████████████████████████████| 7/7 [00:19\u003c00:00,  2.74s/it]\r\n"}
+,{"stream_name":"stdout","time":270.885626504,"data":" -\u003e DenseNet-121 Baseline     | TB AUROC: 1.0000 | Sensitivity: 1.0000 | Specificity: 0.9843\r\n"}
+,{"stream_name":"stdout","time":270.885632423,"data":" -\u003e ResNet-50                 | TB AUROC: 1.0000 | Sensitivity: 1.0000 | Specificity: 1.0000\r\n"}
+,{"stream_name":"stdout","time":270.885636304,"data":" -\u003e AG-MTCNet SOTA            | TB AUROC: 0.9984 | Sensitivity: 1.0000 | Specificity: 0.5943\r\n"}
+,{"stream_name":"stdout","time":270.936416848,"data":" -\u003e WSOL Fine-tuned           | TB AUROC: 0.4047 | Sensitivity: 0.8049 | Specificity: 0.0000\r\n"}
+,{"stream_name":"stdout","time":270.93644741,"data":" -\u003e Consensus Ensemble        | TB AUROC: 1.0000 | Sensitivity: 1.0000 | Specificity: 0.9434\r\n"}
+,{"stream_name":"stdout","time":270.93645326,"data":"\r\n"}
+,{"stream_name":"stdout","time":270.936457887,"data":"======================================================================\r\n"}
+,{"stream_name":"stdout","time":270.936462052,"data":"[*] Running Quantitative WSOL Bounding Box Benchmark (max 100 cases)...\r\n"}
+,{"stream_name":"stdout","time":270.936465951,"data":"======================================================================\r\n"}
+,{"stream_name":"stdout","time":288.034770229,"data":" -\u003e RSNA Labels CSV : /kaggle/input/competitions/rsna-pneumonia-detection-challenge/stage_2_train_labels.csv\r\n"}
+,{"stream_name":"stdout","time":288.03481401,"data":" -\u003e RSNA Images Dir : /kaggle/input/competitions/rsna-pneumonia-detection-challenge/stage_2_train_images\r\n"}
+,{"stream_name":"stdout","time":288.642109059,"data":"\r\n"}
+,{"stream_name":"stdout","time":288.642139769,"data":"[+] Extracting Grad-CAM WSOL Box-IoU for: DenseNet-121 Baseline\r\n"}
+,{"stream_name":"stdout","time":299.401521844,"data":" -\u003e RSNA WSOL: Mean Box-IoU = 0.3862 | IoU\u003e=0.30: 60.0%\r\n"}
+,{"stream_name":"stdout","time":299.401561975,"data":"\r\n"}
+,{"stream_name":"stdout","time":299.401569886,"data":"[+] Extracting Grad-CAM WSOL Box-IoU for: ResNet-50\r\n"}
+,{"stream_name":"stdout","time":306.963089051,"data":" -\u003e RSNA WSOL: Mean Box-IoU = 0.0065 | IoU\u003e=0.30: 0.0%\r\n"}
+,{"stream_name":"stdout","time":306.963140767,"data":"\r\n"}
+,{"stream_name":"stdout","time":307.014188371,"data":"[+] Extracting Grad-CAM WSOL Box-IoU for: AG-MTCNet SOTA\r\n"}
+,{"stream_name":"stdout","time":316.151293888,"data":" -\u003e RSNA WSOL: Mean Box-IoU = 0.2814 | IoU\u003e=0.30: 40.0%\r\n"}
+,{"stream_name":"stdout","time":316.151344454,"data":"\r\n"}
+,{"stream_name":"stdout","time":316.151351492,"data":"[+] Extracting Grad-CAM WSOL Box-IoU for: WSOL Fine-tuned\r\n"}
+,{"stream_name":"stdout","time":325.388672836,"data":" -\u003e RSNA WSOL: Mean Box-IoU = 0.1341 | IoU\u003e=0.30: 6.0%\r\n"}
+,{"stream_name":"stdout","time":327.115250642,"data":"[+] 300 DPI figures exported to /kaggle/working/benchmark_results/figures\r\n"}
+,{"stream_name":"stdout","time":327.166521063,"data":"[+] Full academic report exported successfully to /kaggle/working/benchmark_results/FULL_TEST_BENCHMARK_REPORT.md\r\n"}
+,{"stream_name":"stdout","time":327.166585385,"data":"\r\n"}
+,{"stream_name":"stdout","time":327.166592851,"data":"================================================================================\r\n"}
+,{"stream_name":"stdout","time":327.16659813,"data":"[OK] Full benchmark evaluation completed in 278.5s!\r\n"}
+,{"stream_name":"stdout","time":327.166602919,"data":"Artifacts exported to: /kaggle/working/benchmark_results\r\n"}
+,{"stream_name":"stdout","time":327.166618725,"data":"================================================================================\r\n"}
+,{"stream_name":"stderr","time":341.992255885,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":341.992305423,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":342.190360824,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":342.190398931,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":343.137187123,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to notebook\n"}
+,{"stream_name":"stderr","time":343.221309745,"data":"[NbConvertApp] Writing 63421 bytes to __notebook__.ipynb\n"}
+,{"stream_name":"stderr","time":345.935117227,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to html\n"}
+,{"stream_name":"stderr","time":346.59570162,"data":"[NbConvertApp] Writing 498942 bytes to __results__.html\n"}
+]

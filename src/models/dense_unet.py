@@ -159,9 +159,14 @@ class DenseUNet(nn.Module):
         self,
         image_tensor: torch.Tensor,
         threshold: float = 0.50,
-    ) -> np.ndarray:
+        as_tensor: bool = False,
+    ) -> np.ndarray | torch.Tensor:
         """
-        Runs inference on a (1, 3, H, W) or (3, H, W) tensor and returns a (H, W) uint8 binary mask (0 or 255).
+        Runs inference on an ImageNet-normalized RGB tensor of shape
+        ``(1, 3, H, W)`` or ``(3, H, W)`` and returns a ``(H, W)`` uint8
+        binary mask (0 or 255). Set ``as_tensor=True`` to receive an FP32
+        ``(B, 1, H, W)`` mask in {0.0, 1.0}. Preprocessing is intentionally
+        performed by the caller so training and inference use normalization once.
         """
         self.eval()
         if image_tensor.ndim == 3:
@@ -169,6 +174,8 @@ class DenseUNet(nn.Module):
         device = next(self.parameters()).device
         image_tensor = image_tensor.to(device)
         prob_mask = self.forward(image_tensor)
+        if as_tensor:
+            return (prob_mask >= threshold).to(dtype=torch.float32)
         mask_np = (prob_mask.squeeze().cpu().numpy() >= threshold).astype(np.uint8) * 255
         return mask_np
 
@@ -177,10 +184,14 @@ class DenseUNet(nn.Module):
         self,
         image_tensor: torch.Tensor,
         threshold: float = 0.50,
-    ) -> np.ndarray:
+        as_tensor: bool = False,
+    ) -> np.ndarray | torch.Tensor:
         """
-        Runs batched inference on an ``(N, 3, H, W)`` tensor (or a single
-        ``(3, H, W)`` image) and returns an ``(N, H, W)`` uint8 mask in {0, 255}.
+        Runs batched inference on an ImageNet-normalized RGB tensor of shape
+        ``(N, 3, H, W)`` (or a single ``(3, H, W)`` image) and returns an
+        ``(N, H, W)`` uint8 mask in {0, 255}. Set ``as_tensor=True`` to receive
+        an FP32 ``(N, 1, H, W)`` mask in {0.0, 1.0}. Preprocessing is performed
+        by the caller so training and inference use normalization once.
 
         A single forward pass over the whole batch keeps per-image latency low
         when the Dense-UNet gate is applied to several views or images at once.
@@ -195,7 +206,32 @@ class DenseUNet(nn.Module):
         device = next(self.parameters()).device
         image_tensor = image_tensor.to(device)
         prob_mask = self.forward(image_tensor)
+        if as_tensor:
+            return (prob_mask >= threshold).to(dtype=torch.float32)
         return (prob_mask.squeeze(1).cpu().numpy() >= threshold).astype(np.uint8) * 255
+
+
+def apply_mask_coverage_failsafe(mask: torch.Tensor | np.ndarray, min_coverage: float = 0.05):
+    """Return an all-ones mask when predicted lung coverage is below 5%.
+
+    This fail-safe representation means "do not mask this radiograph". The
+    soft-masking functions separately bypass attenuation for low-coverage
+    masks so their image output remains unchanged.
+    """
+    if not 0.0 <= float(min_coverage) <= 1.0:
+        raise ValueError(f"min_coverage must be in [0, 1], got {min_coverage!r}.")
+    if isinstance(mask, torch.Tensor):
+        binary = (mask > 0.5).to(dtype=torch.float32)
+        coverage = binary.flatten(start_dim=-2).mean(dim=-1, keepdim=True)
+        while coverage.ndim < binary.ndim:
+            coverage = coverage.unsqueeze(-1)
+        return torch.where(coverage < min_coverage, torch.ones_like(binary), binary)
+    array = np.asarray(mask)
+    binary = (array > 0.5).astype(np.float32)
+    coverage = binary.reshape(*binary.shape[:-2], -1).mean(axis=-1, keepdims=True)
+    while coverage.ndim < binary.ndim:
+        coverage = np.expand_dims(coverage, axis=-1)
+    return np.where(coverage < min_coverage, np.ones_like(binary), binary)
 
 
 def apply_dilated_soft_mask(
@@ -242,6 +278,7 @@ def apply_dilated_soft_mask(
     min_side = min(left_lung_px, right_lung_px)
     symmetry_ratio = (min_side / max_side) if max_side > 0.0 else 0.0
 
+    safe_mask = apply_mask_coverage_failsafe(binary_mask)
     if coverage < min_lung_coverage or (symmetry_ratio < min_symmetry_ratio and coverage < 0.25):
         # Suspected white-out lung, massive pleural effusion, or segmentation distortion.
         # Bypass gate and preserve 100% of native radiograph.
@@ -252,7 +289,7 @@ def apply_dilated_soft_mask(
     if kernel_size % 2 == 0:
         kernel_size += 1
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
-    dilated_mask = cv2.dilate(binary_mask, kernel, iterations=1)
+    dilated_mask = cv2.dilate((safe_mask * 255).astype(np.uint8), kernel, iterations=1)
 
     # 2. Gaussian Edge Softening
     blur_ksize = max(7, kernel_size // 2 * 2 + 1)
@@ -379,6 +416,7 @@ def apply_dilated_soft_mask_tensor(
     # 1. Clinical Fail-Safe Evaluation per sample in batch
     total_px = float(height * width)
     coverage = binary.sum(dim=(-2, -1)) / total_px  # (B, 1)
+    safe_binary = apply_mask_coverage_failsafe(binary)
 
     mid_x = width // 2
     left_px = binary[..., :mid_x].sum(dim=(-2, -1))
@@ -392,7 +430,7 @@ def apply_dilated_soft_mask_tensor(
     bypass_mask = fail_coverage | fail_symmetry  # (B, 1)
 
     # 2. Dilation & Softening
-    dilated = F.max_pool2d(binary, kernel_size=kernel, stride=1, padding=pad)
+    dilated = F.max_pool2d(safe_binary, kernel_size=kernel, stride=1, padding=pad)
     soft = F.avg_pool2d(dilated, kernel_size=kernel, stride=1, padding=pad)
     alpha = background_attenuation + (1.0 - background_attenuation) * soft  # (B, 1, H, W)
 

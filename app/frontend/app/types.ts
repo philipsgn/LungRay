@@ -25,6 +25,7 @@ export interface ClinicalReport {
   status: "GENERATED" | "BLOCKED";
   is_blocked: boolean;
   findings: string[];
+  active_findings?: string[];
   anatomical_locations: string[];
   icd10_codes: string[];
   impression: string;
@@ -38,8 +39,16 @@ export interface HeadBScreening {
 }
 
 export interface HeadCScreening {
-  covid_probability: number;
-  is_positive: boolean;
+  available?: boolean;
+  status?: string;
+  message?: string;
+  covid_probability?: number;
+  threshold?: number;
+  is_positive?: boolean;
+  model_is_positive?: boolean;
+  clinical_suspicion?: boolean;
+  guardrail_reasons?: string[];
+  in_lung_energy_ratio?: number | null;
 }
 
 export interface PredictionResponse {
@@ -54,9 +63,10 @@ export interface PredictionResponse {
   model_display_name?: string;
   ensemble_agreement?: number;
   ensemble_models?: string[];
-  individual_model_predictions?: Record<string, any>;
+  individual_model_predictions?: Record<string, unknown>;
   safety?: SafetyDecision;
   report?: ClinicalReport;
+  in_lung_energy_ratio?: number | null;
 }
 
 export interface LesionBBox {
@@ -78,8 +88,13 @@ export interface LesionMetadata {
 
 export interface ExplainResponse {
   heatmap_base64: string;
+  heatmap_rgba_base64?: string | null;
+  heatmap_has_activation?: boolean | null;
+  mask_source?: string;
+  mask_warning?: string;
   overlay_base64: string;
   contour_base64?: string;
+  contour_rgba_base64?: string;
   lesion_bounding_boxes?: LesionMetadata[];
   lesion_area_ratio?: number;
   cam_resolution?: string;
@@ -90,7 +105,7 @@ export interface ExplainResponse {
   target_threshold?: number;
   is_target_positive?: boolean;
   in_lung_energy_ratio?: number;
-  audit_pass?: boolean;
+  audit_pass?: boolean | null;
   is_grounded?: boolean;
 }
 
@@ -98,4 +113,28 @@ export interface AuditResponse {
   in_lung_energy_ratio: number;
   pass_80_percent: boolean;
   lung_mask_base64: string;
+}
+
+
+export interface RagKnowledgeCard {
+  disease: string;
+  icd10: string;
+  hallmarks: string;
+  differential: string;
+  followup: string;
+  coding_note: string;
+  citations: string[];
+}
+export interface RagQueryRequest {
+  question: string;
+  active_findings: string[];
+  anatomical_locations: string[];
+  is_safe: boolean;
+  in_lung_ratio?: number | null;
+}
+export interface RagQueryResponse {
+  status: string;
+  answer: string;
+  citations: string[];
+  retrieved_cards: RagKnowledgeCard[];
 }

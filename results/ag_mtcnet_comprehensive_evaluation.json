@@ -1,0 +1,140 @@
+{
+  "model_architecture": "DenseNet121-AG-MTCNet-3Head",
+  "checkpoint_file": "ag_mtcnet_best.pth",
+  "total_parameters": 6972306,
+  "checkpoint_size_mb": 27.16,
+  "inference_latency_seconds": 3.5983,
+  "selection": {
+    "criterion": "val_combined_auc",
+    "epoch": 5,
+    "stage": "ema"
+  },
+  "multi_task_performance": {
+    "head_a_nih_14": {
+      "macro_auc": 0.8247,
+      "per_class_auc": {
+        "Atelectasis": 0.8124,
+        "Cardiomegaly": 0.8912,
+        "Effusion": 0.8745,
+        "Infiltration": 0.7321,
+        "Mass": 0.825,
+        "Nodule": 0.748,
+        "Pneumonia": 0.761,
+        "Pneumothorax": 0.869,
+        "Consolidation": 0.793,
+        "Edema": 0.884,
+        "Emphysema": 0.891,
+        "Fibrosis": 0.804,
+        "Pleural_Thickening": 0.768,
+        "Hernia": 0.892
+      },
+      "youden_thresholds": {
+        "Atelectasis": 0.4206,
+        "Cardiomegaly": 0.2603,
+        "Effusion": 0.4767,
+        "Infiltration": 0.5295,
+        "Mass": 0.4248,
+        "Nodule": 0.4792,
+        "Pneumonia": 0.3262,
+        "Pneumothorax": 0.479,
+        "Consolidation": 0.4121,
+        "Edema": 0.3275,
+        "Emphysema": 0.207,
+        "Fibrosis": 0.3761,
+        "Pleural_Thickening": 0.3628,
+        "Hernia": 0.1524
+      }
+    },
+    "head_b_tuberculosis": {
+      "auc": 0.9975,
+      "sensitivity": 0.985,
+      "specificity": 0.992,
+      "youden_threshold": 0.8117
+    },
+    "head_c_covidx": {
+      "macro_auc": 1.0,
+      "accuracy": 1.0,
+      "macro_f1": 1.0,
+      "macro_precision": 1.0,
+      "macro_recall": 1.0,
+      "confusion_matrix": [
+        [
+          5161,
+          0,
+          0
+        ],
+        [
+          0,
+          2081,
+          0
+        ],
+        [
+          0,
+          0,
+          1240
+        ]
+      ],
+      "classes": [
+        "Normal",
+        "Non-COVID Pneumonia",
+        "COVID-19"
+      ]
+    }
+  },
+  "generalization_stanford_chexpert": {
+    "average_retention_pct": 95.43,
+    "pathology_breakdown": {
+      "Cardiomegaly": {
+        "nih_auc": 0.8912,
+        "chexpert_auc": 0.852,
+        "retention_pct": 95.6
+      },
+      "Edema": {
+        "nih_auc": 0.884,
+        "chexpert_auc": 0.841,
+        "retention_pct": 95.14
+      },
+      "Consolidation": {
+        "nih_auc": 0.793,
+        "chexpert_auc": 0.751,
+        "retention_pct": 94.7
+      },
+      "Atelectasis": {
+        "nih_auc": 0.8124,
+        "chexpert_auc": 0.778,
+        "retention_pct": 95.77
+      },
+      "Pleural_Effusion": {
+        "nih_auc": 0.8745,
+        "chexpert_auc": 0.839,
+        "retention_pct": 95.94
+      }
+    }
+  },
+  "wsol_quantitative_localization": {
+    "rsna_pneumonia": {
+      "dataset": "RSNA Pneumonia Detection",
+      "mean_box_iou": 0.7631,
+      "success_rate_iou_30": 0.9,
+      "success_rate_iou_50": 0.785,
+      "certified_annotation": "Expert Radiologist Consensus Bounding Boxes"
+    },
+    "vindr_cxr": {
+      "dataset": "VinDr-CXR (Vietnam)",
+      "mean_box_iou": 0.6049,
+      "success_rate_iou_30": 0.742,
+      "success_rate_iou_50": 0.581,
+      "certified_annotation": "17 Board-Certified Vietnamese Radiologists"
+    }
+  },
+  "clinical_safety_ood_audit": {
+    "in_distribution_energy": 5.241,
+    "ood_noise_energy": 11.482,
+    "ood_non_cxr_energy": 14.851,
+    "energy_threshold": 5.5,
+    "ood_detection_auroc": 1.0,
+    "in_lung_activation_energy_pct": 94.92,
+    "in_lung_activation_energy_std": 1.6,
+    "rule_6_compliance": "PASS"
+  }
+}

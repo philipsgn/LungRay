@@ -62,6 +62,7 @@ class ClinicalReport:
     status: str  # "GENERATED" or "BLOCKED"
     is_blocked: bool
     findings: List[str] = field(default_factory=list)
+    active_findings: List[str] = field(default_factory=list)
     anatomical_locations: List[str] = field(default_factory=list)
     icd10_codes: List[str] = field(default_factory=list)
     impression: str = ""
@@ -76,6 +77,7 @@ class ClinicalReport:
             "status": self.status,
             "is_blocked": self.is_blocked,
             "findings": self.findings,
+            "active_findings": self.active_findings,
             "anatomical_locations": self.anatomical_locations,
             "icd10_codes": self.icd10_codes,
             "impression": self.impression,
@@ -141,6 +143,7 @@ class ClinicalReportGenerator:
         heatmap: Optional[np.ndarray] = None,
         safety_decision: Optional[SafetyDecision] = None,
         in_lung_ratio: Optional[float] = None,
+        guardrail_reasons: Optional[List[str]] = None,
     ) -> ClinicalReport:
         """
         Generates structured clinical report. Refuses if scan is REJECTED.
@@ -333,11 +336,31 @@ class ClinicalReportGenerator:
                     "<u>Hướng xử trí tiếp theo</u>: Hội chẩn chuyên khoa Hô hấp / Tim mạch và theo dõi đáp ứng điều trị lâm sàng.",
                 ]
 
+        warnings = list(guardrail_reasons or [])
+        if in_lung_ratio is not None and in_lung_ratio < 0.80:
+            warning = f"In-lung activation energy is {in_lung_ratio:.1%}, below the 80% review threshold."
+            if warning not in warnings:
+                warnings.append(warning)
+        if warnings:
+            findings.append(
+                "Cảnh báo an toàn: cờ nghi ngờ lâm sàng đã được hạ; "
+                + " ".join(warnings)
+            )
+            recommendations.insert(
+                0,
+                "Bác sĩ cần đối chiếu phim gốc và đánh giá độc lập trước khi đưa ra kết luận.",
+            )
+            impression = (
+                "Kết quả mô hình cần được rà soát do không đáp ứng đầy đủ điều kiện bảo vệ lâm sàng. "
+                + impression
+            )
+
         return ClinicalReport(
             status="GENERATED",
             is_blocked=False,
             findings=findings,
             anatomical_locations=locations,
+            active_findings=[item["disease"] for item in active_items],
             icd10_codes=icd_codes,
             impression=impression,
             recommendations=recommendations,

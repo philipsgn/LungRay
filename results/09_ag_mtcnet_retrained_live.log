@@ -1,0 +1,259 @@
+[{"stream_name":"stderr","time":6.583446008,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":6.583500759,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":6.583508108,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":6.583512622,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stderr","time":7.1507895,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":7.150820641,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":7.15083745,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":7.150841049,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stdout","time":8.181686351,"data":"$ git clone --depth 1 https://github.com/philipsgn/LungRay.git /kaggle/working/Chest-X-rays\n"}
+,{"stream_name":"stdout","time":8.202159606,"data":"Cloning into '/kaggle/working/Chest-X-rays'...\n"}
+,{"stream_name":"stdout","time":12.394364222,"data":"[OK] Repository root: /kaggle/working/Chest-X-rays\n"}
+,{"stream_name":"stdout","time":29.006458031,"data":"[*] Execution hardware: cuda (CUDA available: True)\n"}
+,{"stream_name":"stdout","time":29.006537281,"data":"[*] Profile=deep | 6000 samples/epoch | 300 batches | 27 epochs\n"}
+,{"stream_name":"stdout","time":29.207137027,"data":"[*] Resolving dataset mounts under /kaggle/input ...\n"}
+,{"stream_name":"stdout","time":36.265298224,"data":"[*] Mount status: []\n"}
+,{"stream_name":"stdout","time":36.265363475,"data":"[*] Resolved paths: {'nih_dir': '/kaggle/input/datasets/phanphat/lungray-nih-512', 'covid_dir': '/kaggle/input/datasets/phanphat/lungray-covidx-512', 'tb_dir': '/kaggle/input/datasets/tawsifurrahman/tuberculosis-tb-chest-xray-dataset/TB_Chest_Radiography_Database', 'split_dir': '/kaggle/working/Chest-X-rays/dataset/splits'}\n"}
+,{"stream_name":"stdout","time":36.554166354,"data":"[PASS] NIH: zero patient leakage across ['train', 'val', 'test'].\n"}
+,{"stream_name":"stdout","time":43.973338356,"data":"[PASS] COVIDx CXR-4: zero patient leakage across ['train', 'val', 'test'].\n"}
+,{"stream_name":"stdout","time":43.973376999,"data":"[*] NIH   : patient_splits.csv (/kaggle/working/Chest-X-rays/dataset/splits/patient_splits.csv)\n"}
+,{"stream_name":"stdout","time":43.973383757,"data":"[*] COVID : COVIDx manifests (/kaggle/input/datasets/phanphat/lungray-covidx-512/covidx_512/train.txt)\n"}
+,{"stream_name":"stdout","time":43.973389286,"data":"[*] TB    : tb_splits.csv (/kaggle/working/Chest-X-rays/dataset/splits/tb_splits.csv)\n"}
+,{"stream_name":"stdout","time":43.973393727,"data":"[*] NIH dataframe: rows=112120 | splits={'train': 78566, 'test': 21884, 'val': 11670}\n"}
+,{"stream_name":"stdout","time":43.973398766,"data":"    Finding Labels distribution (top 12 of 836 unique): {'No Finding': 60361, 'Infiltration': 9547, 'Atelectasis': 4215, 'Effusion': 3955, 'Nodule': 2705, 'Pneumothorax': 2194, 'Mass': 2139, 'Effusion|Infiltration': 1603, 'Atelectasis|Infiltration': 1350, 'Consolidation': 1310, 'Atelectasis|Effusion': 1165, 'Pleural_Thickening': 1126}\n"}
+,{"stream_name":"stdout","time":43.973404539,"data":"[*] COVID dataframe: rows=76345 | splits={'train': 61453, 'test': 8482, 'val': 6410}\n"}
+,{"stream_name":"stdout","time":43.973409072,"data":"    label distribution (top 12 of 2 unique): {1.0: 61440, 0.0: 14905}\n"}
+,{"stream_name":"stdout","time":43.973414412,"data":"[*] TB dataframe: rows=4200 | splits={'train': 2940, 'test': 841, 'val': 419}\n"}
+,{"stream_name":"stdout","time":43.973435006,"data":"    label distribution (top 12 of 2 unique): {0: 3500, 1: 700}\n"}
+,{"stream_name":"stdout","time":44.018884893,"data":"[*] Resolving training records from dataframes...\n"}
+,{"stream_name":"stdout","time":44.01994558,"data":"    Resolving NIH train records...\n"}
+,{"stream_name":"stdout","time":5704.897650146,"data":"    -\u003e NIH train: 40000 records resolved\n"}
+,{"stream_name":"stdout","time":5704.898517147,"data":"    Resolving COVID train records...\n"}
+,{"stream_name":"stdout","time":7400.055099609,"data":"    -\u003e COVID train: 12000 records resolved\n"}
+,{"stream_name":"stdout","time":7400.056472058,"data":"    Resolving TB train records...\n"}
+,{"stream_name":"stdout","time":7526.584076632,"data":"    -\u003e TB train: 2940 records resolved\n"}
+,{"stream_name":"stdout","time":7526.585123106,"data":"[*] Resolving validation records...\n"}
+,{"stream_name":"stdout","time":8228.464626594,"data":"    -\u003e Validation pools: NIH=3000 | COVID=2000 | TB=419\n"}
+,{"stream_name":"stdout","time":8228.465559786,"data":"[*] Resolving test records...\n"}
+,{"stream_name":"stdout","time":8943.190204801,"data":"    -\u003e Test pools: NIH=3000 | COVID=2000 | TB=841\n"}
+,{"stream_name":"stdout","time":8943.206719039,"data":"[*] Data modes: NIH=REAL | COVID=REAL | TB=REAL\n"}
+,{"stream_name":"stdout","time":8943.206743569,"data":"[*] Train pools: NIH=40000 | COVID=12000 | TB=2940\n"}
+,{"stream_name":"stdout","time":8943.206749149,"data":"[*] Val pools  : NIH=3000 | COVID=2000 | TB=419\n"}
+,{"stream_name":"stdout","time":8943.206753714,"data":"[*] Test pools : NIH=3000 | COVID=2000 | TB=841\n"}
+,{"stream_name":"stdout","time":8943.206758471,"data":"[Rule 5] Batch composition: (12, 5, 3) (NIH:COVID:TB) for batch_size=20\n"}
+,{"stream_name":"stdout","time":8943.206762789,"data":"[Rule 5] Per epoch: NIH=3600 | COVID=1500 | TB=900 | total=6000 over 300 batches\n"}
+,{"stream_name":"stdout","time":8943.206767469,"data":"[Rule 4] Bounding boxes: NOT LOADED. Classification and WSOL supervision use image-level labels only.\n"}
+,{"stream_name":"stdout","time":8943.206772689,"data":"[*] Head C BCE pos_weight: 0.182 | [negative, positive] counts: [1851, 10149]\n"}
+,{"stream_name":"stdout","time":8943.20677717,"data":"[*] Head B pos_weight: 5.0 | pos=490 neg=2450\n"}
+,{"stream_name":"stdout","time":8943.20678162,"data":"[*] Train batches/epoch: 300 | Val batches: head_a=150, head_b=21, head_c=100\n"}
+,{"stream_name":"stdout","time":8943.206786151,"data":"[*] Test batches: head_a=150, head_b=43, head_c=100\n"}
+,{"stream_name":"stdout","time":8946.234852991,"data":"[OK] Frozen anatomical gate loaded from /kaggle/input/models/phanphat/denseunet-dense121/pytorch/default/1/dense_unet_best.pth (requires_grad=False).\n"}
+,{"stream_name":"stdout","time":8946.23489166,"data":"[*] RESUME=False: initializing a fresh DenseNet-121 with ImageNet weights.\n"}
+,{"stream_name":"stdout","time":8946.669115289,"data":"[*] Initializing backbone 'densenet121' (pretrained=True)...\n"}
+,{"stream_name":"stderr","time":8946.740334994,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":8946.74035851,"data":"\n"}
+,{"stream_name":"stderr","time":8946.740364116,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stdout","time":8947.902110173,"data":"[*] AG-MTCNet instantiated: 6,970,256 parameters (Head C = binary COVID screening).\n"}
+,{"stream_name":"stdout","time":8947.902152495,"data":"[*] ASL config: gamma_pos=0, gamma_neg=4, clip=0.05 (rare Hernia/Fibrosis gradient rescue).\n"}
+,{"stream_name":"stdout","time":8947.902157083,"data":"[*] Masked loss: Head A ASL | Head B weighted BCEWithLogits | Head C positive-weighted BCEWithLogits.\n"}
+,{"stream_name":"stdout","time":8947.902160694,"data":"[*] Head C pos_weight: 0.182 | Head B pos_weight: 5.000\n"}
+,{"stream_name":"stdout","time":8947.944647123,"data":"=== STAGE 1: Encoder frozen, classification heads warmup ===\n"}
+,{"stream_name":"stdout","time":8959.969441408,"data":"  [S1-E1] Batch   1/300 ( 0%) | Loss: 3.5094 (A=0.0930, B=3.9957, C=0.2748)\n"}
+,{"stream_name":"stdout","time":9006.373480605,"data":"  [S1-E1] Batch  50/300 (16%) | Loss: 0.8520 (A=0.0409, B=0.8085, C=0.2053)\n"}
+,{"stream_name":"stdout","time":9053.600288353,"data":"  [S1-E1] Batch 100/300 (33%) | Loss: 0.2842 (A=0.0432, B=0.1866, C=0.1146)\n"}
+,{"stream_name":"stdout","time":9100.52117175,"data":"  [S1-E1] Batch 150/300 (50%) | Loss: 0.3840 (A=0.1202, B=0.0867, C=0.2431)\n"}
+,{"stream_name":"stdout","time":9147.436195883,"data":"  [S1-E1] Batch 200/300 (66%) | Loss: 3.3127 (A=0.0298, B=3.4835, C=0.6201)\n"}
+,{"stream_name":"stdout","time":9194.996578252,"data":"  [S1-E1] Batch 250/300 (83%) | Loss: 1.4370 (A=0.0661, B=1.6386, C=0.0750)\n"}
+,{"stream_name":"stdout","time":9241.702558266,"data":"  [S1-E1] Batch 300/300 (100%) | Loss: 0.6743 (A=0.0762, B=0.2619, C=0.4857)\n"}
+,{"stream_name":"stdout","time":9357.610447513,"data":"[S1] Epoch 1/2: loss=1.5048 | val_score=0.6816 | aucA=0.5914 aucB=0.8279 aucC=0.8062 | 293.8s\n"}
+,{"stream_name":"stdout","time":9357.917704448,"data":"  [S1-E2] Batch   1/300 ( 0%) | Loss: 5.3811 (A=0.0454, B=6.4363, C=0.2332)\n"}
+,{"stream_name":"stdout","time":9368.503572141,"data":"  [S1-E2] Batch  50/300 (16%) | Loss: 2.1790 (A=0.0369, B=2.4943, C=0.1834)\n"}
+,{"stream_name":"stdout","time":9379.296932758,"data":"  [S1-E2] Batch 100/300 (33%) | Loss: 0.3327 (A=0.0363, B=0.2640, C=0.1065)\n"}
+,{"stream_name":"stdout","time":9389.993388922,"data":"  [S1-E2] Batch 150/300 (50%) | Loss: 0.3605 (A=0.1107, B=0.0759, C=0.2365)\n"}
+,{"stream_name":"stdout","time":9400.743937822,"data":"  [S1-E2] Batch 200/300 (66%) | Loss: 2.9545 (A=0.0297, B=3.1069, C=0.5491)\n"}
+,{"stream_name":"stdout","time":9411.531655201,"data":"  [S1-E2] Batch 250/300 (83%) | Loss: 0.6658 (A=0.0659, B=0.6798, C=0.0701)\n"}
+,{"stream_name":"stdout","time":9422.19336143,"data":"  [S1-E2] Batch 300/300 (100%) | Loss: 0.4754 (A=0.0739, B=0.1557, C=0.3461)\n"}
+,{"stream_name":"stdout","time":9449.524450378,"data":"[S1] Epoch 2/2: loss=1.6887 | val_score=0.7223 | aucA=0.6134 aucB=0.9108 aucC=0.8603 | 64.8s\n"}
+,{"stream_name":"stdout","time":9449.52448872,"data":"=== STAGE 2: Unfrozen network with layer-wise differential learning rates ===\n"}
+,{"stream_name":"stdout","time":9452.010422495,"data":"  [S2-E1] Batch   1/300 ( 0%) | Loss: 2.1112 (A=0.0949, B=2.3973, C=0.1230)\n"}
+,{"stream_name":"stdout","time":9466.148203239,"data":"  [S2-E1] Batch  50/300 (16%) | Loss: 2.0357 (A=0.0489, B=2.3481, C=0.1354)\n"}
+,{"stream_name":"stdout","time":9480.627453062,"data":"  [S2-E1] Batch 100/300 (33%) | Loss: 0.3161 (A=0.0438, B=0.2601, C=0.0803)\n"}
+,{"stream_name":"stdout","time":9495.052302744,"data":"  [S2-E1] Batch 150/300 (50%) | Loss: 0.2994 (A=0.1249, B=0.0536, C=0.1645)\n"}
+,{"stream_name":"stdout","time":9509.530349328,"data":"  [S2-E1] Batch 200/300 (66%) | Loss: 1.7749 (A=0.0256, B=1.6289, C=0.5578)\n"}
+,{"stream_name":"stdout","time":9523.951496822,"data":"  [S2-E1] Batch 250/300 (83%) | Loss: 0.5376 (A=0.0561, B=0.5315, C=0.0703)\n"}
+,{"stream_name":"stdout","time":9538.367855432,"data":"  [S2-E1] Batch 300/300 (100%) | Loss: 0.5568 (A=0.0820, B=0.1701, C=0.4235)\n"}
+,{"stream_name":"stdout","time":9593.230284362,"data":"  [BEST] Epoch 1 (raw): score=0.6979 | aucA=0.5573 aucB=0.9708 aucC=0.8468 | 89.0s\n"}
+,{"stream_name":"stdout","time":9593.59493559,"data":"  [S2-E2] Batch   1/300 ( 0%) | Loss: 0.2021 (A=0.0513, B=0.1328, C=0.0557)\n"}
+,{"stream_name":"stdout","time":9607.822588751,"data":"  [S2-E2] Batch  50/300 (16%) | Loss: 1.2124 (A=0.0441, B=1.3592, C=0.1011)\n"}
+,{"stream_name":"stdout","time":9622.257795603,"data":"  [S2-E2] Batch 100/300 (33%) | Loss: 0.1000 (A=0.0350, B=0.0200, C=0.0613)\n"}
+,{"stream_name":"stdout","time":9636.763315189,"data":"  [S2-E2] Batch 150/300 (50%) | Loss: 0.1721 (A=0.1088, B=0.0228, C=0.0563)\n"}
+,{"stream_name":"stdout","time":9651.305468205,"data":"  [S2-E2] Batch 200/300 (66%) | Loss: 0.9093 (A=0.0276, B=0.4216, C=0.6805)\n"}
+,{"stream_name":"stdout","time":9665.862455077,"data":"  [S2-E2] Batch 250/300 (83%) | Loss: 0.2153 (A=0.0565, B=0.1490, C=0.0494)\n"}
+,{"stream_name":"stdout","time":9680.410616116,"data":"  [S2-E2] Batch 300/300 (100%) | Loss: 0.3977 (A=0.0838, B=0.0675, C=0.3249)\n"}
+,{"stream_name":"stdout","time":9735.2404203,"data":"  [BEST] Epoch 2 (ema): score=0.7263 | aucA=0.6212 aucB=0.9531 aucC=0.8147 | 87.4s\n"}
+,{"stream_name":"stdout","time":9735.604488009,"data":"  [S2-E3] Batch   1/300 ( 0%) | Loss: 0.0993 (A=0.0501, B=0.0337, C=0.0278)\n"}
+,{"stream_name":"stdout","time":9750.006594704,"data":"  [S2-E3] Batch  50/300 (16%) | Loss: 0.8574 (A=0.0444, B=0.9642, C=0.0521)\n"}
+,{"stream_name":"stdout","time":9764.710054834,"data":"  [S2-E3] Batch 100/300 (33%) | Loss: 0.0590 (A=0.0337, B=0.0051, C=0.0266)\n"}
+,{"stream_name":"stdout","time":9779.362453766,"data":"  [S2-E3] Batch 150/300 (50%) | Loss: 0.1248 (A=0.1038, B=0.0097, C=0.0167)\n"}
+,{"stream_name":"stdout","time":9793.92575355,"data":"  [S2-E3] Batch 200/300 (66%) | Loss: 0.7310 (A=0.0266, B=0.0446, C=0.8359)\n"}
+,{"stream_name":"stdout","time":9808.588066994,"data":"  [S2-E3] Batch 250/300 (83%) | Loss: 0.1276 (A=0.0558, B=0.0535, C=0.0362)\n"}
+,{"stream_name":"stdout","time":9823.109689351,"data":"  [S2-E3] Batch 300/300 (100%) | Loss: 0.2904 (A=0.0758, B=0.0133, C=0.2549)\n"}
+,{"stream_name":"stdout","time":9877.980281826,"data":"  [BEST] Epoch 3 (ema): score=0.7467 | aucA=0.6369 aucB=0.9840 aucC=0.8389 | 88.1s\n"}
+,{"stream_name":"stdout","time":9878.387873919,"data":"  [S2-E4] Batch   1/300 ( 0%) | Loss: 0.0658 (A=0.0455, B=0.0074, C=0.0179)\n"}
+,{"stream_name":"stdout","time":9892.871643004,"data":"  [S2-E4] Batch  50/300 (16%) | Loss: 0.2794 (A=0.0462, B=0.2724, C=0.0191)\n"}
+,{"stream_name":"stdout","time":9907.585389755,"data":"  [S2-E4] Batch 100/300 (33%) | Loss: 0.0401 (A=0.0292, B=0.0040, C=0.0096)\n"}
+,{"stream_name":"stdout","time":9922.310844202,"data":"  [S2-E4] Batch 150/300 (50%) | Loss: 0.0959 (A=0.0841, B=0.0076, C=0.0070)\n"}
+,{"stream_name":"stdout","time":9937.030229832,"data":"  [S2-E4] Batch 200/300 (66%) | Loss: 0.4952 (A=0.0263, B=0.0102, C=0.5759)\n"}
+,{"stream_name":"stdout","time":9951.603196873,"data":"  [S2-E4] Batch 250/300 (83%) | Loss: 0.0634 (A=0.0536, B=0.0034, C=0.0089)\n"}
+,{"stream_name":"stdout","time":9966.193136888,"data":"  [S2-E4] Batch 300/300 (100%) | Loss: 0.1777 (A=0.0708, B=0.0156, C=0.1181)\n"}
+,{"stream_name":"stdout","time":10021.048194469,"data":"  [BEST] Epoch 4 (ema): score=0.7538 | aucA=0.6406 aucB=0.9926 aucC=0.8545 | 88.4s\n"}
+,{"stream_name":"stdout","time":10021.427651754,"data":"  [S2-E5] Batch   1/300 ( 0%) | Loss: 0.0482 (A=0.0401, B=0.0034, C=0.0068)\n"}
+,{"stream_name":"stdout","time":10035.729186796,"data":"  [S2-E5] Batch  50/300 (16%) | Loss: 0.0814 (A=0.0464, B=0.0337, C=0.0100)\n"}
+,{"stream_name":"stdout","time":10050.341232309,"data":"  [S2-E5] Batch 100/300 (33%) | Loss: 0.0407 (A=0.0358, B=0.0009, C=0.0052)\n"}
+,{"stream_name":"stdout","time":10064.904619284,"data":"  [S2-E5] Batch 150/300 (50%) | Loss: 0.0870 (A=0.0819, B=0.0022, C=0.0043)\n"}
+,{"stream_name":"stdout","time":10079.445671127,"data":"  [S2-E5] Batch 200/300 (66%) | Loss: 0.2943 (A=0.0266, B=0.0046, C=0.3301)\n"}
+,{"stream_name":"stdout","time":10094.056180061,"data":"  [S2-E5] Batch 250/300 (83%) | Loss: 0.0521 (A=0.0470, B=0.0035, C=0.0029)\n"}
+,{"stream_name":"stdout","time":10108.501529968,"data":"  [S2-E5] Batch 300/300 (100%) | Loss: 0.1233 (A=0.0689, B=0.0044, C=0.0637)\n"}
+,{"stream_name":"stdout","time":10163.392364474,"data":"  [BEST] Epoch 5 (ema): score=0.7547 | aucA=0.6397 aucB=0.9945 aucC=0.8600 | 87.7s\n"}
+,{"stream_name":"stdout","time":10163.766614825,"data":"  [S2-E6] Batch   1/300 ( 0%) | Loss: 0.0450 (A=0.0413, B=0.0017, C=0.0029)\n"}
+,{"stream_name":"stdout","time":10177.942649567,"data":"  [S2-E6] Batch  50/300 (16%) | Loss: 0.0537 (A=0.0405, B=0.0099, C=0.0066)\n"}
+,{"stream_name":"stdout","time":10192.603419337,"data":"  [S2-E6] Batch 100/300 (33%) | Loss: 0.0334 (A=0.0306, B=0.0002, C=0.0033)\n"}
+,{"stream_name":"stdout","time":10207.096294472,"data":"  [S2-E6] Batch 150/300 (50%) | Loss: 0.0760 (A=0.0736, B=0.0020, C=0.0010)\n"}
+,{"stream_name":"stdout","time":10221.569351175,"data":"  [S2-E6] Batch 200/300 (66%) | Loss: 0.1669 (A=0.0252, B=0.0033, C=0.1739)\n"}
+,{"stream_name":"stdout","time":10236.0935614,"data":"  [S2-E6] Batch 250/300 (83%) | Loss: 0.0483 (A=0.0443, B=0.0028, C=0.0022)\n"}
+,{"stream_name":"stdout","time":10250.475636545,"data":"  [S2-E6] Batch 300/300 (100%) | Loss: 0.0879 (A=0.0706, B=0.0069, C=0.0148)\n"}
+,{"stream_name":"stdout","time":10305.256919368,"data":"  [--] Epoch 6 (raw): score=0.7541 best=0.7547 patience=1/6 | 87.3s\n"}
+,{"stream_name":"stdout","time":10305.632568638,"data":"  [S2-E7] Batch   1/300 ( 0%) | Loss: 0.0340 (A=0.0325, B=0.0003, C=0.0015)\n"}
+,{"stream_name":"stdout","time":10319.780912509,"data":"  [S2-E7] Batch  50/300 (16%) | Loss: 0.0375 (A=0.0346, B=0.0020, C=0.0017)\n"}
+,{"stream_name":"stdout","time":10334.300619029,"data":"  [S2-E7] Batch 100/300 (33%) | Loss: 0.0311 (A=0.0302, B=0.0003, C=0.0009)\n"}
+,{"stream_name":"stdout","time":10348.77944451,"data":"  [S2-E7] Batch 150/300 (50%) | Loss: 0.0722 (A=0.0701, B=0.0017, C=0.0010)\n"}
+,{"stream_name":"stdout","time":10363.261961649,"data":"  [S2-E7] Batch 200/300 (66%) | Loss: 0.0417 (A=0.0260, B=0.0009, C=0.0187)\n"}
+,{"stream_name":"stdout","time":10377.840875196,"data":"  [S2-E7] Batch 250/300 (83%) | Loss: 0.0411 (A=0.0397, B=0.0006, C=0.0011)\n"}
+,{"stream_name":"stdout","time":10392.402388806,"data":"  [S2-E7] Batch 300/300 (100%) | Loss: 0.0668 (A=0.0585, B=0.0045, C=0.0059)\n"}
+,{"stream_name":"stdout","time":10447.245048546,"data":"  [BEST] Epoch 7 (raw): score=0.7598 | aucA=0.6332 aucB=0.9962 aucC=0.9033 | 87.4s\n"}
+,{"stream_name":"stdout","time":10447.600404182,"data":"  [S2-E8] Batch   1/300 ( 0%) | Loss: 0.0369 (A=0.0348, B=0.0006, C=0.0020)\n"}
+,{"stream_name":"stdout","time":10461.858106927,"data":"  [S2-E8] Batch  50/300 (16%) | Loss: 0.0332 (A=0.0313, B=0.0009, C=0.0014)\n"}
+,{"stream_name":"stdout","time":10476.5087155,"data":"  [S2-E8] Batch 100/300 (33%) | Loss: 0.0270 (A=0.0263, B=0.0002, C=0.0007)\n"}
+,{"stream_name":"stdout","time":10491.076468231,"data":"  [S2-E8] Batch 150/300 (50%) | Loss: 0.0656 (A=0.0641, B=0.0016, C=0.0003)\n"}
+,{"stream_name":"stdout","time":10505.615990031,"data":"  [S2-E8] Batch 200/300 (66%) | Loss: 0.0310 (A=0.0279, B=0.0007, C=0.0031)\n"}
+,{"stream_name":"stdout","time":10520.049856285,"data":"  [S2-E8] Batch 250/300 (83%) | Loss: 0.0418 (A=0.0407, B=0.0003, C=0.0010)\n"}
+,{"stream_name":"stdout","time":10534.533224197,"data":"  [S2-E8] Batch 300/300 (100%) | Loss: 0.0561 (A=0.0531, B=0.0012, C=0.0026)\n"}
+,{"stream_name":"stdout","time":10589.445408084,"data":"  [BEST] Epoch 8 (raw): score=0.7626 | aucA=0.6385 aucB=0.9967 aucC=0.9009 | 87.5s\n"}
+,{"stream_name":"stdout","time":10589.825226671,"data":"  [S2-E9] Batch   1/300 ( 0%) | Loss: 0.0379 (A=0.0371, B=0.0004, C=0.0006)\n"}
+,{"stream_name":"stdout","time":10603.93311389,"data":"  [S2-E9] Batch  50/300 (16%) | Loss: 0.0309 (A=0.0297, B=0.0008, C=0.0008)\n"}
+,{"stream_name":"stdout","time":10618.479746414,"data":"  [S2-E9] Batch 100/300 (33%) | Loss: 0.0288 (A=0.0278, B=0.0002, C=0.0011)\n"}
+,{"stream_name":"stdout","time":10632.960165733,"data":"  [S2-E9] Batch 150/300 (50%) | Loss: 0.0669 (A=0.0660, B=0.0006, C=0.0005)\n"}
+,{"stream_name":"stdout","time":10647.521551509,"data":"  [S2-E9] Batch 200/300 (66%) | Loss: 0.0323 (A=0.0234, B=0.0009, C=0.0102)\n"}
+,{"stream_name":"stdout","time":10662.008577352,"data":"  [S2-E9] Batch 250/300 (83%) | Loss: 0.0337 (A=0.0330, B=0.0006, C=0.0004)\n"}
+,{"stream_name":"stdout","time":10676.462035949,"data":"  [S2-E9] Batch 300/300 (100%) | Loss: 0.0482 (A=0.0455, B=0.0010, C=0.0024)\n"}
+,{"stream_name":"stdout","time":10731.377467821,"data":"  [BEST] Epoch 9 (raw): score=0.7637 | aucA=0.6409 aucB=0.9969 aucC=0.8992 | 87.2s\n"}
+,{"stream_name":"stdout","time":10731.752823309,"data":"  [S2-E10] Batch   1/300 ( 0%) | Loss: 0.0319 (A=0.0313, B=0.0001, C=0.0007)\n"}
+,{"stream_name":"stdout","time":10745.907679691,"data":"  [S2-E10] Batch  50/300 (16%) | Loss: 0.0289 (A=0.0274, B=0.0012, C=0.0007)\n"}
+,{"stream_name":"stdout","time":10760.427173704,"data":"  [S2-E10] Batch 100/300 (33%) | Loss: 0.0264 (A=0.0259, B=0.0001, C=0.0005)\n"}
+,{"stream_name":"stdout","time":10774.933056629,"data":"  [S2-E10] Batch 150/300 (50%) | Loss: 0.0597 (A=0.0591, B=0.0006, C=0.0001)\n"}
+,{"stream_name":"stdout","time":10789.442574599,"data":"  [S2-E10] Batch 200/300 (66%) | Loss: 0.0242 (A=0.0220, B=0.0007, C=0.0022)\n"}
+,{"stream_name":"stdout","time":10803.941814952,"data":"  [S2-E10] Batch 250/300 (83%) | Loss: 0.0316 (A=0.0308, B=0.0005, C=0.0005)\n"}
+,{"stream_name":"stdout","time":10818.330811078,"data":"  [S2-E10] Batch 300/300 (100%) | Loss: 0.0445 (A=0.0426, B=0.0010, C=0.0013)\n"}
+,{"stream_name":"stdout","time":10873.635199997,"data":"  [BEST] Epoch 10 (raw): score=0.7647 | aucA=0.6428 aucB=0.9971 aucC=0.8980 | 87.2s\n"}
+,{"stream_name":"stdout","time":10873.995284007,"data":"  [S2-E11] Batch   1/300 ( 0%) | Loss: 0.0314 (A=0.0306, B=0.0003, C=0.0007)\n"}
+,{"stream_name":"stdout","time":10888.00642514,"data":"  [S2-E11] Batch  50/300 (16%) | Loss: 0.0236 (A=0.0226, B=0.0008, C=0.0004)\n"}
+,{"stream_name":"stdout","time":10902.432508767,"data":"  [S2-E11] Batch 100/300 (33%) | Loss: 0.0219 (A=0.0216, B=0.0001, C=0.0003)\n"}
+,{"stream_name":"stdout","time":10916.811644391,"data":"  [S2-E11] Batch 150/300 (50%) | Loss: 0.0567 (A=0.0563, B=0.0003, C=0.0002)\n"}
+,{"stream_name":"stdout","time":10931.216162931,"data":"  [S2-E11] Batch 200/300 (66%) | Loss: 0.0232 (A=0.0209, B=0.0002, C=0.0027)\n"}
+,{"stream_name":"stdout","time":10945.663859823,"data":"  [S2-E11] Batch 250/300 (83%) | Loss: 0.0288 (A=0.0277, B=0.0010, C=0.0003)\n"}
+,{"stream_name":"stdout","time":10960.0561925,"data":"  [S2-E11] Batch 300/300 (100%) | Loss: 0.0458 (A=0.0441, B=0.0011, C=0.0010)\n"}
+,{"stream_name":"stdout","time":11014.843604242,"data":"  [BEST] Epoch 11 (raw): score=0.7653 | aucA=0.6440 aucB=0.9970 aucC=0.8976 | 86.6s\n"}
+,{"stream_name":"stdout","time":11015.203717744,"data":"  [S2-E12] Batch   1/300 ( 0%) | Loss: 0.0261 (A=0.0256, B=0.0001, C=0.0004)\n"}
+,{"stream_name":"stdout","time":11029.339601319,"data":"  [S2-E12] Batch  50/300 (16%) | Loss: 0.0219 (A=0.0206, B=0.0002, C=0.0014)\n"}
+,{"stream_name":"stdout","time":11043.936873778,"data":"  [S2-E12] Batch 100/300 (33%) | Loss: 0.0224 (A=0.0219, B=0.0001, C=0.0005)\n"}
+,{"stream_name":"stdout","time":11058.403797724,"data":"  [S2-E12] Batch 150/300 (50%) | Loss: 0.0554 (A=0.0549, B=0.0003, C=0.0003)\n"}
+,{"stream_name":"stdout","time":11072.913935375,"data":"  [S2-E12] Batch 200/300 (66%) | Loss: 0.0196 (A=0.0188, B=0.0005, C=0.0005)\n"}
+,{"stream_name":"stdout","time":11087.353356504,"data":"  [S2-E12] Batch 250/300 (83%) | Loss: 0.0264 (A=0.0260, B=0.0002, C=0.0003)\n"}
+,{"stream_name":"stdout","time":11101.887180293,"data":"  [S2-E12] Batch 300/300 (100%) | Loss: 0.0381 (A=0.0360, B=0.0006, C=0.0019)\n"}
+,{"stream_name":"stdout","time":11156.670207309,"data":"  [--] Epoch 12 (raw): score=0.7649 best=0.7653 patience=1/6 | 87.3s\n"}
+,{"stream_name":"stdout","time":11157.016438341,"data":"  [S2-E13] Batch   1/300 ( 0%) | Loss: 0.0262 (A=0.0258, B=0.0001, C=0.0004)\n"}
+,{"stream_name":"stdout","time":11171.118817079,"data":"  [S2-E13] Batch  50/300 (16%) | Loss: 0.0213 (A=0.0206, B=0.0006, C=0.0003)\n"}
+,{"stream_name":"stdout","time":11185.680496355,"data":"  [S2-E13] Batch 100/300 (33%) | Loss: 0.0207 (A=0.0205, B=0.0001, C=0.0002)\n"}
+,{"stream_name":"stdout","time":11200.272319229,"data":"  [S2-E13] Batch 150/300 (50%) | Loss: 0.0474 (A=0.0469, B=0.0005, C=0.0001)\n"}
+,{"stream_name":"stdout","time":11214.793944982,"data":"  [S2-E13] Batch 200/300 (66%) | Loss: 0.0179 (A=0.0172, B=0.0005, C=0.0005)\n"}
+,{"stream_name":"stdout","time":11229.184098891,"data":"  [S2-E13] Batch 250/300 (83%) | Loss: 0.0254 (A=0.0249, B=0.0003, C=0.0003)\n"}
+,{"stream_name":"stdout","time":11243.588402474,"data":"  [S2-E13] Batch 300/300 (100%) | Loss: 0.0362 (A=0.0345, B=0.0005, C=0.0016)\n"}
+,{"stream_name":"stdout","time":11298.507952776,"data":"  [--] Epoch 13 (raw): score=0.7639 best=0.7653 patience=2/6 | 87.1s\n"}
+,{"stream_name":"stdout","time":11298.857623125,"data":"  [S2-E14] Batch   1/300 ( 0%) | Loss: 0.0251 (A=0.0249, B=0.0001, C=0.0002)\n"}
+,{"stream_name":"stdout","time":11312.967293013,"data":"  [S2-E14] Batch  50/300 (16%) | Loss: 0.0195 (A=0.0188, B=0.0006, C=0.0002)\n"}
+,{"stream_name":"stdout","time":11327.42728621,"data":"  [S2-E14] Batch 100/300 (33%) | Loss: 0.0205 (A=0.0203, B=0.0000, C=0.0002)\n"}
+,{"stream_name":"stdout","time":11341.910372384,"data":"  [S2-E14] Batch 150/300 (50%) | Loss: 0.0443 (A=0.0440, B=0.0003, C=0.0001)\n"}
+,{"stream_name":"stdout","time":11356.363250405,"data":"  [S2-E14] Batch 200/300 (66%) | Loss: 0.0156 (A=0.0152, B=0.0003, C=0.0002)\n"}
+,{"stream_name":"stdout","time":11370.860408975,"data":"  [S2-E14] Batch 250/300 (83%) | Loss: 0.0237 (A=0.0233, B=0.0002, C=0.0003)\n"}
+,{"stream_name":"stdout","time":11385.32506146,"data":"  [S2-E14] Batch 300/300 (100%) | Loss: 0.0345 (A=0.0334, B=0.0006, C=0.0007)\n"}
+,{"stream_name":"stdout","time":11440.116539419,"data":"  [--] Epoch 14 (raw): score=0.7640 best=0.7653 patience=3/6 | 87.0s\n"}
+,{"stream_name":"stdout","time":11440.466219794,"data":"  [S2-E15] Batch   1/300 ( 0%) | Loss: 0.0244 (A=0.0243, B=0.0001, C=0.0002)\n"}
+,{"stream_name":"stdout","time":11454.609145959,"data":"  [S2-E15] Batch  50/300 (16%) | Loss: 0.0192 (A=0.0186, B=0.0006, C=0.0002)\n"}
+,{"stream_name":"stdout","time":11469.035010886,"data":"  [S2-E15] Batch 100/300 (33%) | Loss: 0.0168 (A=0.0167, B=0.0001, C=0.0001)\n"}
+,{"stream_name":"stdout","time":11483.60226058,"data":"  [S2-E15] Batch 150/300 (50%) | Loss: 0.0393 (A=0.0391, B=0.0001, C=0.0001)\n"}
+,{"stream_name":"stdout","time":11498.071144152,"data":"  [S2-E15] Batch 200/300 (66%) | Loss: 0.0130 (A=0.0121, B=0.0003, C=0.0008)\n"}
+,{"stream_name":"stdout","time":11512.606554506,"data":"  [S2-E15] Batch 250/300 (83%) | Loss: 0.0225 (A=0.0222, B=0.0001, C=0.0002)\n"}
+,{"stream_name":"stdout","time":11527.139741024,"data":"  [S2-E15] Batch 300/300 (100%) | Loss: 0.0314 (A=0.0304, B=0.0004, C=0.0008)\n"}
+,{"stream_name":"stdout","time":11581.854387796,"data":"  [--] Epoch 15 (raw): score=0.7631 best=0.7653 patience=4/6 | 87.2s\n"}
+,{"stream_name":"stdout","time":11582.244825272,"data":"  [S2-E16] Batch   1/300 ( 0%) | Loss: 0.0202 (A=0.0201, B=0.0000, C=0.0001)\n"}
+,{"stream_name":"stdout","time":11596.439529368,"data":"  [S2-E16] Batch  50/300 (16%) | Loss: 0.0172 (A=0.0167, B=0.0004, C=0.0003)\n"}
+,{"stream_name":"stdout","time":11611.034739221,"data":"  [S2-E16] Batch 100/300 (33%) | Loss: 0.0158 (A=0.0156, B=0.0001, C=0.0001)\n"}
+,{"stream_name":"stdout","time":11625.612434321,"data":"  [S2-E16] Batch 150/300 (50%) | Loss: 0.0399 (A=0.0395, B=0.0004, C=0.0001)\n"}
+,{"stream_name":"stdout","time":11640.134112381,"data":"  [S2-E16] Batch 200/300 (66%) | Loss: 0.0144 (A=0.0138, B=0.0003, C=0.0004)\n"}
+,{"stream_name":"stdout","time":11654.676520856,"data":"  [S2-E16] Batch 250/300 (83%) | Loss: 0.0194 (A=0.0190, B=0.0003, C=0.0002)\n"}
+,{"stream_name":"stdout","time":11669.104207001,"data":"  [S2-E16] Batch 300/300 (100%) | Loss: 0.0306 (A=0.0295, B=0.0004, C=0.0010)\n"}
+,{"stream_name":"stdout","time":11723.879952244,"data":"  [--] Epoch 16 (raw): score=0.7629 best=0.7653 patience=5/6 | 87.5s\n"}
+,{"stream_name":"stdout","time":11724.24251314,"data":"  [S2-E17] Batch   1/300 ( 0%) | Loss: 0.0205 (A=0.0204, B=0.0001, C=0.0002)\n"}
+,{"stream_name":"stdout","time":11738.429978328,"data":"  [S2-E17] Batch  50/300 (16%) | Loss: 0.0171 (A=0.0165, B=0.0005, C=0.0002)\n"}
+,{"stream_name":"stdout","time":11752.956276807,"data":"  [S2-E17] Batch 100/300 (33%) | Loss: 0.0145 (A=0.0144, B=0.0001, C=0.0001)\n"}
+,{"stream_name":"stdout","time":11767.529883449,"data":"  [S2-E17] Batch 150/300 (50%) | Loss: 0.0370 (A=0.0368, B=0.0002, C=0.0001)\n"}
+,{"stream_name":"stdout","time":11782.113670005,"data":"  [S2-E17] Batch 200/300 (66%) | Loss: 0.0126 (A=0.0122, B=0.0001, C=0.0003)\n"}
+,{"stream_name":"stdout","time":11796.605225208,"data":"  [S2-E17] Batch 250/300 (83%) | Loss: 0.0189 (A=0.0186, B=0.0001, C=0.0003)\n"}
+,{"stream_name":"stdout","time":11811.082996601,"data":"  [S2-E17] Batch 300/300 (100%) | Loss: 0.0292 (A=0.0285, B=0.0004, C=0.0004)\n"}
+,{"stream_name":"stdout","time":11865.848885841,"data":"  [--] Epoch 17 (raw): score=0.7631 best=0.7653 patience=6/6 | 87.4s\n"}
+,{"stream_name":"stdout","time":11865.848928642,"data":"[*] Early stopping triggered at epoch 17 (patience=6).\n"}
+,{"stream_name":"stdout","time":11865.848933158,"data":"[OK] Selected checkpoint: source=raw epoch=11 val_score=0.7653\n"}
+,{"stream_name":"stdout","time":11865.913969689,"data":"=== FINAL VALIDATION (full validation cap) ===\n"}
+,{"stream_name":"stdout","time":12030.197573305,"data":"  val_score: 0.7506\n"}
+,{"stream_name":"stdout","time":12030.197607943,"data":"  auc_head_a_macro: 0.6193\n"}
+,{"stream_name":"stdout","time":12030.197613875,"data":"  auc_head_b: 0.9970\n"}
+,{"stream_name":"stdout","time":12030.197618206,"data":"  auc_head_c_binary: 0.8983 | accuracy_head_c: 0.8840\n"}
+,{"stream_name":"stdout","time":12030.197624776,"data":"[*] Youden thresholds (Head A, 14/14 classes with both labels): {'Atelectasis': 0.4526304006576538, 'Cardiomegaly': 0.25788846611976624, 'Effusion': 0.4350888133049011, 'Infiltration': 0.5695151686668396, 'Mass': 0.3816068172454834, 'Nodule': 0.45104363560676575, 'Pneumonia': 0.24750778079032898, 'Pneumothorax': 0.3766120970249176, 'Consolidation': 0.2979268729686737, 'Edema': 0.21823768317699432, 'Emphysema': 0.30387645959854126, 'Fibrosis': 0.3338313102722168, 'Pleural_Thickening': 0.2713281214237213, 'Hernia': 0.16864821314811707}\n"}
+,{"stream_name":"stdout","time":12030.197635787,"data":"[*] Youden threshold (Head B): {'tb': 0.9864683151245117}\n"}
+,{"stream_name":"stdout","time":12030.197645338,"data":"[*] Youden threshold (Head C COVID binary): {'covid': 0.7899199724197388}\n"}
+,{"stream_name":"stdout","time":12030.19765681,"data":"=== HELD-OUT TEST EVALUATION (never used for selection) ===\n"}
+,{"stream_name":"stdout","time":12298.651056438,"data":"  auc_head_a_macro: 0.6159\n"}
+,{"stream_name":"stdout","time":12298.65111289,"data":"  auc_head_b: 0.9992\n"}
+,{"stream_name":"stdout","time":12298.651121261,"data":"  auc_head_c_binary: 0.6250 | accuracy_head_c: 0.5540\n"}
+,{"stream_name":"stdout","time":12298.651127263,"data":"[OK] Final checkpoint: /kaggle/working/Chest-X-rays/checkpoints/ag_mtcnet_best.pth (27.1 MB)\n"}
+,{"stream_name":"stdout","time":12298.651132585,"data":"[OK] Thresholds: /kaggle/working/Chest-X-rays/checkpoints/ag_mtcnet_thresholds.json\n"}
+,{"stream_name":"stdout","time":12299.134096269,"data":"[OK] Training curves: /kaggle/working/Chest-X-rays/checkpoints/ag_mtcnet_training_curves.png\n"}
+,{"stream_name":"stdout","time":12299.422249562,"data":"[OK] Inference contract validated across all 3 heads (finite probabilities, correct shapes).\n"}
+,{"stream_name":"stdout","time":12299.422277477,"data":"\n"}
+,{"stream_name":"stdout","time":12299.422281768,"data":"=== STAGE 2 HAND-OFF SUMMARY ===\n"}
+,{"stream_name":"stdout","time":12299.422309655,"data":"Balanced epoch : 3600 NIH : 1500 COVID : 900 TB (6000 samples)\n"}
+,{"stream_name":"stdout","time":12299.42231485,"data":"Data modes     : NIH=REAL | COVID=REAL | TB=REAL\n"}
+,{"stream_name":"stdout","time":12299.422319634,"data":"Gate           : /kaggle/input/models/phanphat/denseunet-dense121/pytorch/default/1/dense_unet_best.pth\n"}
+,{"stream_name":"stdout","time":12299.422324943,"data":"Selection      : raw epoch 11 (val combined AUC = 0.7653)\n"}
+,{"stream_name":"stdout","time":12299.422329766,"data":"Validation     : {'auc_a': 0.6193191515572233, 'auc_b': 0.9970118706508391, 'auc_c': 0.8982565556343018, 'acc_c': 0.884, 'score': 0.7506451761913622}\n"}
+,{"stream_name":"stdout","time":12299.422334563,"data":"Test           : {'auc_a': 0.6159130449753647, 'auc_b': 0.9992052170368861, 'auc_c': 0.6250195000000001, 'acc_c': 0.554, 'score': 0.6943927703925961}\n"}
+,{"stream_name":"stdout","time":12299.422339246,"data":"Checkpoint     : /kaggle/working/Chest-X-rays/checkpoints/ag_mtcnet_best.pth\n"}
+,{"stream_name":"stdout","time":12299.422343472,"data":"Thresholds     : /kaggle/working/Chest-X-rays/checkpoints/ag_mtcnet_thresholds.json\n"}
+,{"stream_name":"stdout","time":12301.664263932,"data":"[OK] Figure 1 saved: /kaggle/working/Chest-X-rays/checkpoints/visualizations/01_training_dynamics_4panel.png\n"}
+,{"stream_name":"stdout","time":12302.088578852,"data":"[OK] Figure 2 saved: /kaggle/working/Chest-X-rays/checkpoints/visualizations/02_head_c_confusion_matrix.png\n"}
+,{"stream_name":"stdout","time":12302.88183261,"data":"[OK] Figure 3 saved: /kaggle/working/Chest-X-rays/checkpoints/visualizations/03_multitask_roc_curves.png\n"}
+,{"stream_name":"stdout","time":12303.227943977,"data":"[!] Scientific visualization suite encountered non-fatal error: Output 0 of BackwardHookFunctionBackward is a view and is being modified inplace. This view was created inside a custom Function (or because an input was returned as-is) and the autograd logic to handle view+inplace would override the custom backward associated with the custom Function, leading to incorrect gradients. This behavior is forbidden. You can fix this by cloning the output of the custom Function.\n"}
+,{"stream_name":"stderr","time":12309.318708828,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":12309.318748308,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":12309.458646264,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":12309.458683981,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":12310.217514382,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to notebook\n"}
+,{"stream_name":"stderr","time":12310.326689707,"data":"[NbConvertApp] Writing 554031 bytes to __notebook__.ipynb\n"}
+,{"stream_name":"stderr","time":12312.940628351,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to html\n"}
+,{"stream_name":"stderr","time":12313.831638536,"data":"[NbConvertApp] Support files will be in __results___files/\n"}
+,{"stream_name":"stderr","time":12313.831673131,"data":"[NbConvertApp] Making directory __results___files\n"}
+,{"stream_name":"stderr","time":12313.832011296,"data":"[NbConvertApp] Making directory __results___files\n"}
+,{"stream_name":"stderr","time":12313.83231382,"data":"[NbConvertApp] Making directory __results___files\n"}
+,{"stream_name":"stderr","time":12313.832580066,"data":"[NbConvertApp] Making directory __results___files\n"}
+,{"stream_name":"stderr","time":12313.832851202,"data":"[NbConvertApp] Writing 734677 bytes to __results__.html\n"}
+]

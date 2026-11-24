@@ -19,6 +19,11 @@ from src.explainability.grad_cam import GradCAMExplainer
 from src.models.dense_unet import apply_dilated_soft_mask
 
 
+IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(1, 1, 3)
+IMAGENET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32).reshape(1, 1, 3)
+DENSE_UNET_DEFAULT_IMAGE_SIZE = 256
+
+
 class LungSegmenter:
     """
     Advanced hybrid lung-field segmenter.
@@ -109,22 +114,33 @@ class LungSegmenter:
         """Batched Dense-UNet segmentation of native images (one forward pass)."""
         device = next(self.dense_unet.parameters()).device
         tensors = []
-        sizes = []
+        restore_params = []
+        image_size = int(getattr(self.dense_unet, "inference_size", DENSE_UNET_DEFAULT_IMAGE_SIZE))
         for image in images:
             rgb = self._ensure_rgb(image)
             height, width = rgb.shape[:2]
-            resized = cv2.resize(rgb, (512, 512), interpolation=cv2.INTER_LINEAR)
-            tensors.append(torch.from_numpy(resized.transpose(2, 0, 1)).float() / 255.0)
-            sizes.append((height, width))
+            gray = self._to_grayscale(rgb)
+            scale = image_size / float(max(height, width))
+            resized_h = max(1, min(image_size, int(round(height * scale))))
+            resized_w = max(1, min(image_size, int(round(width * scale))))
+            interpolation = cv2.INTER_AREA if scale < 1.0 else cv2.INTER_LINEAR
+            resized_gray = cv2.resize(gray, (resized_w, resized_h), interpolation=interpolation)
+            top = (image_size - resized_h) // 2
+            left = (image_size - resized_w) // 2
+            letterboxed = np.zeros((image_size, image_size), dtype=np.uint8)
+            letterboxed[top:top + resized_h, left:left + resized_w] = resized_gray
+            rgb_float = np.repeat(letterboxed[:, :, None], 3, axis=2).astype(np.float32) / 255.0
+            normalized = (rgb_float - IMAGENET_MEAN) / IMAGENET_STD
+            tensors.append(torch.from_numpy(normalized.transpose(2, 0, 1).copy()).float())
+            restore_params.append((height, width, top, left, resized_h, resized_w))
         batch = torch.stack(tensors, dim=0).to(device)
         masks_512 = self.dense_unet.predict_mask_batch(batch)
 
         results = []
-        for mask_512, (height, width) in zip(masks_512, sizes):
-            if (height, width) == (512, 512):
-                mask = mask_512
-            else:
-                mask = cv2.resize(mask_512, (width, height), interpolation=cv2.INTER_NEAREST)
+        for mask, (height, width, top, left, resized_h, resized_w) in zip(masks_512, restore_params):
+            mask = mask[top:top + resized_h, left:left + resized_w]
+            if (height, width) != mask.shape:
+                mask = cv2.resize(mask, (width, height), interpolation=cv2.INTER_NEAREST)
             results.append(np.uint8(mask > 0))
         return results
 

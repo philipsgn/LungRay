@@ -12,7 +12,10 @@ from app.backend.schemas import (
     HealthResponse,
     ModelInfo,
     PredictionResponse,
+    RagQueryRequest,
+    RagQueryResponse,
 )
+from src.safety.rag_knowledge import query_clinical_rag
 from app.backend.services import LungRayService
 
 logging.basicConfig(level=logging.INFO)
@@ -64,10 +67,11 @@ async def predict(
     file: UploadFile = File(...),
     model: str = Query(default="standard", description="Model variant: 'standard' (SOTA CADx), 'wsol' (Grounding Specialist), 'resnet50' (Residual Specialist), or 'ensemble' (Consensus Multi-Backbone)"),
     failsafe_enabled: bool = Query(default=True, description="Whether OOD Fail-Safe policy is enforced"),
+    tta_enabled: bool = Query(default=True, description="Use three test-time views"),
 ) -> PredictionResponse:
     try:
         image_bytes = await file.read()
-        result = service.predict(image_bytes, model_name=model, failsafe_enabled=failsafe_enabled)
+        result = service.predict(image_bytes, model_name=model, failsafe_enabled=failsafe_enabled, tta_enabled=tta_enabled)
         return PredictionResponse(**result)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
@@ -114,3 +118,9 @@ async def audit(file: UploadFile = File(...)) -> AuditResponse:
     except Exception as exc:
         logger.exception("Shortcut audit failed")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+
+@app.post("/api/v1/rag-query", response_model=RagQueryResponse)
+async def rag_query(payload: RagQueryRequest) -> RagQueryResponse:
+    """Retrieve educational references from caller-supplied context, without an LLM."""
+    return RagQueryResponse(**query_clinical_rag(**payload.model_dump()))

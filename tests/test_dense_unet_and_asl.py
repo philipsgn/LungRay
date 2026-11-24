@@ -132,6 +132,33 @@ def test_lung_segmenter_with_dense_unet():
     assert grounded.dtype == np.uint8
 
 
+def test_dense_unet_segmenter_applies_imagenet_normalization():
+    """The Dense-UNet caller matches the preprocessing used during training."""
+    class InputCapture(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.anchor = torch.nn.Parameter(torch.zeros(()))
+            self.received = None
+
+        def predict_mask_batch(self, batch):
+            self.received = batch.detach().cpu()
+            return np.zeros((batch.shape[0], 256, 256), dtype=np.uint8)
+
+    model = InputCapture()
+    segmenter = LungSegmenter(dense_unet=model)
+    image = np.empty((12, 16, 3), dtype=np.uint8)
+    image[:] = [0, 128, 255]
+
+    segmenter._dense_predict_masks([image])
+
+    gray = round(np.dot(np.array([0.0, 128.0, 255.0], dtype=np.float32), [0.299, 0.587, 0.114]))
+    expected = (gray / 255.0 - np.array([0.485, 0.456, 0.406], dtype=np.float32)) / np.array(
+        [0.229, 0.224, 0.225], dtype=np.float32
+    )
+    assert model.received.shape == (1, 3, 256, 256)
+    np.testing.assert_allclose(model.received[0, :, 128, 128].numpy(), expected, atol=1e-6)
+
+
 def test_generate_dilated_soft_mask_attenuates_background(monkeypatch):
     """The dilated soft gate dims the non-lung background while preserving lung intensity."""
     segmenter = LungSegmenter(refine_with_grabcut=False)

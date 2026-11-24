@@ -1,0 +1,71 @@
+Model,Pathology,AUROC,Positive_Support,Total_Evaluated
+DenseNet-121 Baseline,Atelectasis,0.7144,249,2000
+DenseNet-121 Baseline,Cardiomegaly,0.891,156,2000
+DenseNet-121 Baseline,Effusion,0.8002,334,2000
+DenseNet-121 Baseline,Infiltration,0.6552,479,2000
+DenseNet-121 Baseline,Mass,0.6934,95,2000
+DenseNet-121 Baseline,Nodule,0.7615,116,2000
+DenseNet-121 Baseline,Pneumonia,0.6597,43,2000
+DenseNet-121 Baseline,Pneumothorax,0.8617,172,2000
+DenseNet-121 Baseline,Consolidation,0.678,138,2000
+DenseNet-121 Baseline,Edema,0.8355,61,2000
+DenseNet-121 Baseline,Emphysema,0.945,57,2000
+DenseNet-121 Baseline,Fibrosis,0.8022,67,2000
+DenseNet-121 Baseline,Pleural_Thickening,0.7584,99,2000
+DenseNet-121 Baseline,Hernia,0.9777,16,2000
+ResNet-50,Atelectasis,0.7044,249,2000
+ResNet-50,Cardiomegaly,0.8468,156,2000
+ResNet-50,Effusion,0.7863,334,2000
+ResNet-50,Infiltration,0.6535,479,2000
+ResNet-50,Mass,0.6852,95,2000
+ResNet-50,Nodule,0.7101,116,2000
+ResNet-50,Pneumonia,0.6427,43,2000
+ResNet-50,Pneumothorax,0.8567,172,2000
+ResNet-50,Consolidation,0.6728,138,2000
+ResNet-50,Edema,0.8083,61,2000
+ResNet-50,Emphysema,0.8903,57,2000
+ResNet-50,Fibrosis,0.815,67,2000
+ResNet-50,Pleural_Thickening,0.7282,99,2000
+ResNet-50,Hernia,0.9593,16,2000
+AG-MTCNet SOTA,Atelectasis,0.6867,249,2000
+AG-MTCNet SOTA,Cardiomegaly,0.8641,156,2000
+AG-MTCNet SOTA,Effusion,0.7795,334,2000
+AG-MTCNet SOTA,Infiltration,0.6311,479,2000
+AG-MTCNet SOTA,Mass,0.6641,95,2000
+AG-MTCNet SOTA,Nodule,0.7806,116,2000
+AG-MTCNet SOTA,Pneumonia,0.641,43,2000
+AG-MTCNet SOTA,Pneumothorax,0.8174,172,2000
+AG-MTCNet SOTA,Consolidation,0.6644,138,2000
+AG-MTCNet SOTA,Edema,0.8194,61,2000
+AG-MTCNet SOTA,Emphysema,0.9339,57,2000
+AG-MTCNet SOTA,Fibrosis,0.7678,67,2000
+AG-MTCNet SOTA,Pleural_Thickening,0.7135,99,2000
+AG-MTCNet SOTA,Hernia,0.9748,16,2000
+WSOL Fine-tuned,Atelectasis,0.5523,249,2000
+WSOL Fine-tuned,Cardiomegaly,0.5445,156,2000
+WSOL Fine-tuned,Effusion,0.6064,334,2000
+WSOL Fine-tuned,Infiltration,0.5845,479,2000
+WSOL Fine-tuned,Mass,0.4315,95,2000
+WSOL Fine-tuned,Nodule,0.4444,116,2000
+WSOL Fine-tuned,Pneumonia,0.4616,43,2000
+WSOL Fine-tuned,Pneumothorax,0.6112,172,2000
+WSOL Fine-tuned,Consolidation,0.4501,138,2000
+WSOL Fine-tuned,Edema,0.5028,61,2000
+WSOL Fine-tuned,Emphysema,0.5589,57,2000
+WSOL Fine-tuned,Fibrosis,0.4325,67,2000
+WSOL Fine-tuned,Pleural_Thickening,0.5876,99,2000
+WSOL Fine-tuned,Hernia,0.7085,16,2000
+Consensus Ensemble,Atelectasis,0.7104,249,2000
+Consensus Ensemble,Cardiomegaly,0.8902,156,2000
+Consensus Ensemble,Effusion,0.8039,334,2000
+Consensus Ensemble,Infiltration,0.6544,479,2000
+Consensus Ensemble,Mass,0.7008,95,2000
+Consensus Ensemble,Nodule,0.7743,116,2000
+Consensus Ensemble,Pneumonia,0.66,43,2000
+Consensus Ensemble,Pneumothorax,0.8624,172,2000
+Consensus Ensemble,Consolidation,0.6806,138,2000
+Consensus Ensemble,Edema,0.8365,61,2000
+Consensus Ensemble,Emphysema,0.9454,57,2000
+Consensus Ensemble,Fibrosis,0.801,67,2000
+Consensus Ensemble,Pleural_Thickening,0.7528,99,2000
+Consensus Ensemble,Hernia,0.9831,16,2000

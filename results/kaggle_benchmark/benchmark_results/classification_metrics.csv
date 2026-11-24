@@ -1,0 +1,11 @@
+Model,Task,Macro_AUROC,Macro_F1,Sensitivity,Specificity,Total_Samples
+DenseNet-121 Baseline,Head A (NIH-14),0.7881,0.1779,0.9255,0.3847,2000
+ResNet-50,Head A (NIH-14),0.7686,0.2693,0.3433,0.8704,2000
+AG-MTCNet SOTA,Head A (NIH-14),0.767,0.2246,0.7894,0.5842,2000
+WSOL Fine-tuned,Head A (NIH-14),0.5341,0.075,0.2191,0.7909,2000
+Consensus Ensemble,Head A (NIH-14),0.7897,0.2293,0.8494,0.5693,2000
+DenseNet-121 Baseline,Head B (TB Triage),1.0,0.9704,1.0,0.9843,400
+ResNet-50,Head B (TB Triage),1.0,1.0,1.0,1.0,400
+AG-MTCNet SOTA,Head B (TB Triage),0.9984,0.5597,1.0,0.5943,400
+WSOL Fine-tuned,Head B (TB Triage),0.4047,0.2833,0.8049,0.0,400
+Consensus Ensemble,Head B (TB Triage),1.0,0.9011,1.0,0.9434,400

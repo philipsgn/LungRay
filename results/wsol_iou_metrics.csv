@@ -1,0 +1,5 @@
+Model,Dataset,Pathology,Mean_Box_IoU,Success_Rate_IoU_30,Success_Rate_IoU_50,Evaluated_Cases
+DenseNet-121 Baseline,RSNA Pneumonia,Pneumonia,0.3862,60.0,35.0,100
+ResNet-50,RSNA Pneumonia,Pneumonia,0.0065,0.0,0.0,100
+AG-MTCNet SOTA,RSNA Pneumonia,Pneumonia,0.2814,40.0,18.0,100
+WSOL Fine-tuned,RSNA Pneumonia,Pneumonia,0.1341,6.0,0.0,100

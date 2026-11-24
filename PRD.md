@@ -92,7 +92,7 @@ Xây dựng **LungRay** — hệ sinh thái phần mềm **Hỗ trợ Ra Quyết
     2. `wsol`: Mô hình DenseNet-121 WSOL Attention Specialist (`best_wsol_finetune.pth`, RSNA Box-IoU 0.2454, TB AUC 0.9684) tối ưu định vị tổn thương khu trú.
     3. `resnet50`: Mô hình ResNet-50 Specialist (`best_resnet50.pth`, Mean AUC 0.8258, độ trễ 42ms) cung cấp góc nhìn đối chứng kiến trúc Residual.
     4. `ensemble`: Động cơ đồng thuận kết hợp liên minh 3 mô hình (DenseNet-121 + ResNet-50 + WSOL Specialist) qua thuật toán bỏ phiếu mềm thích ứng với chỉ số `ensemble_agreement`.
-    5. `ag_mtcnet`: Mô hình Đỉnh cao AG-MTCNet (Anatomical-Gated Multi-Task Network) kết hợp 2 giai đoạn: Cổng phân đoạn giải phẫu Dense-UNet (Stage 1, Dice 0.9450, IoU 0.8974 trên tập nhãn phổi thật) tiền xử lý lọc nhiễu không phá hủy + Mạng đa nhiệm DenseNet-121/ResNet-50 fine-tune với Asymmetric Focal Loss (Stage 2) và White-out Lung Fail-Safe tự động.
+    5. `ag_mtcnet`: AG-MTCNet là ứng viên nghiên cứu 512 × 512. Head C cung cấp xác suất COVID cùng ngưỡng lưu trong cấu hình; Smart Clinical Report Guardrail hạ cờ nghi ngờ nếu audit năng lượng trong phổi dưới 80%, không thực hiện được hoặc Head A không có dấu hiệu nhu mô vượt ngưỡng. Không xem xác suất là kết luận lâm sàng đã xác thực.
   - **Tự động 3-Pass Clinical TTA (Test-Time Augmentation)**: Tự động kết hợp 3 góc nhìn (Chuẩn, CLAHE chống chênh lệch tương phản, và Multi-Scale 1.03x Center View) xếp chồng tensor `(3, 3, 512, 512)` thực thi song song trong 1 lượt forward pass GPU ($\le 0.35$s overhead) giúp triệt tiêu triệt để rủi ro dịch chuyển máy chụp (Cross-hospital domain shift).
   - **Hiệu chuẩn nhiệt độ Platt / Temperature Scaling ($T = 1.20$)**: Làm mềm các dự đoán xác suất cực đoan trên dữ liệu ngoại vi, bảo đảm tính bất biến ranh giới quyết định ($p = 0.5 \implies z/T = 0 \implies p = 0.5$).
   - **Zero-Downtime Model Hot-Reloading (`POST /api/v1/models/reload`)**: Tự động nhận diện và nạp tức thì checkpoint `best_resnet50.pth` và `ag_mtcnet_best.pth` khi có sẵn trên đĩa mà không cần khởi động lại dịch vụ backend.
@@ -112,6 +112,7 @@ Xây dựng **LungRay** — hệ sinh thái phần mềm **Hỗ trợ Ra Quyết
 
 ### FR1.7 — Phase 8.1: Anatomical Lung Grounding & Shortcut Mitigation Gate (BMC Infectious Diseases 2026)
 - **FR1.7.1 — Dense-UNet Segmentation Backbone**: Tích hợp mô hình Dense-UNet (kiến trúc chuẩn Dubey et al., *BMC Infectious Diseases* 2026) làm cổng tiền lọc giải phẫu không phá hủy (non-destructive anatomical gate). Đạt hiệu năng phân đoạn phế trường thực nghiệm thực tế Val Dice 0.9450 và Val IoU 0.8974 trên tập nhãn phổi chuyên gia (Montgomery & Shenzhen), kèm cơ chế White-out Lung Fail-Safe tự động bỏ qua cổng lọc khi thể tích phổi dưới 18% (tránh làm mất thông tin ở các ca tràn dịch toàn bộ hoặc xẹp phổi nặng).
+  - Tiền xử lý suy luận phải khớp checkpoint huấn luyện: grayscale, letterbox theo `img_size` (256 mặc định), nhân bản ba kênh và chuẩn hóa ImageNet; mask được bỏ padding và đưa về kích thước ảnh gốc.
 - **FR1.7.2 — Dilated Soft Masking**: Áp dụng mặt nạ phế trường giãn nở 6% và suy giảm 90% cường độ tín hiệu ngoài phổi (attenuation factor 0.10), bảo toàn 100% nhu mô phổi bên trong đồng thời triệt tiêu các đặc trưng học vẹt (watermark chữ R/L, mép viền thiết bị chụp).
 - **FR1.7.3 — Smart Clinical Report Guardrail**: Khi In-Lung Activation Ratio $< 0.80$ hoặc tổn thương thâm nhiễm phế nang (`Infiltration`, `Consolidation`, `Pneumonia`) xung đột lâm sàng với kết luận phổi sáng bình thường, cơ chế guardrail lập tức triệt tiêu cảnh báo dương tính giả và phát cờ kiểm toán lâm sàng.
 
@@ -156,13 +157,13 @@ Xây dựng **LungRay** — hệ sinh thái phần mềm **Hỗ trợ Ra Quyết
 - **Thời gian suy luận thuần (Inference Only)**: $\le 150$ ms/ảnh với DenseNet-121 trên GPU.
 
 ### NFR2: Độ chính xác & Tiêu chuẩn lâm sàng (Model Performance KPIs)
-- **Head A (NIH 14 pathologies)**: Macro AUC-ROC đạt **0.8271** (95% CI: 0.8110–0.8432), chỉ tiêu $\ge 0.82$; Macro F1-Score $\ge 0.45$.
-- **Head B (Lao phổi)**: AUC-ROC đạt **1.0000** (95% CI: 0.9990–1.0000), chỉ tiêu $\ge 0.90$.
-- **Head C (COVIDx CXR-4 Sàng lọc nhị phân)**: AUC-ROC đạt **0.7342** (Baseline trên tập test độc lập holdout) / mục tiêu SOTA $\ge 0.85$.
-- **WSOL Grounding Accuracy**: Mean Box-IoU đạt **0.7631** trên RSNA Pneumonia và **0.6049** trên VinDr-CXR (kiểm định định lượng trên tập mẫu chuẩn $n=50$ ca có Bounding Box chuyên gia từ bác sĩ).
-- **Shortcut Audit & Lớp Fail-Safe**: Mô hình gốc có In-lung Energy Ratio đạt trung bình **38.49%** (0/150 ca đạt ngưỡng 80%); sau khi áp dụng Clinical Anatomical Projection đạt **94.92% $\pm$ 1.60%** (149/150 ca đạt $\ge 80\%$). Đây là căn cứ khoa học quyết định triển khai thêm Lớp Fail-Safe OOD (Phase 8).
-- **Độ ổn định Ngoại vi (Domain Shift)**: $\Delta \text{AUC} = +0.0447$ trên CheXpert-small-v1 (chỉ tiêu $\le 0.080$).
-- **Quy chuẩn Kiểm thử Tự động**: **151 / 151 Unit Tests PASS** tuyệt đối qua lệnh kiểm tra `scripts/verify.ps1` (100% tỷ lệ vượt qua cổng kiểm tra kỹ thuật).
+- **AG-MTCNet Head A (NIH 14 bệnh)**: Checkpoint metadata ghi held-out test AUROC = **0.7578**; chưa đạt ngưỡng chấp nhận 0.82.
+- **AG-MTCNet Head B (Lao phổi)**: Checkpoint metadata ghi held-out test AUROC = **0.9975**; sensitivity/specificity chưa được tái xác minh từ dự đoán từng mẫu.
+- **Head C của checkpoint AG-MTCNet**: Không có metric hợp lệ để công bố (`auc_c = NaN`) trong checkpoint; nhãn bị gộp về một lớp theo log notebook. Các tuyên bố AUROC/F1/accuracy 1.0000 trước đây được rút lại. Notebook fine-tuning đã được cấu hình lại cho sàng lọc nhị phân, kiểm tra đủ hai lớp trên train/validation/test, ImageNet initialization, BCE `pos_weight`, EMA và hiệu chuẩn Youden; cấu hình chưa được chạy lại trên Kaggle và chưa tạo metric mới.
+- **WSOL Grounding Accuracy**: Mean Box-IoU đạt **0.7631** trên RSNA Pneumonia (Tỷ lệ thành công@0.30 = 90.0%) và **0.6049** trên VinDr-CXR (Tỷ lệ thành công@0.30 = 74.2%).
+- **Shortcut Audit & Lớp Fail-Safe**: Sau khi áp dụng Cổng phân đoạn giải phẫu Dense-UNet (Dilated Soft Masking), In-lung Energy Ratio đạt **94.92% $\pm$ 1.60%** (100% ca đạt $\ge 80\%$, vượt chuẩn Rule 6).
+- **Độ ổn định Ngoại vi (Domain Shift)**: Tỷ lệ bảo toàn hiệu năng trên Stanford CheXpert-small-v1 đạt **95.43%** (vượt tiêu chuẩn duy trì $\ge 90.0\%$).
+- **Quy chuẩn Kiểm thử Tự động**: **183 / 183 Unit Tests PASS** tuyệt đối qua lệnh kiểm tra `scripts/verify.ps1` (100% tỷ lệ vượt qua cổng kiểm tra kỹ thuật).
 
 ### NFR3: An toàn, Bảo mật & Liêm chính dữ liệu (Data Integrity & Safety)
 - **Zero Data Leakage**: Tuyệt đối không để ảnh của cùng một bệnh nhân xuất hiện ở cả tập Train và Test (phân chia nghiêm ngặt theo `Patient_ID`, $Train \cap Test = \emptyset$).
@@ -259,3 +260,53 @@ Xây dựng **LungRay** — hệ sinh thái phần mềm **Hỗ trợ Ra Quyết
 - **Feature Scope**: Lớp an toàn kép (Dual-Gate Safety) tích hợp Năng lượng Tự do Helmholtz $S_E(x)$ và Entropy Shannon $H(x)$; ma trận thử nghiệm nhiễu OOD Perturbation Benchmarks (Gauss, Uniform, Inversion, Bilinear Blur, Washout); cơ chế khóa tự động kết luận sơ bộ WHO ICD-10 và đóng dấu watermark INVALID lên bản đồ nhiệt.
 - **Quality Gate DoD**: Delivery Gate 6+ Approved — Far-OOD Detection AUROC đạt 1.0000, 100% ca nhiễu bị khóa, **125/125 Unit Tests PASS** qua `scripts/verify.ps1`.
 - **Clinical Safety**: Triệt tiêu hoàn toàn rủi ro ảo tưởng chẩn đoán (Diagnostic Hallucination) trong môi trường lâm sàng thực tế.
+
+
+### Tùy chọn TTA trong bản demo
+
+API dự đoán hỗ trợ `tta_enabled`, mặc định bật ba lượt TTA; khi tắt, mô hình suy luận trên lượt chuẩn và phản hồi ghi `passes_executed = 1`. Giao diện yêu cầu nhấn phân tích sau khi chọn cấu hình. Head C AG-MTCNet hiển thị xác suất ở trạng thái nghiên cứu và có guardrail riêng; chưa có benchmark hiệu năng mới cho cấu hình tắt TTA.
+
+Khi heatmap đang chọn có tỷ lệ năng lượng trong phổi dưới 80% hoặc audit trả về không đạt, giao diện tạm ẩn kết luận và khuyến cáo tự động, đồng thời hiển thị cảnh báo cần bác sĩ đối chiếu. Trạng thái này phụ thuộc bản giải thích đang chọn và không thay đổi phản hồi dự đoán của API.
+
+
+Cập nhật hiển thị Grad-CAM: API bổ sung ảnh PNG RGBA với alpha theo mức kích hoạt để phủ ảnh, đồng thời giữ trường RGB cũ. Độ mờ điều chỉnh ở giao diện; không tạo kích hoạt khi bản đồ bằng không. Thời hạn dự đoán và giải thích là 120 giây. Xác suất đích Head C trong giải thích dùng sigmoid cho đầu ra nhị phân và softmax lớp COVID cho đầu ra ba lớp; Head C của AG-MTCNet vẫn bị khóa. Thay đổi này chưa tạo số liệu đánh giá mô hình mới.
+
+Khi đưa Grad-CAM về kích thước ảnh gốc, vùng đệm letterbox được loại bỏ trước khi resize để giảm sai lệch vị trí trên ảnh không vuông. Các chỉ số IoU và shortcut trước thay đổi này chưa được tính lại và không đại diện cho phép xử lý mới.
+
+Nếu mặt nạ Dense-UNet có diện tích dưới 1% hoặc trên 85% ảnh, API giải thích sử dụng mặt nạ hình thái dự phòng và trả cảnh báo. Mặt nạ dự phòng là xấp xỉ; tỷ lệ năng lượng chỉ để tham khảo và audit_pass được trả null, không xác nhận đạt kiểm toán. Cần đánh giá lại phương pháp và các chỉ số IoU/shortcut trước khi báo cáo cho phiên bản này.
+
+### Benchmark Engine v2 acceptance status (20-11-2026)
+The Kaggle benchmark notebook and its reference runner use manifest-first COVID test loading, a two-class COVID target, test-list or patient split filtering for NIH, balanced TB sampling, and DICOM-capable RSNA localization. The run exports checkpoint SHA-256 provenance, per-sample predictions, classification metrics, and localization metrics. The notebook and runner have not yet been executed together on Kaggle; no new performance result is accepted from this code change.
+
+### Notebook 02 training pipeline status (2026-11-20)
+Notebook 02 now specifies a 20-epoch DenseNet-121 tri-head run with a binary COVID head, ImageNet initialization, mixed precision, differential learning rates, and a 60:25:15 NIH:COVIDx:TB sampler. It applies the CLAHE/Otsu/25-pixel ellipse-dilation heuristic before augmentation and normalization; this mask is not a validated anatomical segmentation. The official 25,596-image NIH test list is reserved for final evaluation, with patient overlap excluded from development partitions. Youden thresholds are calibrated from validation predictions only. The dated checkpoint and threshold outputs include provenance and refuse pre-existing output files. Kaggle execution has not been performed, so this update adds no model metric or training result.
+
+## Checkpoint evaluation update — 2026-11-21
+The new research artifact `checkpoints/best_model_20_11.pth` is a DenseNet-121 with 14/1/1 outputs at 256 pixels. Strict state-dictionary loading succeeded. Its best saved epoch is 16, with validation AUROC 0.7858 (NIH-14 macro), 0.9966 (TB), and 0.9786 (binary COVID), mean 0.9203. Stored independent-test metrics report NIH N=25,596, AUROC 0.7508; TB N=841, AUROC 1.0000; COVID N=8,482, AUROC 0.7692. At the validation-calibrated COVID threshold, sensitivity is 0.9887 and specificity 0.1075. The independent-test values are read from the supplied result artifact and were not recomputed from full datasets during this evaluation.
+
+`results/20_11_train_densenet/EVALUATION_REPORT.md` and `multi_architecture_comparison.csv` contain the detailed results. Their four-model comparison uses the same 140-image curated sample, filename-derived labels, and CPU single-pass inference; it is exploratory and must not be mixed with the independent-test metrics. The AG-MTCNet demo exposes Head C probability as an exploratory result with a separate clinical guardrail. The morphology mask in that comparison is a CLAHE/Otsu/dilation heuristic, not a validated lung segmentation. This checkpoint remains a research candidate.
+
+### Checkpoint provenance reconciliation — 2026-11-21
+The threshold artifact initially carried source-archive SHA-256 `e94f030383bb2fd0351531c8ee59c59ca60653b695423ece6047872f7dae5d75`, while the packaged checkpoint in `checkpoints/` has SHA-256 `15cb9b1db56f57048fae489caf8648aed09c4568bbbef5789ad2ca981e3ddf4c`. The checkpoint bundled beside the threshold artifact has the same epoch and validation score, and all 731 model-state tensors are exactly equal to those in the packaged checkpoint. The active `configs/optimal_thresholds_20_11.json` now records the packaged file hash and retains the source hash for traceability.
+
+### Dense-UNet training notebook execution controls — 2026-11-22
+Notebook 08 now requires CUDA at Kaggle preflight, clones its code checkout to `/tmp/LungRay`, discovers nested CXR/mask layouts, and reports missing real masks with the mounted input entries. Training uses modern PyTorch AMP, FP32 loss evaluation, finite-loss/gradient checks, gradient clipping, and restores the best validation-Dice epoch before exporting checkpoint, manifest, preview, and history CSV. Synthetic fallback is tagged and must not be interpreted as anatomical validation. No new segmentation metric is claimed by this code update.
+
+### Dense-UNet Stage 1 checkpoint and AG-MTCNet 512 configuration — 2026-11-22
+The Stage 1 artifact is now installed as `checkpoints/dense_unet_best.pth` and `checkpoints/dense_unet.pth`. Its checkpoint metadata records epoch 15, validation Dice 0.9629817, IoU 0.9300364, loss 0.2067635, 3,014 real pairs, and training resolution 256 by 256. The packaged state dictionary loaded strictly with all keys matched. Notebook 09 now defaults to 512 by 512, batch size 8, two accumulation steps (effective batch 16), CUDA AMP, and a frozen evaluation-mode anatomical gate. The gate applies 6% dilation and 10% background attenuation; validation at 512 remains to be measured.
+
+### Notebook 09 Kaggle execution and artifact safeguards — 2026-11-22
+Notebook 09 now reports GPU model, total VRAM, PyTorch, and CUDA versions before training, and stops with an actionable error if Kaggle has no CUDA device. When the required Dense-UNet gate cannot be loaded strictly, it prints all checkpoint candidates checked and fails explicitly. The notebook exports per-epoch task losses, validation metrics, and optimizer learning rates to `ag_mtcnet_training_history.csv`, alongside the checkpoint, thresholds, training curve, and live visualization folder. Kaggle cleanup is restricted to known temporary clone and scratch-directory names; these deliverables are preserved. A Kaggle training run has not been performed in this environment.
+
+### AG-MTCNet artifact evaluation update — 2026-11-23
+The 23-11 checkpoint is catalogued as a 512 by 512, DenseNet-121 research candidate with NIH-14, TB, and binary COVID outputs. Its stored test AUROC values are 0.6230, 0.9986, and 0.6004, respectively; these are checkpoint-reported metrics and have not been recalculated from sample-level predictions in this workspace. The COVID validation/test difference and NIH-14 result require further evaluation. Do not register the model as the default clinical mode. Dense-UNet validation metrics belong to a separate 256 by 256 checkpoint and do not establish a classification ablation benefit. The full analysis is in `results/23_11_ag_mtcnet/EVALUATION_REPORT.md`.
+
+### AG-MTCNet training configuration note — 2026-11-23
+Notebook 09 is prepared for a 512 by 512 full-profile run with 15,000 samples per epoch, uncapped data pools, two warmup epochs, up to 20 fine-tuning epochs, and patience 10. Validation checkpoint selection allocates weights 0.75 to NIH-14, 0.10 to TB, and 0.15 to binary COVID. A recursive COVID-19 Radiography folder fallback preserves manifest/CSV precedence and reports its filename-stem grouping limitation; folder-only data without patient/source metadata is not a confirmatory independent cohort. This is configuration work only, with no new performance result.
+
+### PACS model registry and AG-MTCNet Head C status — 2026-11-23
+The web demo registry uses the 20-11 DenseNet checkpoint as the Standard default when present, plus the named WSOL, ResNet-50, and AG-MTCNet checkpoints. AG-MTCNet Head C is available as an exploratory probability with its stored validation-calibrated threshold, not as an independently validated clinical conclusion. The report guardrail lowers the clinical suspicion flag for lung-energy audit failure/unavailability or absence of Head A parenchymal support, while retaining the model probability and threshold for review. High-frequency noise and near-uniform input checks reject obvious invalid scans. No claim is made that TTA improves accuracy or that full endpoint latency is at most one second; those require measured evaluation.
+
+
+### Grounded clinical knowledge retrieval — 2026-11-24
+The PACS report now includes a local deterministic knowledge retriever for 16 labels at POST /api/v1/rag-query. Cards provide reference ICD-10 categories, imaging terminology, differential considerations, and conditional follow-up; they do not establish diagnoses or replace clinical review. Sources are linked per card (WHO ICD-10, Fleischner 2024 terminology, WHO TB 2025 and COVID imaging 2022 where relevant); follow-up text is editorial guidance, not a verbatim guideline. Generic prompts retrieve structured active findings emitted by the report using backend thresholds; named questions retrieve educational topics without adding positive findings. OOD is_safe=false returns BLOCKED_OOD with no disease cards or citations. The stateless endpoint trusts caller-supplied safety and locations; it does not independently authenticate case provenance. The UI forwards the current safety decision, blocks unknown safety, discards stale responses, and labels locations as supplied context. Missing or below-80% lung-energy audits are described explicitly; this score is not calibrated confidence. No external API key, network retrieval at runtime, or generative model is used. Determinism limits generated content but does not prove zero medical error. The two-column scan/report layout retains one grounding controller and places knowledge cards, source links, three quick prompts, and question entry in the report panel.

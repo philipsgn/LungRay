@@ -1,0 +1,15 @@
+{
+  "sha256": "32b8e722076ab20ad3c7e1b9aad89d3598416fc1fa45446dbee1cd67e771936b",
+  "epoch": 15,
+  "val_dice": 0.9629816868609654,
+  "val_iou": 0.9300364478310542,
+  "val_loss": 0.20676346820088762,
+  "pairs_count": 3014,
+  "resolution": [
+    256,
+    256
+  ],
+  "arch": "DenseUNet-DenseNet121",
+  "data_mode": "real",
+  "source_artifact": "results/22_11_dense-unet_phase1/dense_unet_best.zip"
+}

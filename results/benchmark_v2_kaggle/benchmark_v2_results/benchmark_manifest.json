@@ -1,0 +1,42 @@
+{
+  "date": "2026-11-20 05:13:33",
+  "input_root": "/kaggle/input",
+  "device": "cuda",
+  "datasets": {
+    "nih_test_samples": 25596,
+    "tb_test_samples": 800,
+    "covid_test_samples": 800,
+    "covid_manifest": "/kaggle/input/datasets/andyczhao/covidx-cxr2/test.txt",
+    "covid_negative_control_source": null
+  },
+  "models": {
+    "DenseNet-121 Baseline": {
+      "path": "/kaggle/input/models/phanphat/20-11-test-models/pytorch/default/1/best_model.pth",
+      "sha256": "bc6435ac1c943bf2c8fd88a21c61cb0cfa1549a0c3c7fcf0801dce914e3aa611",
+      "bytes": 84633702,
+      "backbone": "densenet121",
+      "head_c_classes": 1
+    },
+    "ResNet-50": {
+      "path": "/kaggle/input/models/phanphat/20-11-test-models/pytorch/default/1/best_resnet50.pth",
+      "sha256": "6151ff6306d92245c7ac2e5f633fa630ed3cad5918ef0a826699eee4ac4b0538",
+      "bytes": 94491829,
+      "backbone": "resnet50",
+      "head_c_classes": 1
+    },
+    "AG-MTCNet Retrained": {
+      "path": "/kaggle/input/models/phanphat/20-11-test-models/pytorch/default/1/ag_mtcnet_best.pth",
+      "sha256": "4d8ce556aa27299e4c6bc8c9cd11e62df847136bb4a702e0036aaab903f11d72",
+      "bytes": 28468272,
+      "backbone": "densenet121",
+      "head_c_classes": 1
+    },
+    "WSOL Fine-tuned": {
+      "path": "/kaggle/input/models/phanphat/20-11-test-models/pytorch/default/1/best_wsol_finetune.pth",
+      "sha256": "0ea04ce3e91d546fb9b27e4fdf2726219c519f45ff6fcecdb71aa19309f92b3c",
+      "bytes": 28467137,
+      "backbone": "densenet121",
+      "head_c_classes": 1
+    }
+  }
+}

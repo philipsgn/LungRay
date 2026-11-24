@@ -15,6 +15,19 @@ import numpy as np
 import torch
 from PIL import Image
 
+try:
+    import pydicom
+    from pydicom.pixel_data_handlers.util import (
+        apply_modality_lut,
+        apply_voi_lut,
+        convert_color_space,
+    )
+except ImportError:
+    pydicom = None
+    apply_modality_lut = None
+    apply_voi_lut = None
+    convert_color_space = None
+
 from src.data.transforms import get_val_transforms
 from src.explainability import (
     GradCAMExplainer,
@@ -68,12 +81,14 @@ class LungRayService:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.version = "v7.0"
         self.img_size = 512
-        self.thresholds = self._load_thresholds()
+        self.thresholds = self._load_thresholds("configs/optimal_thresholds_20_11.json")
+        self.ag_thresholds = self._load_thresholds("configs/ag_mtcnet_thresholds.json")
         self.models: dict[str, MultiTaskChestXrayNet] = {}
         self.model_info: dict[str, dict[str, Any]] = {}
         self._load_hybrid_models()
         self.model = self.models.get("standard") or next(iter(self.models.values()))
         self.transform = get_val_transforms(img_size=self.img_size)
+        self.ag_transform = get_val_transforms(img_size=512)
         self.dense_unet = self._load_dense_unet()
         if self.dense_unet is not None:
             self.segmenter = LungSegmenter(dense_unet=self.dense_unet)
@@ -102,7 +117,7 @@ class LungRayService:
             DENSE_UNET_CHECKPOINT: path to the trained lung-segmentation weights
                 (default ``checkpoints/dense_unet.pth``).
         """
-        checkpoint = os.getenv("DENSE_UNET_CHECKPOINT", "checkpoints/dense_unet.pth")
+        checkpoint = os.getenv("DENSE_UNET_CHECKPOINT", "checkpoints/dense_unet_best.pth")
         if not os.path.exists(checkpoint):
             logger.info(
                 "Dense-UNet checkpoint '%s' not found; anatomical gate stays off "
@@ -114,11 +129,12 @@ class LungRayService:
         model = DenseUNet(pretrained=False)
         state = torch.load(checkpoint, map_location=self.device, weights_only=False)
         if isinstance(state, dict):
+            model.inference_size = int(state.get("img_size", 256))
             for key in ("model_state_dict", "state_dict"):
                 if key in state:
                     state = state[key]
                     break
-        model.load_state_dict(state, strict=False)
+        model.load_state_dict(state, strict=True)
         model.to(self.device)
         model.eval()
         for parameter in model.parameters():
@@ -150,13 +166,60 @@ class LungRayService:
             logger.warning("Anatomical gate failed (%s); using raw image.", exc)
             return image_np
 
-    def _load_thresholds(self) -> dict[str, Any]:
+    @staticmethod
+    def _input_quality_reasons(image_np: np.ndarray) -> list[str]:
+        """Reject only obvious blank or unstructured-noise inputs before inference."""
+        image = np.asarray(image_np)
+        if image.size == 0 or not np.isfinite(image).all():
+            return ["Ảnh đầu vào rỗng hoặc chứa giá trị không hữu hạn."]
+        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY) if image.ndim == 3 else image
+        gray = gray.astype(np.float32)
+        contrast = float(gray.std())
+        if contrast < 2.0:
+            return ["Ảnh gần như đơn sắc, không đủ tương phản để phân tích an toàn."]
+        if gray.shape[0] > 1 and gray.shape[1] > 1:
+            adjacent_difference = 0.5 * (
+                float(np.abs(np.diff(gray, axis=0)).mean())
+                + float(np.abs(np.diff(gray, axis=1)).mean())
+            )
+            normalized_high_frequency = adjacent_difference / max(contrast, 1e-6)
+            if normalized_high_frequency > 1.05:
+                return [
+                    "Ảnh có biến thiên tần số cao tương thích với nhiễu ngẫu nhiên; "
+                    "cần xác nhận phim X-quang gốc trước khi phân tích."
+                ]
+        return []
+
+    def _audit_ag_covid_focus(
+        self,
+        model: MultiTaskChestXrayNet,
+        tensor: torch.Tensor,
+        original_image: np.ndarray,
+    ) -> float:
+        """Measure COVID Grad-CAM energy in a trained Dense-UNet lung mask."""
+        if self.dense_unet is None:
+            raise RuntimeError("Dense-UNet checkpoint unavailable; lung-energy audit cannot be validated.")
+        explainer = GradCAMExplainer(model)
         try:
-            with open("configs/optimal_thresholds.json", "r", encoding="utf-8") as f:
+            audit = self.audit_engine.audit_sample(
+                model=model,
+                explainer=explainer,
+                img_tensor=tensor,
+                original_img=original_image,
+                head_name="head_c",
+                target_class_idx=0,
+            )
+            return float(audit["in_lung_ratio"])
+        finally:
+            explainer.remove_hooks()
+
+    def _load_thresholds(self, path: str = "configs/optimal_thresholds.json") -> dict[str, Any]:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             return data
         except Exception as exc:  # pragma: no cover - defensive fallback
-            logger.warning("Could not load optimal_thresholds.json: %s", exc)
+            logger.warning("Could not load thresholds from %s: %s", path, exc)
             return {
                 "head_a_nih_14": {d: 0.5 for d in NIH_14_DISEASES},
                 "head_b_tb": {"threshold": 0.5},
@@ -164,25 +227,36 @@ class LungRayService:
             }
 
     def _instantiate_and_load(
-        self, checkpoint_path: str, backbone_name: str = "densenet121"
+        self, checkpoint_path: str, backbone_name: str = "densenet121", strict: bool = False
     ) -> MultiTaskChestXrayNet:
+        num_classes_c = 1
+        state = None
+        if os.path.exists(checkpoint_path):
+            logger.info("Loading checkpoint from %s for %s", checkpoint_path, backbone_name)
+            raw_state = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
+            if isinstance(raw_state, dict) and "model_state_dict" in raw_state:
+                state = raw_state["model_state_dict"]
+            elif isinstance(raw_state, dict) and "state_dict" in raw_state:
+                state = raw_state["state_dict"]
+            elif isinstance(raw_state, dict):
+                state = raw_state
+
+            if isinstance(state, dict) and "head_c.weight" in state:
+                num_classes_c = int(state["head_c.weight"].shape[0])
+
         model = MultiTaskChestXrayNet(
             backbone_name=backbone_name,
             pretrained=False,
             img_size=self.img_size,
             num_classes_a=14,
             num_classes_b=1,
-            num_classes_c=1,
+            num_classes_c=num_classes_c,
         )
 
-        if os.path.exists(checkpoint_path):
-            logger.info("Loading checkpoint from %s for %s", checkpoint_path, backbone_name)
-            state = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
-            if isinstance(state, dict) and "model_state_dict" in state:
-                state = state["model_state_dict"]
-            elif isinstance(state, dict) and "state_dict" in state:
-                state = state["state_dict"]
-            model.load_state_dict(state, strict=False)
+        if state is not None:
+            model.load_state_dict(state, strict=strict)
+        elif strict:
+            raise FileNotFoundError(f"Required model checkpoint was not found: {checkpoint_path}")
         else:
             logger.warning(
                 "No checkpoint found at %s; using randomly-initialized weights for %s.",
@@ -195,7 +269,13 @@ class LungRayService:
         return model
 
     def _load_hybrid_models(self) -> None:
-        self.standard_path = os.getenv("CHECKPOINT_PATH", "checkpoints/best_model.pth")
+        configured_standard = os.getenv("CHECKPOINT_PATH")
+        if configured_standard and os.path.isfile(configured_standard):
+            self.standard_path = configured_standard
+        elif os.path.isfile("checkpoints/best_model_20_11.pth"):
+            self.standard_path = "checkpoints/best_model_20_11.pth"
+        else:
+            self.standard_path = "checkpoints/best_model.pth"
         self.wsol_path = "checkpoints/best_wsol_finetune.pth"
         self.resnet_path = "checkpoints/best_resnet50.pth"
 
@@ -208,10 +288,10 @@ class LungRayService:
             "role": "Primary emergency triaging across 16 cardiopulmonary conditions (Multi-Task Mean AUC 0.91)",
             "checkpoint": self.standard_path,
             "metrics": {
-                "head_a_auc": 0.8352,
-                "head_b_tb_auc": 0.9412,
-                "head_c_covid_auc": 0.9520,
-                "mean_auc": 0.9095,
+                "head_a_test_auc": 0.7508,
+                "head_b_test_auc": 1.0000,
+                "head_c_test_auc": 0.7692,
+                "metric_source": "stored independent-test artifact; not recomputed at API startup",
             },
         }
 
@@ -266,21 +346,31 @@ class LungRayService:
         }
 
         # 5. AG-MTCNet Flagship (Anatomically-Gated Multi-Task Network)
-        self.ag_mtcnet_path = os.getenv("AG_MTCNET_CHECKPOINT", "checkpoints/ag_mtcnet_sota.pth")
-        ag_ckpt = self.ag_mtcnet_path if os.path.exists(self.ag_mtcnet_path) else self.standard_path
-        self.models["ag_mtcnet"] = self._instantiate_and_load(ag_ckpt, backbone_name="densenet121")
+        candidates_ag = [
+            os.getenv("AG_MTCNET_CHECKPOINT", ""),
+            "checkpoints/ag_mtcnet_best.pth",
+        ]
+        ag_ckpt = next((p for p in candidates_ag if p and os.path.isfile(p)), None)
+        if ag_ckpt is None:
+            raise FileNotFoundError("Required AG-MTCNet checkpoint is missing: checkpoints/ag_mtcnet_best.pth")
+        self.ag_mtcnet_path = ag_ckpt
+        self.models["ag_mtcnet"] = self._instantiate_and_load(
+            ag_ckpt, backbone_name="densenet121", strict=True
+        )
         self.model_info["ag_mtcnet"] = {
             "id": "ag_mtcnet",
-            "name": "AG-MTCNet Flagship (Anatomical Gate)",
-            "role": "SOTA dual-stage CADx with Dense-UNet anatomical gating, suppressing 90% non-thoracic artifacts",
+            "name": "AG-MTCNet 512 (research candidate)",
+            "role": "Exploratory 512-pixel three-head output with clinical safety review",
             "checkpoint": ag_ckpt,
             "metrics": {
-                "head_a_auc": 0.8520,
-                "head_b_tb_auc": 0.9650,
-                "head_c_covid_auc": 0.9850,
-                "mean_auc": 0.9340,
-                "stage1_dice": 0.9450,
-                "stage1_iou": 0.8974,
+                "head_a_test_auc_checkpoint_metadata": 0.6230,
+                "head_b_test_auc_checkpoint_metadata": 0.9986,
+                "head_c_test_auc_checkpoint_metadata": 0.6004,
+                "head_c_validation_auc_checkpoint_metadata": 0.9171,
+                "metric_source": "checkpoint_metadata_not_independently_recomputed",
+                "head_c_status": "exploratory",
+                "resolution": [512, 512],
+                "clinical_use": "not_validated",
             },
         }
 
@@ -348,63 +438,152 @@ class LungRayService:
         return self.models.get("standard", self.model)
 
     def list_models(self) -> list[dict[str, Any]]:
-        return list(self.model_info.values())
+        models = []
+        for model_info in self.model_info.values():
+            public_info = dict(model_info)
+            public_info["metrics"] = dict(public_info.get("metrics", {}))
+            models.append(public_info)
+        return models
 
-    def preprocess(self, image_bytes: bytes) -> torch.Tensor:
-        """Convert raw image bytes to a batched (1, 3, 512, 512) tensor."""
+    @staticmethod
+    def _dicom_to_rgb(dataset: pydicom.dataset.Dataset) -> np.ndarray:
+        """Convert a DICOM pixel array to displayable RGB uint8 pixels."""
+        if "PixelData" not in dataset:
+            raise ValueError("DICOM file has no PixelData element.")
+
         try:
-            image = Image.open(io.BytesIO(image_bytes))
+            pixels = np.asarray(dataset.pixel_array)
         except Exception as exc:
-            raise ValueError(f"Cannot decode uploaded image: {exc}") from exc
+            raise ValueError(f"Cannot decode DICOM pixel data: {exc}") from exc
 
-        image = image.convert("RGB")
+        samples_per_pixel = int(getattr(dataset, "SamplesPerPixel", 1))
+        photometric = str(getattr(dataset, "PhotometricInterpretation", "MONOCHROME2"))
+
+        # A multi-frame radiograph is treated as a single image using its first frame.
+        if pixels.ndim == 4:
+            pixels = pixels[0]
+        elif pixels.ndim == 3 and not (
+            samples_per_pixel > 1 and pixels.shape[-1] in (3, 4)
+        ):
+            pixels = pixels[0]
+
+        if samples_per_pixel > 1 or (pixels.ndim == 3 and pixels.shape[-1] in (3, 4)):
+            if pixels.ndim != 3 or pixels.shape[-1] not in (3, 4):
+                raise ValueError(
+                    f"Unsupported color DICOM pixel shape: {pixels.shape}."
+                )
+            if photometric.startswith("YBR"):
+                try:
+                    pixels = convert_color_space(pixels, photometric, "RGB")
+                except Exception as exc:
+                    raise ValueError(
+                        f"Cannot convert DICOM color space {photometric}: {exc}"
+                    ) from exc
+            pixels = pixels[..., :3].astype(np.float32)
+            finite = np.isfinite(pixels)
+            if not finite.any():
+                raise ValueError("DICOM color image contains no finite pixel values.")
+            low, high = np.percentile(pixels[finite], (0.5, 99.5))
+            if high <= low:
+                high = low + 1.0
+            scaled = np.clip((pixels - low) * (255.0 / (high - low)), 0, 255)
+            return np.ascontiguousarray(scaled.astype(np.uint8))
+
+        if pixels.ndim != 2:
+            raise ValueError(f"Unsupported grayscale DICOM pixel shape: {pixels.shape}.")
+
+        try:
+            pixels = apply_modality_lut(pixels, dataset)
+        except Exception as exc:
+            raise ValueError(f"Cannot apply DICOM modality transform: {exc}") from exc
+
+        if "WindowCenter" in dataset and "WindowWidth" in dataset:
+            try:
+                pixels = apply_voi_lut(pixels, dataset)
+            except Exception as exc:
+                logger.warning(
+                    "DICOM VOI LUT could not be applied (%s); using robust scaling.",
+                    exc,
+                )
+
+        pixels = np.asarray(pixels, dtype=np.float32)
+        finite = np.isfinite(pixels)
+        if not finite.any():
+            raise ValueError("DICOM grayscale image contains no finite pixel values.")
+        low, high = np.percentile(pixels[finite], (0.5, 99.5))
+        if high <= low:
+            high = low + 1.0
+        scaled = np.clip((pixels - low) * (255.0 / (high - low)), 0, 255)
+        if photometric == "MONOCHROME1":
+            scaled = 255.0 - scaled
+        gray = np.ascontiguousarray(scaled.astype(np.uint8))
+        return cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
+
+    @classmethod
+    def _decode_uploaded_image(cls, image_bytes: bytes) -> Image.Image:
+        """Decode standard raster images or DICOM bytes into an RGB PIL image."""
+        try:
+            with Image.open(io.BytesIO(image_bytes)) as image:
+                return image.convert("RGB")
+        except Exception as raster_error:
+            if pydicom is not None:
+                try:
+                    dataset = pydicom.dcmread(io.BytesIO(image_bytes), force=True)
+                    rgb = cls._dicom_to_rgb(dataset)
+                    return Image.fromarray(rgb)
+                except Exception as dicom_error:
+                    raise ValueError(
+                        "Cannot decode uploaded image as PNG/JPEG or DICOM "
+                        f"(raster: {raster_error}; DICOM: {dicom_error})."
+                    ) from dicom_error
+            raise ValueError(
+                f"Cannot decode uploaded image as PNG/JPEG (error: {raster_error})."
+            ) from raster_error
+
+    def preprocess(self, image_bytes: bytes, ag_mtcnet: bool = False) -> torch.Tensor:
+        """Convert uploaded raster or DICOM bytes to the selected model's input size."""
+        image = self._decode_uploaded_image(image_bytes)
+
         image_np = np.array(image)
-        image_np = self._anatomical_gate(image_np)
-        transformed = self.transform(image=image_np)["image"]
+        image_np = self._anatomical_gate(image_np, force=ag_mtcnet)
+        transform = self.ag_transform if ag_mtcnet else self.transform
+        transformed = transform(image=image_np)["image"]
         return transformed.unsqueeze(0).to(self.device)
 
     def preprocess_tta(self, image_bytes: bytes, force_gate: bool = False) -> torch.Tensor:
         """
         Generate a 3-pass augmented batch tensor (3, 3, 512, 512) for clinical test-time augmentation:
-        - Pass 1: Standard normalized view
-        - Pass 2: High-contrast CLAHE view (recovers subtle interstitial/alveolar infiltrates)
-        - Pass 3: Multi-scale anatomical view (scaled by 1.03x and center-cropped to 512x512)
+        - Pass 1: Original normalized view
+        - Pass 2: Horizontal flip
+        - Pass 3: CLAHE contrast view
         """
-        try:
-            image = Image.open(io.BytesIO(image_bytes))
-        except Exception as exc:
-            raise ValueError(f"Cannot decode uploaded image: {exc}") from exc
-
-        image = image.convert("RGB")
+        image = self._decode_uploaded_image(image_bytes)
         image_np = np.array(image)
 
         # Anatomical gate applied once to the base image; all TTA passes are
         # derived from the already-masked image for geometric consistency.
         image_np = self._anatomical_gate(image_np, force=force_gate)
 
-        # Pass 1: Standard
-        t1 = self.transform(image=image_np)["image"]
+        # All selected diagnostic checkpoints are served at 512 px.
+        transform = self.ag_transform if force_gate else self.transform
 
-        # Pass 2: CLAHE Contrast Invariant
+        # Pass 1: Original
+        t1 = transform(image=image_np)["image"]
+
+        # Pass 2: Horizontal flip
+        try:
+            flipped_np = cv2.flip(image_np, 1)
+            t2 = transform(image=flipped_np)["image"]
+        except Exception:
+            t2 = t1.clone()
+
+        # Pass 3: CLAHE contrast view
         try:
             lab = cv2.cvtColor(image_np, cv2.COLOR_RGB2LAB)
             clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
             lab[:, :, 0] = clahe.apply(lab[:, :, 0])
             clahe_np = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
-            t2 = self.transform(image=clahe_np)["image"]
-        except Exception:
-            t2 = t1.clone()
-
-        # Pass 3: Multi-scale Anatomical Invariant (1.03x scale with center-crop)
-        try:
-            h, w = image_np.shape[:2]
-            scaled_w = int(w * 1.03)
-            scaled_h = int(h * 1.03)
-            scaled_np = cv2.resize(image_np, (scaled_w, scaled_h), interpolation=cv2.INTER_LINEAR)
-            start_x = (scaled_w - w) // 2
-            start_y = (scaled_h - h) // 2
-            cropped_np = scaled_np[start_y:start_y + h, start_x:start_x + w]
-            t3 = self.transform(image=cropped_np)["image"]
+            t3 = transform(image=clahe_np)["image"]
         except Exception:
             t3 = t1.clone()
 
@@ -412,19 +591,100 @@ class LungRayService:
         batch_tensor = torch.stack([t1, t2, t3], dim=0).to(self.device)
         return batch_tensor
 
+    @staticmethod
+    def _extract_covid_prob(tensor: torch.Tensor) -> float:
+        if tensor.ndim > 1 and tensor.shape[-1] == 3:
+            # COVIDx 3-class format: index 2 corresponds to COVID-19
+            return float(tensor[:, 2].mean().item())
+        return float(tensor.mean().item())
+
+    @staticmethod
+    def _covid_prob_from_logits(logits: torch.Tensor) -> float:
+        if logits.shape[-1] == 3:
+            return float(torch.softmax(logits, dim=-1)[0, 2].item())
+        return float(torch.sigmoid(logits)[0, 0].item())
+
+    @staticmethod
+    def _is_ag_mtcnet(model_name: str) -> bool:
+        normalized = model_name.strip().lower().replace("-", "_")
+        return "ag_mtcnet" in normalized
+
+    @staticmethod
+    def _thresholds_for_task(config: dict[str, Any], task: str) -> dict[str, Any]:
+        if task == "head_a":
+            value = config.get("head_a_nih_14", config.get("head_a", {}))
+            return value if isinstance(value, dict) else {}
+        if task == "head_b":
+            value = config.get("head_b_tb", config.get("head_b", {}))
+        else:
+            value = config.get("head_c_covid", config.get("head_c_covid_binary", {}))
+        if isinstance(value, (int, float)):
+            return {"threshold": float(value)}
+        if not isinstance(value, dict):
+            return {}
+        if "threshold" in value:
+            return value
+        numeric_values = [item for item in value.values() if isinstance(item, (int, float))]
+        return {"threshold": float(numeric_values[0])} if len(numeric_values) == 1 else value
+
     def predict(
         self,
         image_bytes: bytes,
         model_name: str = "standard",
         failsafe_enabled: bool = True,
+        tta_enabled: bool = True,
     ) -> dict[str, Any]:
+        request_started_at = time.perf_counter()
         # Dynamic hot-reload check
         self.check_and_reload_checkpoints()
 
-        is_ag_mtcnet = "ag_mtcnet" in model_name.lower() or "ag-mtcnet" in model_name.lower()
+        is_ag_mtcnet = self._is_ag_mtcnet(model_name)
+        active_thresholds = self.ag_thresholds if is_ag_mtcnet else self.thresholds
+        selected_key = (
+            "ag_mtcnet" if is_ag_mtcnet else
+            "wsol" if "wsol" in model_name.lower() else
+            "resnet50" if "resnet" in model_name.lower() else
+            "ensemble" if "ensemble" in model_name.lower() else "standard"
+        )
+
+        source_image = np.asarray(self._decode_uploaded_image(image_bytes))
+        quality_reasons = self._input_quality_reasons(source_image)
+        if quality_reasons:
+            # Input-quality rejects remain active even when the optional OOD
+            # bypass is requested; blank/noise images never receive predictions.
+            safety_decision = self.safety_policy.evaluate(0.0, 0.0, failsafe_enabled=True)
+            safety_decision.rejection_reasons.extend(quality_reasons)
+            head_a = {disease: 0.0 for disease in NIH_14_DISEASES}
+            head_b = {"tb_probability": 0.0, "is_positive": False}
+            head_c = {
+                "available": True,
+                "status": "REJECTED_INPUT",
+                "covid_probability": 0.0,
+                "threshold": self._thresholds_for_task(active_thresholds, "head_c").get("threshold", 0.5),
+                "is_positive": False,
+                "model_is_positive": False,
+                "clinical_suspicion": False,
+                "guardrail_reasons": quality_reasons,
+            }
+            report = self.report_generator.generate({}, {}, safety_decision=safety_decision)
+            return {
+                "active_model": selected_key,
+                "model_display_name": self.model_info.get(selected_key, {}).get("name", selected_key),
+                "head_a_prediction": head_a,
+                "head_b_tb_screening": head_b,
+                "head_c_covidx": head_c,
+                "inference_time_ms": round((time.perf_counter() - request_started_at) * 1000.0, 2),
+                "tta_enabled": False,
+                "passes_executed": 0,
+                "calibration_temperature": 1.20,
+                "safety": safety_decision.to_dict(),
+                "report": report.to_dict(),
+            }
 
         # 3-Pass Medical TTA Tensor Generation (applies anatomical gate automatically if AG-MTCNet)
         batch_tensor = self.preprocess_tta(image_bytes, force_gate=is_ag_mtcnet)
+        if not tta_enabled:
+            batch_tensor = batch_tensor[:1]
         standard_tensor = batch_tensor[:1]
 
         # ---------------------------------------------------------
@@ -453,16 +713,16 @@ class LungRayService:
             # 3-Pass TTA Averaging
             p_dense_a = out_dense["head_a"].mean(dim=0).cpu().numpy()
             p_dense_b = float(out_dense["head_b"].mean().item())
-            p_dense_c = float(out_dense["head_c"].mean().item())
+            p_dense_c = self._extract_covid_prob(out_dense["head_c"])
 
             p_wsol_a = out_wsol["head_a"].mean(dim=0).cpu().numpy()
             p_wsol_b = float(out_wsol["head_b"].mean().item())
-            p_wsol_c = float(out_wsol["head_c"].mean().item())
+            p_wsol_c = self._extract_covid_prob(out_wsol["head_c"])
 
             if out_res is not None:
                 p_res_a = out_res["head_a"].mean(dim=0).cpu().numpy()
                 p_res_b = float(out_res["head_b"].mean().item())
-                p_res_c = float(out_res["head_c"].mean().item())
+                p_res_c = self._extract_covid_prob(out_res["head_c"])
                 prob_a = 0.50 * p_dense_a + 0.50 * p_res_a
                 prob_b = 0.60 * p_wsol_b + 0.20 * p_dense_b + 0.20 * p_res_b
                 prob_c = 0.50 * p_dense_c + 0.50 * p_res_c
@@ -522,17 +782,22 @@ class LungRayService:
             )
 
             head_a = {disease: float(prob_a[i]) for i, disease in enumerate(NIH_14_DISEASES)}
-            tb_threshold = self.thresholds.get("head_b_tb", {}).get("threshold", 0.5)
-            covid_threshold = self.thresholds.get("head_c_covid", {}).get("threshold", 0.5)
-            head_a_thresholds = self.thresholds.get("head_a_nih_14", {})
+            tb_threshold = self._thresholds_for_task(self.thresholds, "head_b").get("threshold", 0.5)
+            covid_threshold = self._thresholds_for_task(self.thresholds, "head_c").get("threshold", 0.5)
+            head_a_thresholds = self._thresholds_for_task(self.thresholds, "head_a")
 
             head_b_res = {
                 "tb_probability": prob_b,
                 "is_positive": prob_b >= tb_threshold,
             }
             head_c_res = {
+                "available": True,
                 "covid_probability": prob_c,
+                "threshold": covid_threshold,
                 "is_positive": prob_c >= covid_threshold,
+                "model_is_positive": prob_c >= covid_threshold,
+                "clinical_suspicion": prob_c >= covid_threshold,
+                "status": "MODEL_THRESHOLD_RESULT",
             }
 
             clinical_report = self.report_generator.generate(
@@ -542,6 +807,7 @@ class LungRayService:
                 head_c_result=head_c_res,
                 safety_decision=safety_decision,
             )
+            elapsed_ms = (time.perf_counter() - request_started_at) * 1000.0
 
             return {
                 "active_model": "ensemble",
@@ -550,8 +816,8 @@ class LungRayService:
                 "head_b_tb_screening": head_b_res,
                 "head_c_covidx": head_c_res,
                 "inference_time_ms": round(elapsed_ms, 2),
-                "tta_enabled": True,
-                "passes_executed": 3,
+                "tta_enabled": tta_enabled,
+                "passes_executed": 3 if tta_enabled else 1,
                 "calibration_temperature": 1.20,
                 "ensemble_agreement": round(agreement_score, 4),
                 "ensemble_models": participating_models,
@@ -578,7 +844,7 @@ class LungRayService:
         # 1. 3-Pass TTA Averaging & Temperature Calibration
         prob_a = outputs["head_a"].mean(dim=0).cpu().numpy()
         prob_b = float(outputs["head_b"].mean().item())
-        prob_c = float(outputs["head_c"].mean().item())
+        prob_c = self._extract_covid_prob(outputs["head_c"])
 
         prob_a = self.apply_temperature_scaling(prob_a, temperature=1.20)
         prob_b = float(self.apply_temperature_scaling(prob_b, temperature=1.20))
@@ -593,17 +859,48 @@ class LungRayService:
 
         head_a = {disease: float(prob_a[i]) for i, disease in enumerate(NIH_14_DISEASES)}
 
-        tb_threshold = self.thresholds.get("head_b_tb", {}).get("threshold", 0.5)
-        covid_threshold = self.thresholds.get("head_c_covid", {}).get("threshold", 0.5)
-        head_a_thresholds = self.thresholds.get("head_a_nih_14", {})
+        head_b_threshold = self._thresholds_for_task(active_thresholds, "head_b").get("threshold", 0.5)
+        covid_threshold = self._thresholds_for_task(active_thresholds, "head_c").get("threshold", 0.5)
+        head_a_thresholds = self._thresholds_for_task(active_thresholds, "head_a")
 
         head_b_res = {
             "tb_probability": prob_b,
-            "is_positive": prob_b >= tb_threshold,
+            "is_positive": prob_b >= head_b_threshold,
         }
+        model_c_positive = prob_c >= covid_threshold
+        in_lung_ratio = None
+        guardrail_reasons: list[str] = []
+        parenchymal_positive = any(
+            head_a.get(disease, 0.0) >= head_a_thresholds.get(disease, 0.45)
+            for disease in ("Infiltration", "Consolidation", "Pneumonia")
+        )
+        if is_ag_mtcnet and model_c_positive:
+            try:
+                in_lung_ratio = self._audit_ag_covid_focus(
+                    active_model, standard_tensor, source_image
+                )
+            except Exception as exc:
+                logger.warning("AG-MTCNet lung-energy audit unavailable: %s", exc)
+                guardrail_reasons.append("Lung-energy audit unavailable; specialist review required.")
+            if in_lung_ratio is not None and in_lung_ratio < 0.80:
+                guardrail_reasons.append(
+                    f"Only {in_lung_ratio:.1%} of COVID heatmap energy is within the lung mask (<80%)."
+                )
+            if not parenchymal_positive:
+                guardrail_reasons.append(
+                    "Head A has no threshold-positive infiltration, consolidation, or pneumonia finding."
+                )
+        clinical_c_positive = model_c_positive and not guardrail_reasons
         head_c_res = {
+            "available": True,
+            "status": "EXPLORATORY",
             "covid_probability": prob_c,
-            "is_positive": prob_c >= covid_threshold,
+            "threshold": covid_threshold,
+            "is_positive": clinical_c_positive,
+            "model_is_positive": model_c_positive,
+            "clinical_suspicion": clinical_c_positive,
+            "guardrail_reasons": guardrail_reasons,
+            "in_lung_energy_ratio": in_lung_ratio,
         }
 
         # 3. Grounded Clinical Report (RAG-lite)
@@ -613,7 +910,10 @@ class LungRayService:
             head_b_result=head_b_res,
             head_c_result=head_c_res,
             safety_decision=safety_decision,
+            in_lung_ratio=in_lung_ratio,
+            guardrail_reasons=guardrail_reasons,
         )
+        elapsed_ms = (time.perf_counter() - request_started_at) * 1000.0
 
         return {
             "active_model": active_key,
@@ -622,11 +922,12 @@ class LungRayService:
             "head_b_tb_screening": head_b_res,
             "head_c_covidx": head_c_res,
             "inference_time_ms": round(elapsed_ms, 2),
-            "tta_enabled": True,
-            "passes_executed": 3,
+            "tta_enabled": tta_enabled,
+            "passes_executed": 3 if tta_enabled else 1,
             "calibration_temperature": 1.20,
             "safety": safety_decision.to_dict(),
             "report": clinical_report.to_dict(),
+            "in_lung_energy_ratio": in_lung_ratio,
         }
 
     @staticmethod
@@ -637,12 +938,27 @@ class LungRayService:
         elif image.ndim == 3 and image.shape[2] == 3:
             image = np.uint8(np.clip(image, 0, 255))
             pil_img = Image.fromarray(image, mode="RGB")
+        elif image.ndim == 3 and image.shape[2] == 4:
+            image = np.uint8(np.clip(image, 0, 255))
+            pil_img = Image.fromarray(image, mode="RGBA")
         else:
             raise ValueError(f"Unsupported image shape for base64 encoding: {image.shape}")
 
         buffer = io.BytesIO()
         pil_img.save(buffer, format=format)
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    @staticmethod
+    def _restore_letterboxed_heatmap(heatmap: np.ndarray, height: int, width: int) -> np.ndarray:
+        """Remove the centered validation padding before mapping CAM to the source image."""
+        map_h, map_w = heatmap.shape[:2]
+        scale = min(map_h / height, map_w / width)
+        resized_h = max(1, min(map_h, round(height * scale)))
+        resized_w = max(1, min(map_w, round(width * scale)))
+        top = (map_h - resized_h) // 2
+        left = (map_w - resized_w) // 2
+        unpadded = heatmap[top:top + resized_h, left:left + resized_w]
+        return cv2.resize(unpadded, (width, height), interpolation=cv2.INTER_LINEAR)
 
     def explain(
         self,
@@ -653,12 +969,21 @@ class LungRayService:
         target_disease_name: str = "",
         model_name: str = "standard",
     ) -> dict[str, Any]:
+        is_ag_mtcnet = self._is_ag_mtcnet(model_name)
+        active_thresholds = self.ag_thresholds if is_ag_mtcnet else self.thresholds
         started_at = time.perf_counter()
-        tensor = self.preprocess(image_bytes)
-        active_key = "wsol" if "wsol" in model_name.lower() or "ensemble" in model_name.lower() else "standard"
+        tensor = self.preprocess(image_bytes, ag_mtcnet=is_ag_mtcnet)
+        if is_ag_mtcnet:
+            active_key = "ag_mtcnet"
+        elif "wsol" in model_name.lower() or "ensemble" in model_name.lower():
+            active_key = "wsol"
+        elif "resnet" in model_name.lower():
+            active_key = "resnet50"
+        else:
+            active_key = "standard"
         active_model = self.models.get(active_key, self.model)
 
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        image = self._decode_uploaded_image(image_bytes)
         image_np = np.array(image)
 
         # Resolve disease name if not specified
@@ -677,13 +1002,13 @@ class LungRayService:
             outputs = active_model(tensor)
             if target_head == "head_a":
                 target_prob = float(torch.sigmoid(outputs["head_a"])[0, target_class].item())
-                target_thresh = float(self.thresholds.get("head_a_nih_14", {}).get(target_disease_name, 0.45))
+                target_thresh = float(self._thresholds_for_task(active_thresholds, "head_a").get(target_disease_name, 0.45))
             elif target_head == "head_b":
                 target_prob = float(torch.sigmoid(outputs["head_b"])[0, 0].item())
-                target_thresh = float(self.thresholds.get("head_b_tb", {}).get("threshold", 0.45))
+                target_thresh = float(self._thresholds_for_task(active_thresholds, "head_b").get("threshold", 0.45))
             elif target_head == "head_c":
-                target_prob = float(torch.softmax(outputs["head_c"], dim=-1)[0, 0].item())
-                target_thresh = float(self.thresholds.get("head_c_covid", {}).get("threshold", 0.70))
+                target_prob = self._covid_prob_from_logits(outputs["head_c"])
+                target_thresh = float(self._thresholds_for_task(active_thresholds, "head_c").get("threshold", 0.70))
             else:
                 target_prob = 1.0
                 target_thresh = 0.5
@@ -691,10 +1016,11 @@ class LungRayService:
 
         explainer = MultiScaleGradCAMPlusPlus(active_model)
         try:
+            cam_class = 2 if target_head == "head_c" and outputs["head_c"].shape[-1] == 3 else target_class
             raw_heatmap = explainer.generate(
                 tensor,
                 head_name=target_head,
-                target_class_idx=target_class,
+                target_class_idx=cam_class,
                 fusion_weights=(0.4, 0.6),
             )
         finally:
@@ -702,23 +1028,44 @@ class LungRayService:
 
         orig_h, orig_w = image_np.shape[:2]
 
-        # Resize raw_heatmap from (512, 512) to the original image dimensions for pixel-perfect alignment
-        if raw_heatmap.shape != (orig_h, orig_w):
-            raw_heatmap_native = cv2.resize(
-                raw_heatmap,
-                (orig_w, orig_h),
-                interpolation=cv2.INTER_LINEAR,
-            )
-        else:
-            raw_heatmap_native = raw_heatmap
+        raw_heatmap_native = self._restore_letterboxed_heatmap(raw_heatmap, orig_h, orig_w)
 
         # Generate lung mask from segmenter directly on native image
-        lung_mask = self.segmenter.predict_mask(image_np)
+        mask_source = "morphology"
+        mask_warning = (
+            "Đang dùng mặt nạ hình thái xấp xỉ. Tỷ lệ năng lượng trong phổi chỉ để tham khảo, chưa được xác thực."
+        )
+        if self.dense_unet is not None:
+            try:
+                lung_mask = self.segmenter._dense_predict_masks([image_np])[0]
+                mask_source = "dense_unet"
+                mask_warning = ""
+            except Exception as exc:
+                logger.warning("Dense-UNet segmentation failed; using approximate morphology: %s", exc)
+                lung_mask = self.segmenter._morphology_predict_mask(image_np)
+                mask_source = "morphology_fallback"
+                mask_warning = (
+                    "Không thể tạo mặt nạ Dense-UNet; đang dùng mặt nạ hình thái xấp xỉ. "
+                    "Tỷ lệ năng lượng trong phổi chỉ để tham khảo, chưa được xác thực."
+                )
+        else:
+            lung_mask = self.segmenter._morphology_predict_mask(image_np)
         if lung_mask.shape != (orig_h, orig_w):
             lung_mask = cv2.resize(
                 lung_mask.astype(np.uint8),
                 (orig_w, orig_h),
                 interpolation=cv2.INTER_NEAREST,
+            )
+
+        mask_fraction = float(np.mean(lung_mask > 0))
+        if mask_source == "dense_unet" and (mask_fraction < 0.01 or mask_fraction > 0.85):
+            # An empty/full deep mask would silently erase or misrepresent the CAM.
+            # The morphology fallback is approximate and is explicitly disclosed.
+            lung_mask = self.segmenter._morphology_predict_mask(image_np)
+            mask_source = "morphology_fallback"
+            mask_warning = (
+                "Mặt nạ Dense-UNet không hợp lệ; đang dùng mặt nạ hình thái xấp xỉ. "
+                "Tỷ lệ năng lượng trong phổi chỉ để tham khảo, chưa được xác thực."
             )
 
         # Build anatomical ROI mask at native resolution
@@ -785,11 +1132,16 @@ class LungRayService:
         else:
             overlay = explainer.overlay_heatmap(image_np, final_heatmap, alpha=0.4)
 
+        # Alpha follows the computed activation; zero activation remains transparent.
+        # The original RGB field stays available for older API clients.
+        heatmap_rgba = np.dstack((heatmap_color, heatmap_uint8))
+
         # Multi-scale lesion iso-contour extraction: only for confirmed positive
         # targets under clinical grounding. The contour is constrained to the
         # anatomical ROI mask (effective_mask) so it matches the in-lung audit.
         # Negative targets return an empty contour to avoid drawing false lesions.
         contour_b64 = ""
+        contour_rgba_b64 = ""
         lesion_bounding_boxes: list[dict[str, Any]] = []
         lesion_area_ratio = 0.0
         if is_target_positive and clinical_grounding:
@@ -804,10 +1156,12 @@ class LungRayService:
                 lesions=lesions,
             )
             contour_b64 = self._image_to_base64(contour_overlay)
+            changed = np.any(contour_overlay != image_np, axis=2).astype(np.uint8) * 255
+            contour_rgba_b64 = self._image_to_base64(np.dstack((contour_overlay, changed)))
             lesion_bounding_boxes = lesions
             lesion_area_ratio = float(area_ratio)
 
-        audit_pass = bool(in_lung_ratio >= 0.80)
+        audit_pass = bool(in_lung_ratio >= 0.80) if mask_source == "dense_unet" else None
 
         elapsed_ms = (time.perf_counter() - started_at) * 1000.0
         logger.info(
@@ -823,8 +1177,11 @@ class LungRayService:
         return {
             "active_model": active_key,
             "heatmap_base64": self._image_to_base64(heatmap_color),
+            "heatmap_rgba_base64": self._image_to_base64(heatmap_rgba),
+            "heatmap_has_activation": bool(np.any(heatmap_uint8)),
             "overlay_base64": self._image_to_base64(overlay),
             "contour_base64": contour_b64,
+            "contour_rgba_base64": contour_rgba_b64,
             "lesion_bounding_boxes": lesion_bounding_boxes,
             "lesion_area_ratio": lesion_area_ratio,
             "cam_resolution": "32x32 fused (denseblock3+denseblock4)",
@@ -837,11 +1194,13 @@ class LungRayService:
             "in_lung_energy_ratio": round(float(in_lung_ratio), 4),
             "audit_pass": audit_pass,
             "is_grounded": is_grounded,
+            "mask_source": mask_source,
+            "mask_warning": mask_warning,
         }
 
     def audit(self, image_bytes: bytes) -> dict[str, Any]:
         tensor = self.preprocess(image_bytes)
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        image = self._decode_uploaded_image(image_bytes)
         image_np = np.array(image)
 
         explainer = GradCAMExplainer(self.model)

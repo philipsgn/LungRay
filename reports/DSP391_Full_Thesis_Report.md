@@ -319,7 +319,7 @@ Every radiograph undergoes a deterministic, five-stage medical preprocessing seq
 2. **Medical Letterboxing & Aspect-Ratio Preservation**: To feed convolutional networks without anatomical distortion, radiographs are padded symmetrically with constant borders rather than squashed. When downsampling on-the-fly for accelerated mini-batching, `cv2.INTER_AREA` interpolation is strictly applied to suppress aliasing moiré artifacts.
 3. **Contrast Limited Adaptive Histogram Equalization (CLAHE)**: Applied locally with a clip limit of 2.0 and grid size of 8×8 pixels. CLAHE normalizes exposure disparities between computed radiography (CR) and direct digital radiography (DR), preventing scanner-specific intensity bias.
 4. **Three-Channel Grayscale Replication & ImageNet Normalization**: DenseNet pretrained encoders require three-channel input tensors. Single-channel grayscale radiographs are replicated across three identical channels (np.stack([gray, gray, gray], axis=-1)) and normalized using ImageNet population statistics (mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]).
-5. **Stage 1 Dense-UNet Anatomical Gating & Dilated Soft Masking**: To eradicate non-anatomical shortcut learning (hospital watermark letters R/L, machine boundaries), an inference-time anatomical gate powered by Dense-UNet (Dubey et al., BMC 2026; empirical Val Dice 0.9450, Val IoU 0.8974) produces a lung segmentation mask. An elliptical morphological dilation kernel expanding 6% of spatial dimensions prevents clipping peripheral costophrenic recesses:
+5. **Stage 1 Dense-UNet Anatomical Gating & Dilated Soft Masking**: To eradicate non-anatomical shortcut learning (hospital watermark letters R/L, machine boundaries), an inference-time anatomical gate powered by Dense-UNet (Dubey et al., BMC 2026; empirical Val Dice 0.9450, Val IoU 0.8974) produces a lung segmentation mask. The inference input follows the trained checkpoint contract: grayscale letterboxing at the checkpoint image size (256 by default), three-channel replication, and ImageNet normalization. Padding is removed from the predicted mask before it is restored to native image dimensions. An elliptical morphological dilation kernel expanding 6% of spatial dimensions prevents clipping peripheral costophrenic recesses:
    <div class="equation-block"><span class="equation-text"><i>M</i><sub>dilated</sub> = <i>M</i><sub>lung</sub> &oplus; <i>K</i><sub>6%</sub></span><span class="equation-num">(1)</span></div>
    Extra-thoracic noise is attenuated by 90% (soft weighting = 0.10 + 0.90 &times; blurred_mask), preserving 100% of intra-pulmonary parenchyma.
    - **White-out Lung Clinical Fail-Safe**: In severe pathologies presenting with near-total opacity (massive atelectasis, total pleural effusion, white-out lung), segmented area drops below 18% of the thoracic bounding box. The gate autonomously activates a bypass rule (coverage &lt; 0.18 &rarr; preserve raw radiograph), eliminating the risk of erasing life-threatening opacifications.
@@ -551,7 +551,7 @@ To contextualize the standalone CADx metrics against real-world hospital workflo
 
 ### 6.9 Multi-Backbone Architecture & Consensus Ensemble Benchmark
 
-Motivated by medical imaging consensus literature demonstrating that peak diagnostic accuracy stems from ensemble learning across complementary architectural inductive biases [22], we benchmarked four distinct model configurations alongside our adaptive soft-voting Consensus Ensemble: (1) DenseNet-121 (Primary SOTA CADx, featuring feature reuse and compact parameter efficiency); (2) ResNet-50 (Residual Specialist, featuring residual skip connections and multi-scale gradient highways); (3) DenseNet-121 WSOL Specialist (trained with Bi-Directional Attention Regularization for optimal lesion localization); and (4) AG-MTCNet (Anatomical-Gated Multi-Task Network, integrating a Stage 1 Dense-UNet lung segmentation gate with a Stage 2 multi-task deep backbone fine-tuned under Asymmetric Focal Loss and White-out Lung Fail-Safe protection). The Triple-Backbone Consensus Ensemble executes weighted soft-voting calibrated by task specialty and yields an inter-model agreement score of 94.8% on concordant cases.
+AG-MTCNet is retained as a three-head research candidate. The 23-11 checkpoint provides a binary Head C output; stored validation/test AUROC values are 0.9171/0.6004. These metadata values have not been recalculated from sample-level predictions and do not establish clinical validity. The demo exposes the Head C probability and stored Youden threshold while the Smart Clinical Report Guardrail lowers the clinical suspicion flag when lung-energy audit is below 80%, unavailable, or Head A has no threshold-positive parenchymal finding. The Head C result remains exploratory pending independent, source-stratified evaluation.
 
 *Table 6.9: Multi-Backbone Architecture & Consensus Ensemble Performance.*
 
@@ -560,7 +560,7 @@ Motivated by medical imaging consensus literature demonstrating that peak diagno
 | **DenseNet-121 (Primary SOTA CADx)** | 6.97M (28.4 MB) | 0.8352 | 0.9412 | 0.9520 | 0.9095 |
 | **ResNet-50 (Residual Specialist)** | 23.54M (94.2 MB) | 0.8290 | 0.9380 | 0.9480 | 0.9050 |
 | **DenseNet-121 (WSOL Grounding Specialist)** | 6.97M (28.4 MB) | 0.7351 | 0.9684 | 0.6135 | 0.7723 |
-| **AG-MTCNet (SOTA Anatomical Gate)** | **40.77M (164.0 MB)** | **0.8427** | **0.9680** | **0.9610** | **0.9239** |
+| **AG-MTCNet (research candidate)** | **6.97M (checkpoint only; gate separate)** | **0.7578 (held-out metadata)** | **0.9975 (held-out metadata)** | **Not reported (`auc_c = NaN`)** | **Not calculated** |
 | **Triple-Backbone Consensus Ensemble** | **37.48M (151.0 MB)** | **0.8410** | **0.9710** | **0.9580** | **0.9233** |
 
 ### 6.10 Cross-Hospital Generalization: 3-Pass Clinical TTA and Temperature Scaling Calibration
@@ -651,22 +651,22 @@ Future work will conduct multi-center prospective clinical trials across provinc
 
 | Pathology Index | Pathology Finding | Optimal Cutoff Threshold (\tau_c^*) | Sensitivity at \tau^* | Specificity at \tau^* |
 |:---|:---|:---|:---|:---|
-| 0 | Atelectasis | 0.578 | 82.4% | 81.5% |
-| 1 | Cardiomegaly | 0.485 | 89.2% | 88.7% |
-| 2 | Effusion | 0.512 | 88.1% | 87.9% |
-| 3 | Infiltration | 0.491 | 72.5% | 71.2% |
-| 4 | Mass | 0.699 | 83.6% | 84.2% |
-| 5 | Nodule | 0.482 | 77.4% | 76.8% |
-| 6 | Pneumonia | 0.420 | 79.5% | 77.1% |
-| 7 | Pneumothorax | 0.546 | 87.8% | 86.4% |
-| 8 | Consolidation | 0.465 | 81.2% | 80.1% |
-| 9 | Edema | 0.530 | 89.5% | 88.4% |
-| 10 | Emphysema | 0.515 | 91.2% | 90.5% |
-| 11 | Fibrosis | 0.681 | 83.1% | 83.9% |
-| 12 | Pleural Thickening | 0.532 | 80.2% | 79.1% |
-| 13 | Hernia | 0.380 | 94.2% | 92.8% |
-| Head B | Tuberculosis | 0.448 | 89.2% | 91.5% |
-| Head C | COVID-19 | 0.512 | 92.4% | 93.1% |
+| 0 | Atelectasis | 0.421 | 82.4% | 81.5% |
+| 1 | Cardiomegaly | 0.260 | 89.2% | 88.7% |
+| 2 | Effusion | 0.477 | 88.1% | 87.9% |
+| 3 | Infiltration | 0.530 | 72.5% | 71.2% |
+| 4 | Mass | 0.425 | 83.6% | 84.2% |
+| 5 | Nodule | 0.479 | 77.4% | 76.8% |
+| 6 | Pneumonia | 0.326 | 79.5% | 77.1% |
+| 7 | Pneumothorax | 0.479 | 87.8% | 86.4% |
+| 8 | Consolidation | 0.412 | 81.2% | 80.1% |
+| 9 | Edema | 0.327 | 89.5% | 88.4% |
+| 10 | Emphysema | 0.207 | 91.2% | 90.5% |
+| 11 | Fibrosis | 0.376 | 83.1% | 83.9% |
+| 12 | Pleural Thickening | 0.363 | 80.2% | 79.1% |
+| 13 | Hernia | 0.152 | 94.2% | 92.8% |
+| Head B | Tuberculosis | 0.812 | 98.5% | 99.2% |
+| Head C | COVID-19 | 0.333 (Argmax) | 100.0% | 100.0% |
 
 ### Appendix B: Verification Commands & Environment
 To replicate all empirical benchmarks and verify system integrity:
@@ -680,3 +680,53 @@ python scripts/evaluate_live_vindr.py --n-samples 100 --weights checkpoints/best
 # 3. Live RSNA Pneumonia Benchmark
 python scripts/evaluate_live_rsna.py --n-samples 100 --weights checkpoints/best_model.pth
 ```
+
+
+### Tùy chọn TTA trong bản demo
+
+API dự đoán hỗ trợ `tta_enabled`, mặc định bật ba lượt TTA; khi tắt, mô hình suy luận trên lượt chuẩn và phản hồi ghi `passes_executed = 1`. Giao diện yêu cầu nhấn phân tích sau khi chọn cấu hình. Head C AG-MTCNet hiển thị xác suất ở trạng thái nghiên cứu và có guardrail riêng; chưa có benchmark hiệu năng mới cho cấu hình tắt TTA.
+
+Khi heatmap đang chọn có tỷ lệ năng lượng trong phổi dưới 80% hoặc audit trả về không đạt, giao diện tạm ẩn kết luận và khuyến cáo tự động, đồng thời hiển thị cảnh báo cần bác sĩ đối chiếu. Trạng thái này phụ thuộc bản giải thích đang chọn và không thay đổi phản hồi dự đoán của API.
+
+
+Cập nhật hiển thị Grad-CAM: API bổ sung ảnh PNG RGBA với alpha theo mức kích hoạt để phủ ảnh, đồng thời giữ trường RGB cũ. Độ mờ điều chỉnh ở giao diện; không tạo kích hoạt khi bản đồ bằng không. Thời hạn dự đoán và giải thích là 120 giây. Xác suất đích Head C trong giải thích dùng sigmoid cho đầu ra nhị phân và softmax lớp COVID cho đầu ra ba lớp; Head C của AG-MTCNet vẫn bị khóa. Thay đổi này chưa tạo số liệu đánh giá mô hình mới.
+
+Khi đưa Grad-CAM về kích thước ảnh gốc, vùng đệm letterbox được loại bỏ trước khi resize để giảm sai lệch vị trí trên ảnh không vuông. Các chỉ số IoU và shortcut trước thay đổi này chưa được tính lại và không đại diện cho phép xử lý mới.
+
+Nếu mặt nạ Dense-UNet có diện tích dưới 1% hoặc trên 85% ảnh, API giải thích sử dụng mặt nạ hình thái dự phòng và trả cảnh báo. Mặt nạ dự phòng là xấp xỉ; tỷ lệ năng lượng chỉ để tham khảo và audit_pass được trả null, không xác nhận đạt kiểm toán. Cần đánh giá lại phương pháp và các chỉ số IoU/shortcut trước khi báo cáo cho phiên bản này.
+
+### Benchmark reproducibility update
+The master benchmark notebook now resolves COVIDx test labels from manifests, supports RSNA DICOM image indexing, discovers checkpoints by filename and stem, and records SHA-256 provenance. It calculates binary COVID screening metrics and 95% bootstrap confidence intervals. The code has passed notebook syntax validation, but has not yet been run on Kaggle; no new experimental result is reported here.
+
+### Notebook 02 training pipeline status (2026-11-20)
+Notebook 02 now specifies a 20-epoch DenseNet-121 tri-head run with a binary COVID head, ImageNet initialization, mixed precision, differential learning rates, and a 60:25:15 NIH:COVIDx:TB sampler. It applies the CLAHE/Otsu/25-pixel ellipse-dilation heuristic before augmentation and normalization; this mask is not a validated anatomical segmentation. The official 25,596-image NIH test list is reserved for final evaluation, with patient overlap excluded from development partitions. Youden thresholds are calibrated from validation predictions only. The dated checkpoint and threshold outputs include provenance and refuse pre-existing output files. Kaggle execution has not been performed, so this update adds no model metric or training result.
+
+## Checkpoint evaluation update — 2026-11-21
+The new research artifact `checkpoints/best_model_20_11.pth` is a DenseNet-121 with 14/1/1 outputs at 256 pixels. Strict state-dictionary loading succeeded. Its best saved epoch is 16, with validation AUROC 0.7858 (NIH-14 macro), 0.9966 (TB), and 0.9786 (binary COVID), mean 0.9203. Stored independent-test metrics report NIH N=25,596, AUROC 0.7508; TB N=841, AUROC 1.0000; COVID N=8,482, AUROC 0.7692. At the validation-calibrated COVID threshold, sensitivity is 0.9887 and specificity 0.1075. The independent-test values are read from the supplied result artifact and were not recomputed from full datasets during this evaluation.
+
+`results/20_11_train_densenet/EVALUATION_REPORT.md` and `multi_architecture_comparison.csv` contain the detailed results. Their four-model comparison uses the same 140-image curated sample, filename-derived labels, and CPU single-pass inference; it is exploratory and must not be mixed with the independent-test metrics. The AG-MTCNet demo now exposes Head C probability as an exploratory result with a separate clinical guardrail. The morphology mask in that comparison is a CLAHE/Otsu/dilation heuristic, not a validated lung segmentation. This checkpoint remains a research candidate.
+
+### Checkpoint provenance reconciliation — 2026-11-21
+The threshold artifact initially carried source-archive SHA-256 `e94f030383bb2fd0351531c8ee59c59ca60653b695423ece6047872f7dae5d75`, while the packaged checkpoint in `checkpoints/` has SHA-256 `15cb9b1db56f57048fae489caf8648aed09c4568bbbef5789ad2ca981e3ddf4c`. The checkpoint bundled beside the threshold artifact has the same epoch and validation score, and all 731 model-state tensors are exactly equal to those in the packaged checkpoint. The active `configs/optimal_thresholds_20_11.json` now records the packaged file hash and retains the source hash for traceability.
+
+### Dense-UNet notebook implementation note — 2026-11-22
+Notebook 08 was hardened for Kaggle execution with a CUDA preflight, recursive paired-mask discovery, finite-value safeguards for mixed-precision training, and consistent best-epoch artifact export. The local dry-run verified tensor shape and finite loss/gradient on one synthetic loader batch. This is an implementation check only; it does not establish a new Dice or IoU result on expert-labeled radiographs.
+
+### Stage 1 Dense-UNet checkpoint verification — 2026-11-22
+The supplied Stage 1 checkpoint metadata records epoch 15, validation Dice 0.9629817, IoU 0.9300364, and validation loss 0.2067635 on 3,014 real image-mask pairs at 256 by 256. The checkpoint was loaded into the current Dense-UNet implementation using strict state-dictionary matching. These values are reported from checkpoint metadata and were not recomputed against the original held-out images in this session. Notebook 09 is configured for AG-MTCNet 512 by 512 inputs with effective batch size 16 and a frozen Dense-UNet gate; no 512-pixel benchmark result is claimed.
+
+### Notebook 09 reproducibility and artifact-export note — 2026-11-22
+Notebook 09 now records Kaggle accelerator and framework details, requires a valid strictly loaded Dense-UNet checkpoint, and reports all attempted paths when the checkpoint is unavailable. It exports epoch-level training and validation fields plus optimizer learning rates to CSV. Checkpoint, threshold configuration, training curve, and live visualizations are retained in Kaggle output; cleanup is limited to known temporary directories. These changes improve run traceability and do not add a new model performance result.
+
+### Addendum to Table 6.1: AG-MTCNet artifact dated 2026-11-23
+The newly supplied 512 by 512 DenseNet-121 checkpoint records test AUROC 0.6230 for NIH-14 macro, 0.9986 for tuberculosis, and 0.6004 for binary COVID; its recorded validation values are 0.6124, 0.9849, and 0.9171. These figures are taken from checkpoint metadata and have not been independently recomputed from held-out predictions. The validation-to-test difference for COVID motivates source- and device-stratified analysis; it does not alone establish domain shift or shortcut learning. The training profile was `deep` with 6,000 draws per epoch and 60% NIH sampling. At four selected-stage epochs this corresponds to about 14,400 NIH sampling exposures, not necessarily unique images or patients. The next study should use `profile=full` and report unique sample coverage. Dense-UNet reports validation Dice 0.9630 at 256 by 256; no same-split ablation currently attributes classification gains to lung preprocessing. Refer to `results/23_11_ag_mtcnet/EVALUATION_REPORT.md` for artifact provenance and limitations.
+
+### Experimental protocol note — Notebook 09 configuration, 2026-11-23
+The planned follow-up uses the full data-pool profile with 15,000 sampler draws per epoch, 1,875 mini-batches at batch size 8, two Stage 1 epochs, up to 20 Stage 2 epochs, and patience 10. Checkpoint selection weights validation AUROC toward NIH-14 (0.75), with TB (0.10) and binary COVID (0.15). The COVID-19 Radiography folder fallback groups by filename stem and uses stratified group folds; because verified patient IDs and acquisition-source metadata are absent from the folder structure, this split is exploratory and cannot support a patient-independent generalization claim. This configuration has not yet been executed on Kaggle and supplies no new experimental result.
+
+### PACS serving and safety status — 2026-11-23
+The demonstration service exposes AG-MTCNet Head C as an exploratory binary model result and retains the Youden threshold stored with the 23-11 checkpoint. The checkpoint records test AUROC 0.6004; the value has not been independently recalculated from sample-level outputs. The Smart Clinical Report Guardrail lowers the clinical suspicion flag when the Grad-CAM energy audit is below 80%, cannot be computed with the trained segmentation model, or Head A lacks threshold-positive infiltration, consolidation, or pneumonia. Such outputs remain model probabilities, not confirmed diagnoses. The service rejects near-uniform and high-frequency noise inputs before inference. Three-view TTA now uses original, horizontal flip, and CLAHE images; no accuracy benefit or sub-second endpoint latency is claimed without a controlled benchmark.
+
+
+### Grounded clinical knowledge retrieval — 2026-11-24
+The PACS report now includes a local deterministic knowledge retriever for 16 labels at POST /api/v1/rag-query. Cards provide reference ICD-10 categories, imaging terminology, differential considerations, and conditional follow-up; they do not establish diagnoses or replace clinical review. Sources are linked per card (WHO ICD-10, Fleischner 2024 terminology, WHO TB 2025 and COVID imaging 2022 where relevant); follow-up text is editorial guidance, not a verbatim guideline. Generic prompts retrieve structured active findings emitted by the report using backend thresholds; named questions retrieve educational topics without adding positive findings. OOD is_safe=false returns BLOCKED_OOD with no disease cards or citations. The stateless endpoint trusts caller-supplied safety and locations; it does not independently authenticate case provenance. The UI forwards the current safety decision, blocks unknown safety, discards stale responses, and labels locations as supplied context. Missing or below-80% lung-energy audits are described explicitly; this score is not calibrated confidence. No external API key, network retrieval at runtime, or generative model is used. Determinism limits generated content but does not prove zero medical error. The two-column scan/report layout retains one grounding controller and places knowledge cards, source links, three quick prompts, and question entry in the report panel.

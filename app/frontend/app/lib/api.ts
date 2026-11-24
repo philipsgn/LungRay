@@ -6,9 +6,21 @@ import {
   HealthResponse,
   ModelInfo,
   PredictionResponse,
+  RagQueryRequest,
+  RagQueryResponse,
 } from "../types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -18,13 +30,15 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function checkHealth(): Promise<HealthResponse> {
-  const response = await fetch(`${API_BASE}/health`, {
+export async function checkBackendHealth(): Promise<HealthResponse> {
+  const response = await fetchWithTimeout(`${API_BASE}/health`, {
     method: "GET",
     cache: "no-store",
-  });
+  }, 3000);
   return handleResponse<HealthResponse>(response);
 }
+
+export const checkHealth = checkBackendHealth;
 
 export async function getModels(): Promise<ModelInfo[]> {
   const response = await fetch(`${API_BASE}/api/v1/models`, {
@@ -37,16 +51,18 @@ export async function getModels(): Promise<ModelInfo[]> {
 export async function predictImage(
   file: File,
   model: string = "standard",
-  failsafeEnabled: boolean = true
+  failsafeEnabled: boolean = true,
+  ttaEnabled: boolean = true
 ): Promise<PredictionResponse> {
   const formData = new FormData();
   formData.append("file", file);
-  const response = await fetch(
-    `${API_BASE}/api/v1/predict?model=${encodeURIComponent(model)}&failsafe_enabled=${failsafeEnabled}`,
+  const response = await fetchWithTimeout(
+    `${API_BASE}/api/v1/predict?model=${encodeURIComponent(model)}&failsafe_enabled=${failsafeEnabled}&tta_enabled=${ttaEnabled}`,
     {
       method: "POST",
       body: formData,
-    }
+    },
+    120000
   );
   return handleResponse<PredictionResponse>(response);
 }
@@ -68,10 +84,10 @@ export async function explainImage(
   if (targetDiseaseName) {
     formData.append("target_disease_name", targetDiseaseName);
   }
-  const response = await fetch(`${API_BASE}/api/v1/explain`, {
+  const response = await fetchWithTimeout(`${API_BASE}/api/v1/explain`, {
     method: "POST",
     body: formData,
-  });
+  }, 120000);
   return handleResponse<ExplainResponse>(response);
 }
 
@@ -83,4 +99,13 @@ export async function auditImage(file: File): Promise<AuditResponse> {
     body: formData,
   });
   return handleResponse<AuditResponse>(response);
+}
+
+
+export async function queryClinicalRag(payload: RagQueryRequest): Promise<RagQueryResponse> {
+  const response = await fetchWithTimeout(`${API_BASE}/api/v1/rag-query`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }, 10000);
+  return handleResponse<RagQueryResponse>(response);
 }

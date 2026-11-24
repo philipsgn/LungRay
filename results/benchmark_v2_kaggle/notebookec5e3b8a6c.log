@@ -1,0 +1,247 @@
+[{"stream_name":"stderr","time":7.504073263,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":7.504149255,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":7.504157299,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":7.504161457,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stderr","time":8.178042421,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":8.17809011,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":8.178096976,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":8.178101801,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stdout","time":28.069427657,"data":"[*] Execution Hardware: cuda\n"}
+,{"stream_name":"stdout","time":28.069467223,"data":" -\u003e Device Name: Tesla T4\n"}
+,{"stream_name":"stdout","time":28.069474002,"data":" -\u003e Total VRAM: 14.56 GB\n"}
+,{"stream_name":"stdout","time":28.069478858,"data":"[+] Output Directory: /kaggle/working/benchmark_v2_results\n"}
+,{"stream_name":"stdout","time":28.06948304,"data":"[+] Figure Directory: /kaggle/working/figures\n"}
+,{"stream_name":"stdout","time":28.236326738,"data":"[*] Scanning datasets under /kaggle/input...\n"}
+,{"stream_name":"stdout","time":223.708038875,"data":"[*] Candidate roots: {'NIH': ['/kaggle/input/datasets/nih-chest-xrays'], 'TB': ['/kaggle/input/datasets/tawsifurrahman/tuberculosis-tb-chest-xray-dataset', '/kaggle/input/datasets/tawsifurrahman/tuberculosis-tb-chest-xray-dataset/TB_Chest_Radiography_Database', '/kaggle/input/datasets/tawsifurrahman/tuberculosis-tb-chest-xray-dataset/TB_Chest_Radiography_Database/Tuberculosis'], 'COVID': ['/kaggle/input/datasets/andyczhao/covidx-cxr2'], 'RSNA': ['/kaggle/input/competitions/rsna-pneumonia-detection-challenge']}\n"}
+,{"stream_name":"stdout","time":263.576585026,"data":"[+] NIH official test samples resolved: 25,596\n"}
+,{"stream_name":"stdout","time":263.576648722,"data":"[+] TB test sample counts: total=800, positive=400, negative=400\n"}
+,{"stream_name":"stdout","time":266.195636719,"data":"[+] COVID test labels loaded from manifest: /kaggle/input/datasets/andyczhao/covidx-cxr2/test.txt (8,482 resolved rows)\n"}
+,{"stream_name":"stdout","time":266.195690766,"data":"[+] COVID test sample counts: total=800, positive=400, negative=400; control_source=manifest/folder labels\n"}
+,{"stream_name":"stdout","time":270.21330955,"data":"[+] Loaded DenseNet-121 Baseline from /kaggle/input/models/phanphat/20-11-test-models/pytorch/default/1/best_model.pth\n"}
+,{"stream_name":"stdout","time":270.213351291,"data":"    SHA-256: bc6435ac1c943bf2... | Head C width: 1 | loaded tensors: 731\n"}
+,{"stream_name":"stdout","time":274.051973552,"data":"[+] Loaded ResNet-50 from /kaggle/input/models/phanphat/20-11-test-models/pytorch/default/1/best_resnet50.pth\n"}
+,{"stream_name":"stdout","time":274.052020654,"data":"    SHA-256: 6151ff6306d92245... | Head C width: 1 | loaded tensors: 324\n"}
+,{"stream_name":"stdout","time":279.195131298,"data":"[+] Loaded AG-MTCNet Retrained from /kaggle/input/models/phanphat/20-11-test-models/pytorch/default/1/ag_mtcnet_best.pth\n"}
+,{"stream_name":"stdout","time":279.195187052,"data":"    SHA-256: 4d8ce556aa27299e... | Head C width: 1 | loaded tensors: 731\n"}
+,{"stream_name":"stdout","time":285.210291904,"data":"[+] Loaded WSOL Fine-tuned from /kaggle/input/models/phanphat/20-11-test-models/pytorch/default/1/best_wsol_finetune.pth\n"}
+,{"stream_name":"stdout","time":285.210365002,"data":"    SHA-256: 0ea04ce3e91d546f... | Head C width: 1 | loaded tensors: 731\n"}
+,{"stream_name":"stdout","time":285.210372756,"data":"[+] Saved SHA-256 benchmark provenance to /kaggle/working/benchmark_v2_results/benchmark_manifest.json\n"}
+,{"stream_name":"stderr","time":1001.645959667,"data":"Exception ignored in: \n"}
+,{"stream_name":"stderr","time":1001.646022294,"data":"Exception ignored in: \u003cfunction _MultiProcessingDataLoaderIter.__del__ at 0x7995d5d739c0\u003e\n"}
+,{"stream_name":"stderr","time":1001.647606196,"data":"\u003cfunction _MultiProcessingDataLoaderIter.__del__ at 0x7995d5d739c0\u003e\n"}
+,{"stream_name":"stderr","time":1001.647657573,"data":"\n"}
+,{"stream_name":"stderr","time":1001.647968879,"data":"\n"}
+,{"stream_name":"stderr","time":1001.649506153,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":1001.649559994,"data":"\n"}
+,{"stream_name":"stderr","time":1001.649867798,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":1001.651375516,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1709, in __del__\n"}
+,{"stream_name":"stderr","time":1001.65142799,"data":"\n"}
+,{"stream_name":"stderr","time":1001.651687247,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1709, in __del__\n"}
+,{"stream_name":"stderr","time":1001.653064223,"data":"    \n"}
+,{"stream_name":"stderr","time":1001.664550311,"data":"    self._shutdown_workers()\n"}
+,{"stream_name":"stderr","time":1001.67072978,"data":"self._shutdown_workers()\n"}
+,{"stream_name":"stderr","time":1001.670764061,"data":"\n"}
+,{"stream_name":"stderr","time":1001.671185964,"data":"\n"}
+,{"stream_name":"stderr","time":1001.674061664,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1692, in _shutdown_workers\n"}
+,{"stream_name":"stderr","time":1001.674081946,"data":"\n"}
+,{"stream_name":"stderr","time":1001.674383391,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1692, in _shutdown_workers\n"}
+,{"stream_name":"stderr","time":1001.677167122,"data":"    \n"}
+,{"stream_name":"stderr","time":1001.682714502,"data":"    if w.is_alive():\n"}
+,{"stream_name":"stderr","time":1001.692147847,"data":"if w.is_alive():\n"}
+,{"stream_name":"stderr","time":1001.692180255,"data":"\n"}
+,{"stream_name":"stderr","time":1001.693627953,"data":"\n"}
+,{"stream_name":"stderr","time":1001.69870588,"data":"  File \"/usr/lib/python3.13/multiprocessing/process.py\", line 160, in is_alive\n"}
+,{"stream_name":"stderr","time":1001.698744744,"data":"\n"}
+,{"stream_name":"stderr","time":1001.699109023,"data":"  File \"/usr/lib/python3.13/multiprocessing/process.py\", line 160, in is_alive\n"}
+,{"stream_name":"stderr","time":1001.70373376,"data":"    \n"}
+,{"stream_name":"stderr","time":1001.707033803,"data":"    assert self._parent_pid == os.getpid(), 'can only test a child process'\n"}
+,{"stream_name":"stderr","time":1001.707052736,"data":"assert self._parent_pid == os.getpid(), 'can only test a child process'\n"}
+,{"stream_name":"stderr","time":1001.707069033,"data":"\n"}
+,{"stream_name":"stderr","time":1001.707074699,"data":"\n"}
+,{"stream_name":"stderr","time":1001.716551813,"data":"AssertionError\n"}
+,{"stream_name":"stderr","time":1001.720227813,"data":"AssertionError: \n"}
+,{"stream_name":"stderr","time":1001.726691939,"data":": can only test a child process\n"}
+,{"stream_name":"stderr","time":1001.73067655,"data":"can only test a child process\n"}
+,{"stream_name":"stderr","time":1001.73072425,"data":"\n"}
+,{"stream_name":"stderr","time":1001.730729775,"data":"\n"}
+,{"stream_name":"stderr","time":1003.076080365,"data":"Exception ignored in: \n"}
+,{"stream_name":"stderr","time":1003.082829952,"data":"Exception ignored in: \u003cfunction _MultiProcessingDataLoaderIter.__del__ at 0x7995d5d739c0\u003e\n"}
+,{"stream_name":"stderr","time":1003.086084881,"data":"\u003cfunction _MultiProcessingDataLoaderIter.__del__ at 0x7995d5d739c0\u003e\n"}
+,{"stream_name":"stderr","time":1003.086109244,"data":"\n"}
+,{"stream_name":"stderr","time":1003.08996257,"data":"\n"}
+,{"stream_name":"stderr","time":1003.092440793,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":1003.092464326,"data":"\n"}
+,{"stream_name":"stderr","time":1003.092509565,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":1003.094941561,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1709, in __del__\n"}
+,{"stream_name":"stderr","time":1003.094962724,"data":"\n"}
+,{"stream_name":"stderr","time":1003.095274419,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1709, in __del__\n"}
+,{"stream_name":"stderr","time":1003.103885933,"data":"    \n"}
+,{"stream_name":"stderr","time":1003.118283108,"data":"    self._shutdown_workers()\n"}
+,{"stream_name":"stderr","time":1003.125430883,"data":"self._shutdown_workers()\n"}
+,{"stream_name":"stderr","time":1003.125463711,"data":"\n"}
+,{"stream_name":"stderr","time":1003.125912082,"data":"\n"}
+,{"stream_name":"stderr","time":1003.127632434,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1692, in _shutdown_workers\n"}
+,{"stream_name":"stderr","time":1003.127696218,"data":"\n"}
+,{"stream_name":"stderr","time":1003.12939815,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1692, in _shutdown_workers\n"}
+,{"stream_name":"stderr","time":1003.131000193,"data":"    \n"}
+,{"stream_name":"stderr","time":1003.137740136,"data":"    if w.is_alive():\n"}
+,{"stream_name":"stderr","time":1003.139750451,"data":"if w.is_alive():\n"}
+,{"stream_name":"stderr","time":1003.139853243,"data":"\n"}
+,{"stream_name":"stderr","time":1003.143907383,"data":"\n"}
+,{"stream_name":"stderr","time":1003.145924906,"data":"  File \"/usr/lib/python3.13/multiprocessing/process.py\", line 160, in is_alive\n"}
+,{"stream_name":"stderr","time":1003.145943802,"data":"\n"}
+,{"stream_name":"stderr","time":1003.145949202,"data":"  File \"/usr/lib/python3.13/multiprocessing/process.py\", line 160, in is_alive\n"}
+,{"stream_name":"stderr","time":1003.147260767,"data":"    \n"}
+,{"stream_name":"stderr","time":1003.149719642,"data":"    assert self._parent_pid == os.getpid(), 'can only test a child process'\n"}
+,{"stream_name":"stderr","time":1003.155332539,"data":"assert self._parent_pid == os.getpid(), 'can only test a child process'\n"}
+,{"stream_name":"stderr","time":1003.155368327,"data":"\n"}
+,{"stream_name":"stderr","time":1003.157956233,"data":"\n"}
+,{"stream_name":"stderr","time":1003.160176026,"data":"AssertionError\n"}
+,{"stream_name":"stderr","time":1003.16630242,"data":"AssertionError: \n"}
+,{"stream_name":"stderr","time":1003.171333637,"data":": can only test a child process\n"}
+,{"stream_name":"stderr","time":1003.175504055,"data":"can only test a child process\n"}
+,{"stream_name":"stderr","time":1003.175526598,"data":"\n"}
+,{"stream_name":"stderr","time":1003.178880536,"data":"\n"}
+,{"stream_name":"stderr","time":1003.953817285,"data":"Exception ignored in: \n"}
+,{"stream_name":"stderr","time":1003.962709747,"data":"Exception ignored in: \u003cfunction _MultiProcessingDataLoaderIter.__del__ at 0x7995d5d739c0\u003e\n"}
+,{"stream_name":"stderr","time":1003.972863732,"data":"\u003cfunction _MultiProcessingDataLoaderIter.__del__ at 0x7995d5d739c0\u003e\n"}
+,{"stream_name":"stderr","time":1003.972901396,"data":"\n"}
+,{"stream_name":"stderr","time":1003.978036396,"data":"\n"}
+,{"stream_name":"stderr","time":1003.984907796,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":1003.984943537,"data":"\n"}
+,{"stream_name":"stderr","time":1003.987041685,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":1003.994587322,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1709, in __del__\n"}
+,{"stream_name":"stderr","time":1003.994621224,"data":"\n"}
+,{"stream_name":"stderr","time":1003.995920981,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1709, in __del__\n"}
+,{"stream_name":"stderr","time":1004.001671208,"data":"    \n"}
+,{"stream_name":"stderr","time":1004.004475969,"data":"    self._shutdown_workers()\n"}
+,{"stream_name":"stderr","time":1004.010147847,"data":"self._shutdown_workers()\n"}
+,{"stream_name":"stderr","time":1004.010177567,"data":"\n"}
+,{"stream_name":"stderr","time":1004.010346554,"data":"\n"}
+,{"stream_name":"stderr","time":1004.014502441,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1692, in _shutdown_workers\n"}
+,{"stream_name":"stderr","time":1004.01457783,"data":"\n"}
+,{"stream_name":"stderr","time":1004.014586201,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1692, in _shutdown_workers\n"}
+,{"stream_name":"stderr","time":1004.018789428,"data":"    \n"}
+,{"stream_name":"stderr","time":1004.02203435,"data":"    if w.is_alive():\n"}
+,{"stream_name":"stderr","time":1004.024400859,"data":"if w.is_alive():\n"}
+,{"stream_name":"stderr","time":1004.02442039,"data":"\n"}
+,{"stream_name":"stderr","time":1004.025202698,"data":"\n"}
+,{"stream_name":"stderr","time":1004.027301152,"data":"  File \"/usr/lib/python3.13/multiprocessing/process.py\", line 160, in is_alive\n"}
+,{"stream_name":"stderr","time":1004.027327219,"data":"\n"}
+,{"stream_name":"stderr","time":1004.028389242,"data":"  File \"/usr/lib/python3.13/multiprocessing/process.py\", line 160, in is_alive\n"}
+,{"stream_name":"stderr","time":1004.029978918,"data":"    \n"}
+,{"stream_name":"stderr","time":1004.034158965,"data":"    assert self._parent_pid == os.getpid(), 'can only test a child process'\n"}
+,{"stream_name":"stderr","time":1004.040599501,"data":"assert self._parent_pid == os.getpid(), 'can only test a child process'\n"}
+,{"stream_name":"stderr","time":1004.040627458,"data":"\n"}
+,{"stream_name":"stderr","time":1004.040953906,"data":"\n"}
+,{"stream_name":"stderr","time":1004.042379218,"data":"AssertionError\n"}
+,{"stream_name":"stderr","time":1004.046589615,"data":"AssertionError: \n"}
+,{"stream_name":"stderr","time":1004.048104293,"data":": can only test a child process\n"}
+,{"stream_name":"stderr","time":1004.052252908,"data":"can only test a child process\n"}
+,{"stream_name":"stderr","time":1004.052273607,"data":"\n"}
+,{"stream_name":"stderr","time":1004.052546484,"data":"\n"}
+,{"stream_name":"stderr","time":1012.160340149,"data":"Exception ignored in: \n"}
+,{"stream_name":"stderr","time":1012.161315787,"data":"Exception ignored in: \u003cfunction _MultiProcessingDataLoaderIter.__del__ at 0x7995d5d739c0\u003e\n"}
+,{"stream_name":"stderr","time":1012.163323476,"data":"\u003cfunction _MultiProcessingDataLoaderIter.__del__ at 0x7995d5d739c0\u003e\n"}
+,{"stream_name":"stderr","time":1012.163342299,"data":"\n"}
+,{"stream_name":"stderr","time":1012.163630244,"data":"\n"}
+,{"stream_name":"stderr","time":1012.165521484,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":1012.165581656,"data":"\n"}
+,{"stream_name":"stderr","time":1012.16595867,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":1012.168125665,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1709, in __del__\n"}
+,{"stream_name":"stderr","time":1012.168144319,"data":"\n"}
+,{"stream_name":"stderr","time":1012.168397315,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1709, in __del__\n"}
+,{"stream_name":"stderr","time":1012.170364774,"data":"    \n"}
+,{"stream_name":"stderr","time":1012.176935553,"data":"    self._shutdown_workers()\n"}
+,{"stream_name":"stderr","time":1012.176968833,"data":"self._shutdown_workers()\n"}
+,{"stream_name":"stderr","time":1012.176974194,"data":"\n"}
+,{"stream_name":"stderr","time":1012.176978402,"data":"\n"}
+,{"stream_name":"stderr","time":1012.176983219,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1692, in _shutdown_workers\n"}
+,{"stream_name":"stderr","time":1012.176987633,"data":"\n"}
+,{"stream_name":"stderr","time":1012.176991648,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py\", line 1692, in _shutdown_workers\n"}
+,{"stream_name":"stderr","time":1012.182079024,"data":"    \n"}
+,{"stream_name":"stderr","time":1012.184228062,"data":"    if w.is_alive():\n"}
+,{"stream_name":"stderr","time":1012.188416419,"data":"if w.is_alive():\n"}
+,{"stream_name":"stderr","time":1012.188439744,"data":"\n"}
+,{"stream_name":"stderr","time":1012.188572199,"data":"\n"}
+,{"stream_name":"stderr","time":1012.189947581,"data":"  File \"/usr/lib/python3.13/multiprocessing/process.py\", line 160, in is_alive\n"}
+,{"stream_name":"stderr","time":1012.189968799,"data":"\n"}
+,{"stream_name":"stderr","time":1012.191502517,"data":"  File \"/usr/lib/python3.13/multiprocessing/process.py\", line 160, in is_alive\n"}
+,{"stream_name":"stderr","time":1012.192734152,"data":"    \n"}
+,{"stream_name":"stderr","time":1012.194830406,"data":"    assert self._parent_pid == os.getpid(), 'can only test a child process'\n"}
+,{"stream_name":"stderr","time":1012.196347438,"data":"assert self._parent_pid == os.getpid(), 'can only test a child process'\n"}
+,{"stream_name":"stderr","time":1012.196370752,"data":"\n"}
+,{"stream_name":"stderr","time":1012.196672484,"data":"\n"}
+,{"stream_name":"stderr","time":1012.199291912,"data":"AssertionError\n"}
+,{"stream_name":"stderr","time":1012.199885013,"data":"AssertionError: \n"}
+,{"stream_name":"stderr","time":1012.201401886,"data":": can only test a child process\n"}
+,{"stream_name":"stderr","time":1012.202988977,"data":"can only test a child process\n"}
+,{"stream_name":"stderr","time":1012.20300687,"data":"\n"}
+,{"stream_name":"stderr","time":1012.203288685,"data":"\n"}
+,{"stream_name":"stdout","time":1032.300552672,"data":"[+] Metrics exported under /kaggle/working/benchmark_v2_results\n"}
+,{"stream_name":"stdout","time":1032.300602921,"data":"[+] Raw per-sample predictions exported to /kaggle/working/benchmark_v2_results/test_predictions_raw.csv.gz\n"}
+,{"stream_name":"stdout","time":1070.779783962,"data":"[*] RSNA annotated positive studies available: 100 (maximum 100).\n"}
+,{"stream_name":"stdout","time":1083.807346823,"data":" -\u003e DenseNet-121 Baseline: Mean Box-IoU=0.2281; @0.30=30.0%; @0.50=9.0%\n"}
+,{"stream_name":"stdout","time":1091.390001517,"data":" -\u003e ResNet-50: Mean Box-IoU=0.2059; @0.30=28.0%; @0.50=4.0%\n"}
+,{"stream_name":"stdout","time":1102.368913913,"data":" -\u003e AG-MTCNet Retrained: Mean Box-IoU=0.0257; @0.30=2.0%; @0.50=0.0%\n"}
+,{"stream_name":"stdout","time":1113.134917901,"data":" -\u003e WSOL Fine-tuned: Mean Box-IoU=0.0450; @0.30=3.0%; @0.50=0.0%\n"}
+,{"stream_name":"stdout","time":1113.134965325,"data":"[+] WSOL metrics exported to /kaggle/working/benchmark_v2_results/wsol_iou_metrics.csv\n"}
+,{"stream_name":"stdout","time":1117.446744693,"data":"[+] Publication figures saved to /kaggle/working/figures\n"}
+,{"stream_name":"stdout","time":1117.503198897,"data":"=== MASTER BENCHMARK ENGINE V2 SUMMARY ===\n"}
+,{"stream_name":"stdout","time":1117.503236293,"data":"\\toprule\n"}
+,{"stream_name":"stdout","time":1117.503244236,"data":"Model \u0026 Task \u0026 Macro\\_AUROC \u0026 95%\\_CI \u0026 Sensitivity \u0026 Specificity \u0026 F1 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503251866,"data":"\\midrule\n"}
+,{"stream_name":"stdout","time":1117.503257225,"data":"DenseNet-121 Baseline \u0026 Head A (NIH-14) \u0026 0.7520 \u0026 [0.7478, 0.7562] \u0026 0.8193 \u0026 0.4517 \u0026 -- \\\\\n"}
+,{"stream_name":"stdout","time":1117.503263216,"data":"ResNet-50 \u0026 Head A (NIH-14) \u0026 0.7009 \u0026 [0.6951, 0.7060] \u0026 0.3751 \u0026 0.8242 \u0026 -- \\\\\n"}
+,{"stream_name":"stdout","time":1117.503268834,"data":"AG-MTCNet Retrained \u0026 Head A (NIH-14) \u0026 0.6154 \u0026 [0.6090, 0.6212] \u0026 0.2247 \u0026 0.8512 \u0026 -- \\\\\n"}
+,{"stream_name":"stdout","time":1117.503285164,"data":"WSOL Fine-tuned \u0026 Head A (NIH-14) \u0026 0.5391 \u0026 [0.5339, 0.5439] \u0026 0.2123 \u0026 0.8023 \u0026 -- \\\\\n"}
+,{"stream_name":"stdout","time":1117.503290824,"data":"Consensus Ensemble (Clean SOTA) \u0026 Head A (NIH-14) \u0026 0.6931 \u0026 [0.6874, 0.6979] \u0026 0.2072 \u0026 0.8980 \u0026 -- \\\\\n"}
+,{"stream_name":"stdout","time":1117.503296463,"data":"Consensus Ensemble (Full 4-Model) \u0026 Head A (NIH-14) \u0026 0.7535 \u0026 [0.7493, 0.7578] \u0026 0.6024 \u0026 0.6966 \u0026 -- \\\\\n"}
+,{"stream_name":"stdout","time":1117.50330238,"data":"DenseNet-121 Baseline \u0026 Head B (TB Triage) \u0026 0.9922 \u0026 [0.9869, 0.9966] \u0026 0.9875 \u0026 0.9375 \u0026 0.9634 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503308948,"data":"ResNet-50 \u0026 Head B (TB Triage) \u0026 0.9637 \u0026 [0.9517, 0.9747] \u0026 0.5400 \u0026 1.0000 \u0026 0.7013 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503315299,"data":"AG-MTCNet Retrained \u0026 Head B (TB Triage) \u0026 0.8420 \u0026 [0.8127, 0.8662] \u0026 1.0000 \u0026 0.2400 \u0026 0.7246 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503321389,"data":"WSOL Fine-tuned \u0026 Head B (TB Triage) \u0026 0.4104 \u0026 [0.3726, 0.4513] \u0026 0.8650 \u0026 0.0000 \u0026 0.6038 \\\\\n"}
+,{"stream_name":"stdout","time":1117.50332788,"data":"Consensus Ensemble (Clean SOTA) \u0026 Head B (TB Triage) \u0026 0.9587 \u0026 [0.9463, 0.9691] \u0026 0.9975 \u0026 0.2475 \u0026 0.7255 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503334757,"data":"Consensus Ensemble (Full 4-Model) \u0026 Head B (TB Triage) \u0026 0.9948 \u0026 [0.9919, 0.9971] \u0026 0.9975 \u0026 0.8675 \u0026 0.9366 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503340861,"data":"DenseNet-121 Baseline \u0026 Head C (COVID Screening) \u0026 0.6484 \u0026 [0.6146, 0.6836] \u0026 0.9475 \u0026 0.1450 \u0026 0.6762 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503346988,"data":"ResNet-50 \u0026 Head C (COVID Screening) \u0026 0.4809 \u0026 [0.4447, 0.5210] \u0026 0.6875 \u0026 0.3100 \u0026 0.5783 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503369684,"data":"AG-MTCNet Retrained \u0026 Head C (COVID Screening) \u0026 0.6706 \u0026 [0.6366, 0.7070] \u0026 0.7750 \u0026 0.4175 \u0026 0.6575 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503374645,"data":"WSOL Fine-tuned \u0026 Head C (COVID Screening) \u0026 0.8056 \u0026 [0.7755, 0.8366] \u0026 0.3000 \u0026 0.9525 \u0026 0.4453 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503379284,"data":"Consensus Ensemble (Clean SOTA) \u0026 Head C (COVID Screening) \u0026 0.6940 \u0026 [0.6614, 0.7285] \u0026 0.6775 \u0026 0.5625 \u0026 0.6407 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503384061,"data":"Consensus Ensemble (Full 4-Model) \u0026 Head C (COVID Screening) \u0026 0.6982 \u0026 [0.6653, 0.7334] \u0026 0.8525 \u0026 0.3275 \u0026 0.6752 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503389043,"data":"\\bottomrule\n"}
+,{"stream_name":"stdout","time":1117.503393132,"data":"\n"}
+,{"stream_name":"stdout","time":1117.503399044,"data":"=== WSOL LOCALIZATION (RSNA) ===\n"}
+,{"stream_name":"stdout","time":1117.50340885,"data":"\\toprule\n"}
+,{"stream_name":"stdout","time":1117.503414263,"data":"Model \u0026 Dataset \u0026 Mean\\_Box\\_IoU \u0026 Success\\_Rate\\_IoU\\_30 \u0026 Success\\_Rate\\_IoU\\_50 \u0026 Evaluated\\_Cases \\\\\n"}
+,{"stream_name":"stdout","time":1117.503418322,"data":"\\midrule\n"}
+,{"stream_name":"stdout","time":1117.503421108,"data":"DenseNet-121 Baseline \u0026 RSNA Pneumonia \u0026 0.2281 \u0026 30.0000 \u0026 9.0000 \u0026 100 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503424584,"data":"ResNet-50 \u0026 RSNA Pneumonia \u0026 0.2059 \u0026 28.0000 \u0026 4.0000 \u0026 100 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503427673,"data":"AG-MTCNet Retrained \u0026 RSNA Pneumonia \u0026 0.0257 \u0026 2.0000 \u0026 0.0000 \u0026 100 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503430832,"data":"WSOL Fine-tuned \u0026 RSNA Pneumonia \u0026 0.0450 \u0026 3.0000 \u0026 0.0000 \u0026 100 \\\\\n"}
+,{"stream_name":"stdout","time":1117.503433915,"data":"\\bottomrule\n"}
+,{"stream_name":"stdout","time":1117.503436754,"data":"\n"}
+,{"stream_name":"stdout","time":1117.503439453,"data":"=== ACCEPTANCE CRITERIA ===\n"}
+,{"stream_name":"stdout","time":1117.503442246,"data":"Head A NIH Macro AUROC \u003e= 0.82: 0.7535 (target 0.82) — NEEDS FOLLOW-UP\n"}
+,{"stream_name":"stdout","time":1117.503445879,"data":"Head B TB AUROC \u003e= 0.90: 0.9948 (target 0.90) — MEETS\n"}
+,{"stream_name":"stdout","time":1117.503448864,"data":"Head C COVID AUROC \u003e= 0.90: 0.8056 (target 0.90) — NEEDS FOLLOW-UP\n"}
+,{"stream_name":"stdout","time":1117.503451825,"data":"RSNA Mean Box-IoU \u003e= 0.25: 0.2281 (target 0.25) — NEEDS FOLLOW-UP\n"}
+,{"stream_name":"stdout","time":1117.503454736,"data":"\n"}
+,{"stream_name":"stdout","time":1117.503457433,"data":"Recommendation: continue targeted validation or fine-tuning for the unmet criteria:\n"}
+,{"stream_name":"stdout","time":1117.503460461,"data":" - Head A NIH Macro AUROC \u003e= 0.82\n"}
+,{"stream_name":"stdout","time":1117.503463325,"data":" - Head C COVID AUROC \u003e= 0.90\n"}
+,{"stream_name":"stdout","time":1117.503466169,"data":" - RSNA Mean Box-IoU \u003e= 0.25\n"}
+,{"stream_name":"stdout","time":1117.503468984,"data":"A missing metric is treated as unmet; no unavailable result is inferred as a success.\n"}
+,{"stream_name":"stderr","time":1123.635296974,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":1123.635364976,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":1123.794846847,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":1123.794916224,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":1124.707864867,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to notebook\n"}
+,{"stream_name":"stderr","time":1124.842174046,"data":"[NbConvertApp] Writing 1216409 bytes to __notebook__.ipynb\n"}
+,{"stream_name":"stderr","time":1128.07863345,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to html\n"}
+,{"stream_name":"stderr","time":1128.957003814,"data":"[NbConvertApp] Support files will be in __results___files/\n"}
+,{"stream_name":"stderr","time":1128.957050929,"data":"[NbConvertApp] Making directory __results___files\n"}
+,{"stream_name":"stderr","time":1128.957551231,"data":"[NbConvertApp] Making directory __results___files\n"}
+,{"stream_name":"stderr","time":1128.958057437,"data":"[NbConvertApp] Making directory __results___files\n"}
+,{"stream_name":"stderr","time":1128.958405289,"data":"[NbConvertApp] Writing 620629 bytes to __results__.html\n"}
+]

@@ -26,6 +26,7 @@ class ReportResponse(BaseModel):
     status: str = Field(..., description="GENERATED or BLOCKED")
     is_blocked: bool = Field(..., description="Whether report was blocked by safety fail-safe")
     findings: list[str] = Field(default_factory=list)
+    active_findings: list[str] = Field(default_factory=list)
     anatomical_locations: list[str] = Field(default_factory=list)
     icd10_codes: list[str] = Field(default_factory=list)
     impression: str = Field(default="")
@@ -51,9 +52,12 @@ class PredictionResponse(BaseModel):
         ..., description="TB screening result with probability and binary flag"
     )
     head_c_covidx: dict = Field(
-        ..., description="COVID-19 screening result with probability and binary flag"
+        ..., description="COVID-19 model probability, configured threshold, and clinical guardrail status"
     )
     inference_time_ms: float = Field(..., ge=0.0, description="Pure inference latency in ms")
+    in_lung_energy_ratio: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="COVID Grad-CAM energy fraction inside the trained lung mask when audited"
+    )
     tta_enabled: bool = Field(default=True, description="Whether 3-pass clinical TTA was applied for domain robustness")
     passes_executed: int = Field(default=3, description="Number of clinical augmentation passes executed")
     calibration_temperature: float = Field(default=1.20, description="Temperature scaling factor for confidence calibration")
@@ -71,8 +75,13 @@ class PredictionResponse(BaseModel):
 class ExplainResponse(BaseModel):
     active_model: str = Field(default="standard", description="Model variant used for explanation")
     heatmap_base64: str = Field(..., description="Base64-encoded Grad-CAM heatmap PNG")
+    heatmap_rgba_base64: str | None = Field(default=None, description="Grad-CAM PNG with activation-weighted alpha")
+    heatmap_has_activation: bool | None = Field(default=None, description="Whether the rendered map contains nonzero activation")
+    mask_source: str = Field(default="", description="Lung mask method used for this explanation")
+    mask_warning: str = Field(default="", description="Warning when an approximate fallback mask is used")
     overlay_base64: str = Field(..., description="Base64-encoded heatmap overlay PNG")
     contour_base64: str = Field(default="", description="Base64-encoded clinical lesion iso-contour overlay PNG")
+    contour_rgba_base64: str = Field(default="", description="Transparent lesion contour PNG")
     lesion_bounding_boxes: list[dict] = Field(default_factory=list, description="Detected lesion bounding boxes and centroids")
     lesion_area_ratio: float = Field(default=0.0, description="Ratio of detected lesion area to total pulmonary field")
     cam_resolution: str = Field(default="", description="Spatial resolution of multi-scale CAM")
@@ -83,7 +92,7 @@ class ExplainResponse(BaseModel):
     target_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Decision threshold for target")
     is_target_positive: bool = Field(default=True, description="Whether target probability exceeds decision threshold")
     in_lung_energy_ratio: float = Field(default=1.0, ge=0.0, le=1.0, description="Activation energy inside anatomy ratio [0, 1]")
-    audit_pass: bool = Field(default=True, description="Whether in-lung energy ratio is >= 80%")
+    audit_pass: bool | None = Field(default=None, description="Whether in-lung energy ratio is >= 80%; null for an approximate mask")
     is_grounded: bool = Field(default=True, description="Whether clinical anatomical grounding was applied")
 
 
@@ -97,3 +106,28 @@ PredictionResponse.model_rebuild()
 ModelInfo.model_rebuild()
 ExplainResponse.model_rebuild()
 AuditResponse.model_rebuild()
+
+
+class RagKnowledgeCard(BaseModel):
+    disease: str
+    icd10: str
+    hallmarks: str
+    differential: str
+    followup: str
+    coding_note: str
+    citations: list[str]
+
+
+class RagQueryRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    active_findings: list[str] = Field(default_factory=list, max_length=32)
+    anatomical_locations: list[str] = Field(default_factory=list, max_length=16)
+    is_safe: bool = True
+    in_lung_ratio: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+
+
+class RagQueryResponse(BaseModel):
+    status: str
+    answer: str
+    citations: list[str]
+    retrieved_cards: list[RagKnowledgeCard]

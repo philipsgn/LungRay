@@ -1,0 +1,139 @@
+{
+  "timestamp": "2026-11-19 06:22:19",
+  "models_evaluated": [
+    "DenseNet-121 Baseline",
+    "ResNet-50",
+    "AG-MTCNet SOTA",
+    "WSOL Fine-tuned"
+  ],
+  "classification_summary": [
+    {
+      "Model": "DenseNet-121 Baseline",
+      "Task": "Head A (NIH-14)",
+      "Macro_AUROC": 0.7881,
+      "Macro_F1": 0.1779,
+      "Sensitivity": 0.9255,
+      "Specificity": 0.3847,
+      "Total_Samples": 2000
+    },
+    {
+      "Model": "ResNet-50",
+      "Task": "Head A (NIH-14)",
+      "Macro_AUROC": 0.7686,
+      "Macro_F1": 0.2693,
+      "Sensitivity": 0.3433,
+      "Specificity": 0.8704,
+      "Total_Samples": 2000
+    },
+    {
+      "Model": "AG-MTCNet SOTA",
+      "Task": "Head A (NIH-14)",
+      "Macro_AUROC": 0.767,
+      "Macro_F1": 0.2246,
+      "Sensitivity": 0.7894,
+      "Specificity": 0.5842,
+      "Total_Samples": 2000
+    },
+    {
+      "Model": "WSOL Fine-tuned",
+      "Task": "Head A (NIH-14)",
+      "Macro_AUROC": 0.5341,
+      "Macro_F1": 0.075,
+      "Sensitivity": 0.2191,
+      "Specificity": 0.7909,
+      "Total_Samples": 2000
+    },
+    {
+      "Model": "Consensus Ensemble",
+      "Task": "Head A (NIH-14)",
+      "Macro_AUROC": 0.7897,
+      "Macro_F1": 0.2293,
+      "Sensitivity": 0.8494,
+      "Specificity": 0.5693,
+      "Total_Samples": 2000
+    },
+    {
+      "Model": "DenseNet-121 Baseline",
+      "Task": "Head B (TB Triage)",
+      "Macro_AUROC": 1.0,
+      "Macro_F1": 0.9704,
+      "Sensitivity": 1.0,
+      "Specificity": 0.9843,
+      "Total_Samples": 400
+    },
+    {
+      "Model": "ResNet-50",
+      "Task": "Head B (TB Triage)",
+      "Macro_AUROC": 1.0,
+      "Macro_F1": 1.0,
+      "Sensitivity": 1.0,
+      "Specificity": 1.0,
+      "Total_Samples": 400
+    },
+    {
+      "Model": "AG-MTCNet SOTA",
+      "Task": "Head B (TB Triage)",
+      "Macro_AUROC": 0.9984,
+      "Macro_F1": 0.5597,
+      "Sensitivity": 1.0,
+      "Specificity": 0.5943,
+      "Total_Samples": 400
+    },
+    {
+      "Model": "WSOL Fine-tuned",
+      "Task": "Head B (TB Triage)",
+      "Macro_AUROC": 0.4047,
+      "Macro_F1": 0.2833,
+      "Sensitivity": 0.8049,
+      "Specificity": 0.0,
+      "Total_Samples": 400
+    },
+    {
+      "Model": "Consensus Ensemble",
+      "Task": "Head B (TB Triage)",
+      "Macro_AUROC": 1.0,
+      "Macro_F1": 0.9011,
+      "Sensitivity": 1.0,
+      "Specificity": 0.9434,
+      "Total_Samples": 400
+    }
+  ],
+  "wsol_summary": [
+    {
+      "Model": "DenseNet-121 Baseline",
+      "Dataset": "RSNA Pneumonia",
+      "Pathology": "Pneumonia",
+      "Mean_Box_IoU": 0.3862,
+      "Success_Rate_IoU_30": 60.0,
+      "Success_Rate_IoU_50": 35.0,
+      "Evaluated_Cases": 100
+    },
+    {
+      "Model": "ResNet-50",
+      "Dataset": "RSNA Pneumonia",
+      "Pathology": "Pneumonia",
+      "Mean_Box_IoU": 0.0065,
+      "Success_Rate_IoU_30": 0.0,
+      "Success_Rate_IoU_50": 0.0,
+      "Evaluated_Cases": 100
+    },
+    {
+      "Model": "AG-MTCNet SOTA",
+      "Dataset": "RSNA Pneumonia",
+      "Pathology": "Pneumonia",
+      "Mean_Box_IoU": 0.2814,
+      "Success_Rate_IoU_30": 40.0,
+      "Success_Rate_IoU_50": 18.0,
+      "Evaluated_Cases": 100
+    },
+    {
+      "Model": "WSOL Fine-tuned",
+      "Dataset": "RSNA Pneumonia",
+      "Pathology": "Pneumonia",
+      "Mean_Box_IoU": 0.1341,
+      "Success_Rate_IoU_30": 6.0,
+      "Success_Rate_IoU_50": 0.0,
+      "Evaluated_Cases": 100
+    }
+  ]
+}

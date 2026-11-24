@@ -3,17 +3,89 @@ from __future__ import annotations
 
 import base64
 import io
+import sys
+from pathlib import Path
 
 import asyncio
 import httpx
 import numpy as np
 import pytest
 from PIL import Image
+import torch
 
 from app.backend.main import app
+from app.backend.services import LungRayService
 
 
-import sys
+def test_explain_covid_probability_uses_correct_activation() -> None:
+    assert LungRayService._covid_prob_from_logits(torch.tensor([[0.0]])) == pytest.approx(0.5)
+    expected = torch.softmax(torch.tensor([[0.0, 1.0, 2.0]]), dim=-1)[0, 2].item()
+    assert LungRayService._covid_prob_from_logits(torch.tensor([[0.0, 1.0, 2.0]])) == pytest.approx(expected)
+
+
+def test_heatmap_restores_landscape_and_portrait_letterbox() -> None:
+    landscape = np.zeros((100, 100), dtype=np.float32)
+    landscape[25:75, :] = 1.0
+    portrait = np.zeros((100, 100), dtype=np.float32)
+    portrait[:, 25:75] = 1.0
+    assert np.allclose(LungRayService._restore_letterboxed_heatmap(landscape, 50, 100), 1.0)
+    assert np.allclose(LungRayService._restore_letterboxed_heatmap(portrait, 100, 50), 1.0)
+
+
+def test_explain_discloses_fallback_for_empty_lung_mask(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.backend.main import service
+
+    if service.dense_unet is None:
+        pytest.skip("Dense-UNet checkpoint unavailable.")
+    monkeypatch.setattr(service.segmenter, "_dense_predict_masks", lambda images: [np.zeros(image.shape[:2], dtype=np.uint8) for image in images])
+
+    def approximate_mask(image: np.ndarray) -> np.ndarray:
+        mask = np.zeros(image.shape[:2], dtype=np.uint8)
+        h, w = mask.shape
+        mask[h // 4:3 * h // 4, w // 4:3 * w // 4] = 1
+        return mask
+
+    monkeypatch.setattr(service.segmenter, "_morphology_predict_mask", approximate_mask)
+    response = client.post(
+        "/api/v1/explain",
+        files={"file": ("sample.png", _make_image_bytes(), "image/png")},
+        data={"target_head": "head_a", "target_class": 0, "target_disease_name": "Atelectasis"},
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["mask_source"] == "morphology_fallback"
+    assert result["mask_warning"]
+    assert result["audit_pass"] is None
+
+
+def test_ag_mtcnet_predict_returns_all_three_heads(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/predict?model=ag_mtcnet&tta_enabled=false",
+        files={"file": ("sample.png", _make_image_bytes(), "image/png")},
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert len(result["head_a_prediction"]) == 14
+    assert "tb_probability" in result["head_b_tb_screening"]
+    assert result["head_c_covidx"]["available"] is True
+    assert result["head_c_covidx"]["status"] == "EXPLORATORY"
+    assert result["head_c_covidx"]["threshold"] == pytest.approx(0.6123412, abs=1e-5)
+    assert 0.0 <= result["head_c_covidx"]["covid_probability"] <= 1.0
+    assert result["inference_time_ms"] >= 0.0
+
+
+def test_explain_ag_mtcnet_head_c_is_available(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/explain",
+        files={"file": ("sample.png", _make_image_bytes(), "image/png")},
+        data={"target_head": "head_c", "target_class": 0, "model": "ag_mtcnet"},
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["target_head"] == "head_c"
+    assert result["target_threshold"] == pytest.approx(0.6123, abs=1e-5)
+    assert 0.0 <= result["target_probability"] <= 1.0
+
 
 # Prevent Windows Proactor event loop deadlock on localhost socketpair accept
 if sys.platform == "win32":
@@ -122,6 +194,68 @@ def test_predict_endpoint(client: TestClient) -> None:
     assert isinstance(payload["safety"]["is_safe"], bool)
     assert "report" in payload
     assert payload["report"]["status"] in ("GENERATED", "BLOCKED")
+
+
+def _rsna_dicom_sample() -> tuple[str, bytes]:
+    sample_dir = Path(__file__).resolve().parents[1] / "test_samples" / "04_rsna_pneumonia"
+    sample_path = next(sample_dir.glob("*.dcm"), None)
+    if sample_path is None:
+        pytest.skip("No RSNA DICOM sample is available for the integration check.")
+    return sample_path.name, sample_path.read_bytes()
+
+
+def test_predict_endpoint_accepts_rsna_dicom(client: TestClient) -> None:
+    filename, dicom_bytes = _rsna_dicom_sample()
+    response = client.post(
+        "/api/v1/predict",
+        files={"file": (filename, dicom_bytes, "application/dicom")},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert len(payload["head_a_prediction"]) == 14
+    assert 0.0 <= payload["head_b_tb_screening"]["tb_probability"] <= 1.0
+    assert "head_c_covidx" in payload
+
+
+def test_explain_endpoint_accepts_rsna_dicom(client: TestClient) -> None:
+    filename, dicom_bytes = _rsna_dicom_sample()
+    response = client.post(
+        "/api/v1/explain",
+        files={"file": (filename, dicom_bytes, "application/dicom")},
+        data={
+            "target_head": "head_a",
+            "target_class": 2,
+            "target_disease_name": "Effusion",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["target_head"] == "head_a"
+    assert _is_base64_png(payload["heatmap_base64"])
+    assert _is_base64_png(payload["overlay_base64"])
+    with Image.open(io.BytesIO(base64.b64decode(payload["heatmap_rgba_base64"]))) as rgba:
+        assert rgba.mode == "RGBA"
+        alpha = np.asarray(rgba)[:, :, 3]
+        assert payload["heatmap_has_activation"] == bool(np.any(alpha))
+    if payload["mask_source"] != "dense_unet":
+        assert payload["mask_warning"]
+        assert payload["audit_pass"] is None
+
+
+def test_audit_endpoint_accepts_rsna_dicom(client: TestClient) -> None:
+    filename, dicom_bytes = _rsna_dicom_sample()
+    response = client.post(
+        "/api/v1/audit",
+        files={"file": (filename, dicom_bytes, "application/dicom")},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert 0.0 <= payload["in_lung_energy_ratio"] <= 1.0
+    assert isinstance(payload["pass_80_percent"], bool)
+    assert _is_base64_png(payload["lung_mask_base64"])
 
 
 def test_explain_endpoint_default_grounded(client: TestClient) -> None:
@@ -295,8 +429,11 @@ def test_list_models_endpoint(client: TestClient) -> None:
     models = response.json()
     assert isinstance(models, list)
     model_ids = [m["id"] for m in models]
-    assert "standard" in model_ids
-    assert "wsol" in model_ids
+    assert set(model_ids) == {"standard", "wsol", "resnet50", "ensemble", "ag_mtcnet"}
+    by_id = {model["id"]: model for model in models}
+    assert by_id["standard"]["checkpoint"] == "checkpoints/best_model_20_11.pth"
+    assert by_id["ag_mtcnet"]["checkpoint"] == "checkpoints/ag_mtcnet_best.pth"
+    assert by_id["ag_mtcnet"]["metrics"]["head_c_status"] == "exploratory"
 
 
 def test_predict_with_wsol_model(client: TestClient) -> None:
@@ -365,6 +502,17 @@ def test_predict_with_automatic_tta(client: TestClient) -> None:
     assert "head_a_prediction" in payload
     assert "head_b_tb_screening" in payload
     assert "head_c_covidx" in payload
+
+
+def test_predict_can_disable_tta(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/predict?tta_enabled=false",
+        files={"file": ("cxr.png", _make_image_bytes(), "image/png")},
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["tta_enabled"] is False
+    assert payload["passes_executed"] == 1
 
 
 def test_hot_reload_endpoint(client: TestClient) -> None:

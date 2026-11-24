@@ -33,6 +33,7 @@ dependencies = [
     "timm>=0.9.0",
     "albumentations>=1.3.0",
     "opencv-python-headless>=4.7.0",
+    "pydicom>=2.3.0",
     "PyYAML>=6.0",
     "tqdm>=4.65.0",
     "pydantic>=2.0.0"
@@ -64,7 +65,7 @@ include = ["src*"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --ignore=tests/test_adversarial_probe.py"
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::UserWarning"

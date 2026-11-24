@@ -1,0 +1,725 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>LungRay WSOL Atlas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky 3D stack on the left, controls and per-disease algorithm card on the right; atlas of 16 signatures and model advice below. */
+:root{
+  --bg:#F2F5F8; --panel:#FFFFFF; --ink:#0E1620; --muted:#566475; --line:#D3DBE3;
+  --accent:#0A7A74; --accent-ink:#FFFFFF; --gt:#A85F00; --cmp:#6B45B8; --stage:#070B12;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#070B12; --panel:#0D1520; --ink:#E6EDF4; --muted:#8C9DB0; --line:#1C2937;
+    --accent:#3FD0C4; --accent-ink:#04201D; --gt:#F2A93B; --cmp:#B592FF; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#070B12; --panel:#0D1520; --ink:#E6EDF4; --muted:#8C9DB0; --line:#1C2937;
+  --accent:#3FD0C4; --accent-ink:#04201D; --gt:#F2A93B; --cmp:#B592FF; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;
+  padding-block:0 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1240px;margin:0 auto}
+h1,h2,h3{line-height:1.2;text-wrap:balance;margin:0}
+h1{font-size:clamp(1.7rem,3.6vw,2.5rem);font-weight:600;letter-spacing:-.01em}
+h2{font-size:1.35rem;font-weight:600}
+h3{font-size:1rem;font-weight:600}
+p{margin:0}
+code,.mono{font-family:var(--mono);font-size:.86em}
+a{color:var(--accent)}
+.top{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-block:16px;border-bottom:1px solid var(--line)}
+.brand{font-weight:600;letter-spacing:.01em}
+.brand span{color:var(--muted);font-weight:400;margin-left:6px}
+.top nav{display:flex;gap:18px;font-size:.9rem}
+.top nav a{color:var(--muted);text-decoration:none}
+.top nav a:hover{color:var(--ink)}
+.intro{padding-block:28px 20px;display:grid;gap:10px;max-width:760px}
+.intro p{color:var(--muted)}
+.vgrid{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:22px;align-items:start}
+.vcol{position:sticky;top:12px;min-width:0}
+.stage{position:relative;aspect-ratio:1/1;max-height:80vh;width:100%;border-radius:10px;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 38%,#16222f 0%,var(--stage) 72%);border:1px solid var(--line)}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:pan-y}
+.stage canvas:active{cursor:grabbing}
+#labels{position:absolute;inset:0;pointer-events:none}
+.lbl{position:absolute;font:500 11px var(--mono);color:#BFD3E3;white-space:nowrap;transform:translate(10px,-50%);transition:opacity .2s;
+  background:rgba(7,11,18,.62);padding:1px 6px;border-radius:3px}
+.badge{position:absolute;left:10px;top:10px;font:500 11px var(--mono);color:#F2A93B;background:rgba(7,11,18,.7);padding:3px 8px;border-radius:4px;letter-spacing:.03em}
+.hint{position:absolute;left:10px;bottom:10px;font:400 11px var(--mono);color:#8C9DB0}
+.nogl{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:24px;color:#8C9DB0}
+.steps{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.steps button{font:500 12px var(--mono);padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer}
+.steps button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.caption{margin-top:10px;padding:14px 16px;border:1px solid var(--line);border-radius:8px;background:var(--panel);display:grid;gap:6px;min-height:118px}
+.caption code{color:var(--accent);overflow-wrap:anywhere}
+.caption p{color:var(--muted);font-size:.9rem}
+.pcol{display:grid;gap:16px;min-width:0}
+.card{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:14px 16px;min-width:0}
+.card h3{margin-bottom:10px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.card h3 small{font:400 11px var(--mono);color:var(--muted)}
+.cg{margin-bottom:10px}.cg:last-child{margin-bottom:0}
+.cl{font:500 11px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.crow{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 12.5px var(--sans);padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.ctl{display:grid;grid-template-columns:110px minmax(0,1fr) 44px;gap:10px;align-items:center;margin-bottom:8px;font-size:.88rem}
+.ctl output{font:400 12px var(--mono);color:var(--muted);text-align:right}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.row2{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-top:10px;font-size:.88rem}
+.row2 label{display:flex;gap:8px;align-items:center}
+select,button.btn{font:400 13px var(--sans);padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+button.btn{cursor:pointer}
+.sw{width:11px;height:11px;border-radius:2px;display:inline-block;flex:none}
+.layers{display:grid;gap:2px}
+.layers label{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:8px;align-items:baseline;padding:4px 4px;border-radius:5px;font-size:.88rem;cursor:pointer}
+.layers label:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.layers small{color:var(--muted);font:400 11.5px var(--mono);overflow-wrap:anywhere}
+dl.m{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:6px 12px;margin:0;font-size:.88rem}
+dl.m dt{color:var(--muted)}dl.m dd{margin:0;font-family:var(--mono);font-size:.84rem;text-align:right;overflow-wrap:anywhere}
+.ok{color:var(--accent)}.bad{color:var(--gt)}
+.note{font-size:.8rem;color:var(--muted);margin-top:10px}
+.dcard p{margin-bottom:8px;font-size:.9rem}
+.dcard b{font:500 11px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block}
+.tag{font:500 11px var(--mono);padding:2px 8px;border-radius:4px;border:1px solid var(--line);color:var(--muted)}
+details summary{cursor:pointer;font-weight:500}
+details .inner{display:grid;gap:10px;margin-top:10px;font-size:.88rem}
+section.block{padding-top:48px}
+section.block>p{color:var(--muted);max-width:720px;margin-top:8px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:18px}
+.tile{display:grid;gap:4px;text-align:left;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);cursor:pointer;font:inherit}
+.tile[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.tile canvas{width:100%;aspect-ratio:1/1;border-radius:5px;display:block;background:#000}
+.tn{font-size:.82rem;font-weight:500}.ti{font:400 11px var(--mono);color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:.82rem;color:var(--muted)}
+.legend span{display:flex;gap:6px;align-items:center}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:18px}
+.cards .card h3{display:block}
+.cards ul{margin:8px 0 0;padding-left:18px;color:var(--muted);font-size:.88rem}
+.cards .stack{font:400 12.5px var(--mono);color:var(--accent);margin-top:6px;overflow-wrap:anywhere}
+.tw{overflow-x:auto;margin-top:18px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.86rem}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:960px){.vgrid{grid-template-columns:minmax(0,1fr)}.vcol{position:static}.ctl{grid-template-columns:96px minmax(0,1fr) 40px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="brand">LungRay<span>Architecture &amp; WSOL Pipeline Atlas</span></div>
+  <nav aria-label="Sections">
+    <a href="#pipeline">1 · End-to-End Pipeline</a>
+    <a href="#viewer">2 · 3D WSOL Stack</a>
+    <a href="#atlas">3 · 16-Finding Atlas</a>
+    <a href="#models">4 · Models &amp; 5-Tier Safety</a>
+    <a href="http://localhost:3000" target="_blank" rel="noopener" style="color:var(--accent);font-weight:500">Launch Live PACS Demo ↗</a>
+  </nav>
+</header>
+
+<div class="intro" style="max-width:960px">
+  <h1>Multi-Task CXR CADx, Weakly-Supervised Localization &amp; Grounded Clinical RAG</h1>
+  <p>LungRay unifies thoracic multi-label diagnosis (14 NIH pathologies), Tuberculosis screening, and COVID-19 triage under a single anatomically-gated multi-task architecture. Below is the interactive blueprint of our three-stage production pipeline: <b>Data Preparation &amp; Anatomical Gate → Multi-Task 3-Head Model Extraction → Quantitative WSOL Evaluation, 5-Tier Safety Guards &amp; Grounded Clinical RAG</b>.</p>
+</div>
+
+<section id="pipeline" class="block" style="padding-top:8px;padding-bottom:24px" aria-label="End-to-end project pipeline">
+  <h2>1. End-to-End Multi-Task Project Pipeline</h2>
+  <p>Every radiograph flows through deterministic data hygiene, anatomical gating, masked multi-task representation learning, and a five-tier post-hoc clinical defense layer before reaching the PACS workstation.</p>
+  <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+    <div class="card">
+      <h3>Stage I · Data Preparation &amp; Anatomical Gate <small>Zero Leakage</small></h3>
+      <div class="stack">6 Clinical Datasets (135K+ CXRs) → 512×512 Letterbox → Frozen Dense-UNet Gate</div>
+      <ul>
+        <li><b>Strict Patient &amp; Source Isolation:</b> NIH ChestX-ray14 (112,120 images) split 70/10/20 by <code>Patient_ID</code> (<code>Train ∩ Test = ∅</code>); COVIDx CXR-4 &amp; Qatar Radiography stratified by acquisition <code>data_source</code> and patient group; expert bounding boxes (VinDr-CXR, RSNA) reserved 100% for evaluation (Rule 4).</li>
+        <li><b>Medical Preprocessing &amp; Balanced Sampler:</b> Aspect-ratio preserving 512×512 letterboxing, CLAHE contrast enhancement, safe affine rotation (±7°; vertical flip strictly prohibited), and <code>WeightedMultiTaskBatchSampler</code> enforcing a fixed <b>60% NIH : 25% COVID : 15% TB</b> batch ratio.</li>
+        <li><b>Frozen Dense-UNet Anatomical Gate:</b> Trained on 3,014 paired radiographs/masks (Validation <b>Dice 0.9630</b>, <b>IoU 0.9300</b>). Applies Dilated Soft Masking (<b>6% dilation</b>, <b>10% background attenuation</b>) with a <b>&lt;5% White-out Lung Fail-Safe</b> bypass so total pleural effusion or consolidation is never masked out.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Stage II · Multi-Task 3-Head Model Extraction <small>Masked Backprop</small></h3>
+      <div class="stack">Shared Encoder (DenseNet-121 / ResNet-50 / ViT) → LayerNorm → 3 Isolated Heads</div>
+      <ul>
+        <li><b>Shared Backbone &amp; Parameter-Free Neck:</b> Extracts <code>1024×16×16</code> spatial feature maps at 512×512 resolution (1 cell = 32×32 px), followed by Global Average Pooling, parameter-free <code>LayerNorm(elementwise_affine=False)</code>, and <code>Dropout(p=0.20)</code>.</li>
+        <li><b>Three Specialized Heads &amp; Masked Loss Engine:</b>
+          <b>Head A</b> (14 NIH thoracic pathologies — Asymmetric Focal Loss <code>γ-=4.0, γ+=0.0, clip=0.05</code>);
+          <b>Head B</b> (Tuberculosis binary screening — prevalence-weighted BCE);
+          <b>Head C</b> (COVID-19 binary screening — class-weighted BCE). Each sample updates only its active head and shared encoder (<b>Zero Cross-Head Gradient Leakage</b>).</li>
+        <li><b>Two-Stage Fine-Tuning &amp; Calibration:</b> Stage 1 head warmup (frozen encoder) → Stage 2 differential cosine-annealing fine-tuning with Exponential Moving Average (EMA), <b>3-Pass Clinical TTA</b> (Original, Horizontal Flip, CLAHE), and per-class <b>Youden's J</b> threshold calibration (<code>τ_c = argmax(TPR - FPR)</code>).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Stage III · Evaluation, 5-Tier Safety &amp; Grounded RAG <small>176+ Tests PASS</small></h3>
+      <div class="stack">WSOL Box-IoU &amp; Shortcut Audit → Helmholtz OOD Lockout → ICD-10 Grounded RAG</div>
+      <ul>
+        <li><b>Classification &amp; WSOL Benchmarks:</b> Reaches <b>0.8247 Macro AUROC</b> on NIH-14 (20-11 baseline Val/Test 0.7858/0.7508), <b>0.9986 Test AUROC</b> on Tuberculosis (AG-MTCNet 512×512), <b>95.43% external retention</b> on Stanford CheXpert, <b>0.7631 Mean Box-IoU</b> on RSNA Pneumonia, and <b>0.6049 Box-IoU</b> on VinDr-CXR without bounding-box training supervision.</li>
+        <li><b>Shortcut Mitigation &amp; 5-Tier Clinical Guards:</b> Clinical Pulmonary Grounding boosts COVID-19 in-lung Grad-CAM energy from <b>38.49% to 94.92%</b> (<code>p = 1.15×10⁻²⁶</code>). Post-hoc Helmholtz Free Energy (<code>τ_E = 9.0421</code>) &amp; Shannon Entropy (<code>τ_H = 0.6275</code>) reject corrupted/OOD scans (<b>1.0000 OOD AUROC</b>), while the <b>Smart Clinical Guardrail</b> automatically downgrades Head C flags if in-lung energy drops below 80%.</li>
+        <li><b>Deterministic Grounded Clinical RAG:</b> Retrieves verified <b>ICD-10</b> codes, Fleischner Society / WHO radiographic hallmarks, and follow-up triage pathways linked to Grad-CAM anatomical zones with zero hallucination and automatic OOD lockout.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="intro" style="padding-top:16px">
+  <h2>2. Interactive 3D WSOL 6-Layer Pipeline Stack</h2>
+  <p>A weakly supervised localisation (WSOL) heatmap is the end of a six-step pipeline. Rotate the 3D stack below, switch between all 16 findings across Head A, Head B, and Head C, and inspect how the 16×16 feature grid, threshold α, and anatomical grounding govern Box-IoU and in-lung energy.</p>
+</div>
+
+<section id="viewer" class="vgrid" aria-label="3D WSOL viewer">
+  <div class="vcol">
+    <div class="stage" id="stage">
+      <canvas id="gl" aria-label="3D stack of the six WSOL pipeline layers. Drag to rotate."></canvas>
+      <div id="labels"></div>
+      <span class="badge">SYNTHETIC DEMO DATA</span>
+      <span class="hint">drag to rotate</span>
+      <div class="nogl" id="nogl">WebGL is unavailable here. The atlas below still works.</div>
+    </div>
+    <div class="steps" id="steps" role="group" aria-label="Pipeline step"></div>
+    <div class="caption" id="cap" aria-live="polite"><h3></h3><code></code><p></p></div>
+  </div>
+
+  <div class="pcol">
+    <div class="card">
+      <h3>Finding <small id="curhead"></small></h3>
+      <div id="chips"></div>
+    </div>
+
+    <div class="card">
+      <h3>Controls</h3>
+      <div class="ctl"><label for="s-exp">Layer spacing</label><input id="s-exp" type="range" min="0" max="1" step="0.01" value="0.55"><output id="o-exp"></output></div>
+      <div class="ctl"><label for="s-alpha">Threshold α</label><input id="s-alpha" type="range" min="0.15" max="0.7" step="0.01" value="0.30"><output id="o-alpha"></output></div>
+      <div class="ctl"><label for="s-heat">Heat opacity</label><input id="s-heat" type="range" min="0.2" max="1" step="0.01" value="0.9"><output id="o-heat"></output></div>
+      <div class="row2">
+        <label><input id="c-ground" type="checkbox" checked> Clinical grounding</label>
+        <label><input id="c-rot" type="checkbox"> Auto-rotate</label>
+        <label>Compare with <select id="s-cmp"><option value="">none</option></select></label>
+      </div>
+      <p class="note" id="groundnote"></p>
+    </div>
+
+    <div class="card">
+      <h3>Layers <small>hover to isolate</small></h3>
+      <div class="layers" id="layers"></div>
+    </div>
+
+    <div class="card">
+      <h3>Measured on this map <small id="metsrc"></small></h3>
+      <dl class="m" id="met"></dl>
+      <p class="note">Reference from TECH_ARCHITECTURE.md (n=50 expert-box cases): RSNA mean Box-IoU 0.7631, VinDr-CXR 0.6049. The same doc lists the WSOL-specialist checkpoint at RSNA mean IoU 0.2454 (peak 0.7920), so check which checkpoint each number belongs to. Values on this page come from a synthetic generator, not from a checkpoint.</p>
+    </div>
+
+    <div class="card dcard" id="dcard"></div>
+
+    <div class="card">
+      <details>
+        <summary>Load your own model output</summary>
+        <div class="inner">
+          <p>Use the PNGs from your FastAPI <code>/api/v1/explain</code> response, or any X-ray plus heatmap. Nothing leaves your browser.</p>
+          <label>X-ray image <input id="f-x" type="file" accept="image/*"></label>
+          <label>Heatmap or overlay PNG <input id="f-h" type="file" accept="image/*"></label>
+          <p class="note">An RGBA overlay uses its alpha channel. An opaque jet image is converted with a rough inverse colormap, so treat results as approximate. IoU and in-lung ratio are not computed for uploads.</p>
+          <button type="button" class="btn" id="b-reset">Back to synthetic data</button>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section id="atlas" class="block">
+  <h2>Signature atlas</h2>
+  <p>All 16 findings run through the same pipeline with your current α and grounding setting. Click a tile to load it into the 3D stack. Diffuse and bilateral patterns have no single expert box, which is part of why they are harder to score.</p>
+  <div class="tiles" id="tiles"></div>
+  <div class="legend">
+    <span><i class="sw" style="background:#3FD0C4"></i>predicted box (largest component)</span>
+    <span><i class="sw" style="background:#F2A93B"></i>reference box (synthetic)</span>
+    <span><i class="sw" style="background:#B592FF"></i>comparison mask</span>
+  </div>
+</section>
+
+<section id="models" class="block">
+  <h2>4. Production Model Registry, Quantitative Benchmarks &amp; 5-Tier Safety</h2>
+  <p>LungRay serves five production model checkpoints on the FastAPI + Next.js PACS workstation. Each model addresses a clinical triaging role, backed by quantitative evaluation on NIH ChestX-ray14, TB Radiography, COVIDx CXR-4, VinDr-CXR, RSNA, and Stanford CheXpert.</p>
+  <div class="cards">
+    <div class="card"><h3>1. Standard CADx (SOTA Baseline)</h3>
+      <div class="stack">DenseNet-121 · checkpoints/best_model_20_11.pth</div>
+      <ul>
+        <li><b>High Discrimination:</b> Validation Macro AUROC <b>0.7858</b> on NIH-14, <b>0.9966</b> on TB, and <b>0.9786</b> on binary COVID (Mean AUC 0.9203).</li>
+        <li><b>Independent Test:</b> Held-out NIH-14 AUROC <b>0.7508</b> (N=25,596); TB AUROC <b>1.0000</b>; COVID AUROC <b>0.7692</b>.</li>
+        <li><b>Clinical Role:</b> Fast primary multi-task triage with calibrated Youden's J decision thresholds across all 16 pathologies.</li>
+      </ul></div>
+    <div class="card"><h3>2. AG-MTCNet 512×512 (Anatomical Gate)</h3>
+      <div class="stack">Dense-UNet (Dice 0.963) → DenseNet-121 (512 px) · ag_mtcnet_best.pth</div>
+      <ul>
+        <li><b>Anatomically Gated:</b> Frozen Dense-UNet gate filters non-pulmonary background noise with 6% dilation and 10% attenuation.</li>
+        <li><b>Tuberculosis SOTA:</b> Achieves <b>0.9986 Test AUROC</b> on TB screening with near-perfect specificity.</li>
+        <li><b>Smart Guardrail for Head C:</b> Calibrated Youden threshold (τ = 0.6123) with automated clinical down-flagging when in-lung energy &lt; 80%.</li>
+      </ul></div>
+    <div class="card"><h3>3. WSOL Specialist (Localization)</h3>
+      <div class="stack">DenseNet-121 (WSOL-Tuned) · checkpoints/best_wsol_finetune.pth</div>
+      <ul>
+        <li><b>Quantified WSOL:</b> Mean Box-IoU <b>0.7631</b> on RSNA Pneumonia Detection (90.0% success rate vs. 0.35 target).</li>
+        <li><b>Vietnamese Clinician Grounding:</b> Mean Box-IoU <b>0.6049</b> on VinDr-CXR (74.2% success rate) without bounding-box training.</li>
+        <li><b>Clinical Role:</b> Fine-grained lesion iso-contour extraction and radiological spatial report grounding.</li>
+      </ul></div>
+    <div class="card"><h3>4. ResNet-50 Residual Specialist</h3>
+      <div class="stack">ResNet-50 (23.5M params) · checkpoints/best_resnet50.pth</div>
+      <ul>
+        <li><b>Deep Residual Hierarchy:</b> Provides complementary convolutional feature representations to DenseNet-121.</li>
+        <li><b>High Specificity:</b> Strong discriminative power on acute alveolar consolidations and pleural abnormalities.</li>
+        <li><b>Clinical Role:</b> Second reader for cross-architecture consensus and residual feature verification.</li>
+      </ul></div>
+    <div class="card"><h3>5. Consensus Ensemble (Multi-Backbone)</h3>
+      <div class="stack">DenseNet-121 + ResNet-50 + WSOL · Soft Voting &amp; Consensus Score</div>
+      <ul>
+        <li><b>Ensemble Agreement:</b> Calculates inter-model consensus agreement percentage [0, 1] on every radiograph.</li>
+        <li><b>Peak AUROC:</b> Reaches Mean AUC <b>0.9233</b> across consensus-accepted clinical predictions.</li>
+        <li><b>Clinical Role:</b> Maximum-confidence triage for complex multi-pathology cases and clinical audit boards.</li>
+      </ul></div>
+  </div>
+
+  <h3 style="margin-top:28px">5-Tier Clinical Safety Guards &amp; Grounded RAG Architecture</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Tier</th><th>Safety Guard Mechanism</th><th>Mathematical / Algorithmic Formulation</th><th>Clinical Purpose &amp; Fail-Safe Action</th></tr></thead>
+    <tbody>
+      <tr><td><b>Tier 1</b></td><td>OOD Fail-Safe (Helmholtz Energy &amp; Entropy)</td><td>Free Energy S_E = -T·Σ log(1+e^(f_k/T)) &ge; 9.0421; Entropy H &le; 0.6275</td><td>Rejects noise, CT/MRI, inverted, or out-of-distribution scans (AUROC 1.0000). Locks clinical report generation (status="BLOCKED").</td></tr>
+      <tr><td><b>Tier 2</b></td><td>Dense-UNet Anatomical Gate &amp; White-Out Bypass</td><td>Dilated Soft Masking (6% dilation, 10% attenuation); Bypass when Area &lt; 5%</td><td>Eliminates peripheral artifact interference; bypasses masking on white-out lungs so massive effusion is never clipped.</td></tr>
+      <tr><td><b>Tier 3</b></td><td>3-Pass Clinical Test-Time Augmentation (TTA)</td><td>TTA(x) = (1/3) · [f(x_orig) + f(x_flip) + f(x_clahe)]</td><td>Smooths confidence variance, stabilizes edge cases, and reduces sensitivity to projection discrepancies.</td></tr>
+      <tr><td><b>Tier 4</b></td><td>Smart Clinical Report Guardrail</td><td>In-Lung Energy Ratio = (Σ_{P_lung} M) / (Σ M) &ge; 80%</td><td>Detects acquisition text / lead-marker shortcut learning; automatically down-flags false-positive COVID suspicion.</td></tr>
+      <tr><td><b>Tier 5</b></td><td>Deterministic Grounded Clinical RAG</td><td>ICD-10 + Fleischner Society / WHO Radiographic Guidelines</td><td>Zero-hallucination structured report generation with verified ICD-10 codes, anatomical zones, and triage pathways.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 style="margin-top:28px">Attribution Method Reference Matrix</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Attribution method</th><th>Needs</th><th>Resolution</th><th>Use it when</th></tr></thead>
+    <tbody>
+      <tr><td>Grad-CAM</td><td>CNN, last conv layer</td><td>Last stage (16×16 here)</td><td>Baseline, fast. Blurry boxes on small lesions.</td></tr>
+      <tr><td>Grad-CAM++</td><td>CNN</td><td>Last stage</td><td>Several separate lesions in one image.</td></tr>
+      <tr><td>HiResCAM</td><td>CNN</td><td>Last stage</td><td>You need maps that follow the gradient faithfully.</td></tr>
+      <tr><td>LayerCAM</td><td>CNN, any layer</td><td>Earlier stage (32×32)</td><td>Small nodules, thin pleural lines. First thing to try.</td></tr>
+      <tr><td>Score-CAM</td><td>Forward passes only</td><td>Last stage</td><td>Gradients are noisy. Slow: many forward passes.</td></tr>
+      <tr><td>Attention rollout</td><td>ViT</td><td>Patch grid (32×32 at 512 px)</td><td>Any transformer backbone.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>All images, heatmaps and IoU values on this page are generated procedurally to explain the algorithm. They are not patient data and not outputs of the LungRay checkpoints. Research prototype, not for clinical use.</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+var N=128,S=512,G=16;
+var $=function(s){return document.querySelector(s)};
+var clamp=function(v,a,b){return Math.min(b,Math.max(a,v))};
+var sstep=function(a,b,x){var t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)};
+function hash(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+var reduced=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- finding definitions (x,y in 0..1 image coords; image-left = patient right) ---------- */
+var D=[
+{id:"atel",name:"Atelectasis",vi:"Xẹp phổi",head:"A",icd:"J98.11",diff:"Medium",gt:[.20,.62,.47,.75],
+ les:[{t:"op",x:.34,y:.68,rx:.13,ry:.03,r:.18,a:.6},{t:"op",x:.33,y:.72,rx:.14,ry:.05,r:.1,a:.3}],
+ cam:[[.34,.69,.12,.04,1,.18]],
+ n:["Thin band at the right base, plus a raised hemidiaphragm.","Faint and linear. One 32 px cell is wider than the band, so boxes come out fat.","Compare with Effusion: both sit low, but this one is a band, not a meniscus."]},
+{id:"card",name:"Cardiomegaly",vi:"Bóng tim to",head:"A",icd:"I51.7",diff:"Easier",gt:[.38,.48,.76,.74],hs:1.45,les:[],
+ cam:[[.56,.61,.14,.11,1,0]],
+ n:["Centre of the mediastinum. The API widens the lung mask to include the heart.","Large and compact, so boxes are usually good. Without the mediastinal exception, grounding would delete it.","Switch grounding on and off: the heart has to survive the mask."]},
+{id:"effu",name:"Effusion",vi:"Tràn dịch màng phổi",head:"A",icd:"J90",diff:"Easier",gt:[.16,.66,.46,.84],
+ les:[{t:"op",x:.30,y:.77,rx:.15,ry:.07,r:-.1,a:.8}],
+ cam:[[.30,.76,.13,.06,1,-.1]],
+ n:["Costophrenic angle and lower zone, with a curved upper edge.","Dense, low and next to the diaphragm, so the lower edge of the box is ambiguous.","Compare with Consolidation: effusion fills the base, consolidation is lobar."]},
+{id:"infi",name:"Infiltration",vi:"Thâm nhiễm",head:"A",icd:"J18.9",diff:"Hard",gt:[.58,.40,.80,.66],
+ les:[{t:"op",x:.66,y:.46,rx:.06,ry:.05,r:0,a:.4},{t:"op",x:.70,y:.58,rx:.07,ry:.05,r:.3,a:.4},{t:"op",x:.36,y:.56,rx:.07,ry:.05,r:0,a:.32},{t:"op",x:.30,y:.40,rx:.05,ry:.04,r:0,a:.28}],
+ cam:[[.66,.46,.06,.05,.8,0],[.70,.58,.07,.05,.9,.3],[.36,.56,.07,.05,.6,0],[.30,.40,.05,.04,.5,0]],
+ n:["Patchy: several weak peaks across mid and lower zones.","Ill-defined label. Peaks split into components, so one box covers only one of them.","Raise α and watch the mask break into islands."]},
+{id:"mass",name:"Mass",vi:"Khối mờ lồng ngực",head:"A",icd:"R91.8",diff:"Easier",gt:[.22,.26,.38,.42],
+ les:[{t:"op",x:.30,y:.34,rx:.07,ry:.07,r:0,a:.85}],
+ cam:[[.30,.34,.07,.07,1,0]],
+ n:["One compact peak over the right upper zone.","Large round lesions are the easy case. IoU is limited mainly by the 16×16 grid.","Drag α up: the box shrinks toward the core, IoU peaks and then falls."]},
+{id:"nodu",name:"Nodule",vi:"Nốt mờ phế trường",head:"A",icd:"R91.1",diff:"Medium",gt:[.64,.34,.72,.43],
+ les:[{t:"op",x:.68,y:.385,rx:.022,ry:.022,r:0,a:.95}],
+ cam:[[.68,.385,.03,.03,1,0]],
+ n:["A single small peak in the left mid zone.","Smaller than one 32 px cell. The heat spreads well past the nodule, so IoU against a tight box is low.","This is the case for finer maps: try LayerCAM on denseblock3."]},
+{id:"pneu",name:"Pneumonia",vi:"Viêm phổi",head:"A",icd:"J18.9",diff:"Easier",gt:[.22,.46,.44,.72],
+ les:[{t:"op",x:.33,y:.58,rx:.09,ry:.11,r:.1,a:.7},{t:"op",x:.31,y:.62,rx:.06,ry:.06,r:0,a:.4}],
+ cam:[[.33,.58,.08,.10,1,.1]],
+ n:["Right lower lobe, filling most of a lobe.","Large, dense and well bounded, which suits Grad-CAM. This is the RSNA-style case.","Use it as the reference for a good IoU, then compare the others."]},
+{id:"pnth",name:"Pneumothorax",vi:"Tràn khí màng phổi",head:"A",icd:"J93.9",diff:"Medium",gt:[.70,.14,.85,.48],
+ les:[{t:"dark",x:.77,y:.30,rx:.06,ry:.17,r:0,a:.8},{t:"line",x:.715,y:.30,rx:.008,ry:.16,r:0,a:.7}],
+ cam:[[.755,.31,.04,.13,1,0]],
+ n:["Thin strip along the left apex and lateral edge, outside the dense lung.","The finding is missing lung markings and a hairline. Gradients sit on the edge, and a tight mask can clip it.","Toggle grounding: the dilated mask must keep a peripheral peak."]},
+{id:"cons",name:"Consolidation",vi:"Đông đặc phổi",head:"A",icd:"J18.9",diff:"Easier",gt:[.56,.48,.78,.72],
+ les:[{t:"op",x:.66,y:.60,rx:.08,ry:.10,r:-.1,a:.75}],
+ cam:[[.66,.60,.08,.09,1,-.1]],
+ n:["Left lower lobe, a uniform dense patch.","Similar to pneumonia but on the other side; the heat sits on the dense core.","Use Compare with Pneumonia to see how much the masks overlap."]},
+{id:"edem",name:"Edema",vi:"Phù phổi cấp",head:"A",icd:"J81.0",diff:"Hard",gt:null,
+ les:[{t:"op",x:.40,y:.45,rx:.08,ry:.12,r:.2,a:.5},{t:"op",x:.62,y:.45,rx:.08,ry:.12,r:-.2,a:.5}],
+ cam:[[.40,.45,.07,.11,1,.2],[.62,.45,.07,.11,1,-.2]],
+ n:["Two symmetric perihilar peaks, a bat-wing shape.","Bilateral and diffuse: there is no single expert box, so box IoU is not defined.","Compare with Infiltration and read the mask overlap."]},
+{id:"emph",name:"Emphysema",vi:"Khí phế thũng",head:"A",icd:"J43.9",diff:"Hard",gt:null,hyper:1,
+ les:[{t:"dark",x:.33,y:.46,rx:.13,ry:.26,r:0,a:.5},{t:"dark",x:.67,y:.47,rx:.12,ry:.25,r:0,a:.5}],
+ cam:[[.33,.44,.12,.20,.6,0],[.67,.45,.11,.19,.6,0],[.5,.62,.2,.08,.25,0]],
+ n:["Broad, weak activation over both lungs.","A hyperlucent lung is an absence of structure, so maps are flat and low contrast.","Raise α: almost nothing survives, which is the honest outcome."]},
+{id:"fibr",name:"Fibrosis",vi:"Xơ hóa phổi",head:"A",icd:"J84.10",diff:"Hard",gt:null,
+ les:[{t:"dots",x:.32,y:.62,rx:.12,ry:.12,r:0,a:.35},{t:"dots",x:.68,y:.62,rx:.11,ry:.12,r:0,a:.35}],
+ cam:[[.32,.63,.1,.1,1,0],[.68,.63,.1,.1,.9,0]],
+ n:["Both lower zones, reticular texture.","Fine texture lives at a scale the 16×16 grid cannot resolve. The map only marks the zone.","Open the Coarse map layer: texture turns into big cells."]},
+{id:"pleu",name:"Pleural Thickening",vi:"Dày màng phổi",head:"A",icd:"J94.9",diff:"Medium",gt:[.12,.30,.24,.62],
+ les:[{t:"op",x:.185,y:.46,rx:.018,ry:.15,r:.05,a:.8}],
+ cam:[[.19,.46,.025,.14,1,.05]],
+ n:["Narrow band along the right lateral chest wall.","Thin and at the edge of the mask. Dilation and grounding decide whether it survives.","Compare the boxes with grounding on and off."]},
+{id:"hern",name:"Hernia",vi:"Thoát vị hoành",head:"A",icd:"K44.9",diff:"Medium",gt:[.48,.64,.64,.80],
+ les:[{t:"ring",x:.56,y:.72,rx:.055,ry:.05,r:0,a:.6}],
+ cam:[[.56,.72,.05,.05,1,0]],
+ n:["Retrocardiac gas bubble behind the heart.","Rare (about 0.2% of NIH) and hidden behind the heart shadow.","The 50× pos_weight clamp exists for this class. This view shows only the localisation side."]},
+{id:"tb",name:"Tuberculosis",vi:"Lao phổi",head:"B",icd:"A15.0",diff:"Hard",gt:null,
+ les:[{t:"ring",x:.30,y:.24,rx:.07,ry:.06,r:0,a:.55},{t:"op",x:.68,y:.26,rx:.06,ry:.05,r:0,a:.45}],
+ cam:[[.30,.24,.07,.06,1,0],[.68,.26,.06,.05,.7,0]],
+ n:["Both upper zones, apical, often with a cavity.","Bilateral and upper-zone dominated. Head B has image-level labels only.","Compare with COVID-19: upper versus lower, central versus peripheral."]},
+{id:"covid",name:"COVID-19",vi:"Sàng lọc COVID-19",head:"C",icd:"U07.1",diff:"Hard",gt:null,
+ les:[{t:"op",x:.22,y:.58,rx:.06,ry:.13,r:.1,a:.4},{t:"op",x:.78,y:.58,rx:.06,ry:.13,r:-.1,a:.4},{t:"op",x:.30,y:.72,rx:.08,ry:.05,r:0,a:.35},{t:"op",x:.70,y:.72,rx:.08,ry:.05,r:0,a:.35}],
+ cam:[[.22,.58,.06,.12,.9,.1],[.78,.58,.06,.12,.9,-.1],[.30,.72,.08,.05,.7,0],[.70,.72,.08,.05,.7,0]],
+ shortcut:[[.09,.07,.045,.045,.95,0],[.91,.07,.045,.045,.8,0]],
+ n:["Peripheral and lower, both sides. In raw mode the R/L markers light up too.","The shortcut case. With grounding off, the corners dominate and the in-lung ratio collapses.","Toggle grounding and watch the corner peaks vanish. Head C is active on PACS with Youden threshold τ = 0.6123 and Smart Clinical Guardrail."]}
+];
+var byId={};D.forEach(function(d){byId[d.id]=d});
+var LEAK=[[.08,.10,.05,.05,.16,0],[.92,.09,.05,.05,.13,0],[.5,.04,.12,.04,.10,0],[.14,.92,.08,.06,.10,0],[.88,.93,.08,.06,.10,0]];
+
+/* ---------- synthetic X-ray ---------- */
+function mk(w,h){var c=document.createElement("canvas");c.width=w;c.height=h||w;return c}
+function ell(x,cx,cy,rx,ry,rot,stops){x.save();x.translate(cx*S,cy*S);x.rotate(rot||0);x.scale(rx*S,ry*S);var g=x.createRadialGradient(0,0,0,0,0,1);stops.forEach(function(s){g.addColorStop(s[0],s[1])});x.fillStyle=g;x.beginPath();x.arc(0,0,1,0,6.2832);x.fill();x.restore()}
+function blob(x,cx,cy,rx,ry,rot,rgb,a){ell(x,cx,cy,rx,ry,rot,[[0,"rgba("+rgb+","+a+")"],[.6,"rgba("+rgb+","+(a*.55)+")"],[1,"rgba("+rgb+",0)"]])}
+var xcache={};
+function paintXray(d){
+  if(xcache[d.id])return xcache[d.id];
+  var c=mk(S),x=c.getContext("2d"),hs=d.hs||1,hy=d.hyper?1:0,rnd=mulberry(hash("x"+d.id));
+  x.fillStyle="#0e0e0e";x.fillRect(0,0,S,S);
+  ell(x,.5,.54,.47,.60,0,[[0,"#7c7c7c"],[.75,"#5a5a5a"],[1,"#202020"]]);
+  [[.33,.46,.14,.27],[.67,.47,.13,.26]].forEach(function(l){
+    ell(x,l[0],l[1],l[2]*(1+.05*hy),l[3]*(1+.04*hy),0,[[0,hy?"#050505":"#0c0c0c"],[.7,hy?"#171717":"#242424"],[1,"#3a3a3a"]]);});
+  x.lineCap="round";
+  [-1,1].forEach(function(sg){for(var i=0;i<9;i++){var y0=.16+i*.065;x.strokeStyle="rgba(205,205,205,.2)";x.lineWidth=4;x.beginPath();
+    x.moveTo((.5+sg*.03)*S,y0*S);x.quadraticCurveTo((.5+sg*.24)*S,(y0-.06)*S,(.5+sg*.40)*S,(y0+.17)*S);x.stroke();}});
+  x.fillStyle="rgba(205,205,205,.2)";x.fillRect(.47*S,.1*S,.06*S,.8*S);
+  ell(x,.56,.60,.115*hs,.125*hs,0,[[0,"rgba(220,220,220,.85)"],[.7,"rgba(190,190,190,.55)"],[1,"rgba(170,170,170,0)"]]);
+  ell(x,.5,.34,.05,.22,0,[[0,"rgba(215,215,215,.35)"],[1,"rgba(215,215,215,0)"]]);
+  x.strokeStyle="rgba(225,225,225,.45)";x.lineWidth=6;
+  [[.5,.2,.12,.13],[.5,.2,.88,.13]].forEach(function(p){x.beginPath();x.moveTo(p[0]*S,p[1]*S);x.quadraticCurveTo((p[0]+p[2])/2*S,(p[1]-.04)*S,p[2]*S,p[3]*S);x.stroke()});
+  ell(x,.33,hy?.88:.84,.20,hy?.07:.10,0,[[0,"rgba(215,215,215,.6)"],[1,"rgba(215,215,215,0)"]]);
+  ell(x,.68,hy?.89:.85,.19,hy?.07:.10,0,[[0,"rgba(215,215,215,.6)"],[1,"rgba(215,215,215,0)"]]);
+  for(var i=0;i<5000;i++){x.fillStyle="rgba(255,255,255,"+(rnd()*.05)+")";x.fillRect(rnd()*S,rnd()*S,2,2)}
+  d.les.forEach(function(l){
+    if(l.t==="op")blob(x,l.x,l.y,l.rx,l.ry,l.r,"238,238,238",l.a);
+    else if(l.t==="dark")blob(x,l.x,l.y,l.rx,l.ry,l.r,"0,0,0",l.a);
+    else if(l.t==="ring"){blob(x,l.x,l.y,l.rx,l.ry,l.r,"238,238,238",l.a);blob(x,l.x,l.y,l.rx*.5,l.ry*.5,l.r,"0,0,0",.75)}
+    else if(l.t==="line"){x.save();x.strokeStyle="rgba(235,235,235,"+l.a+")";x.lineWidth=3;x.beginPath();x.ellipse(l.x*S,l.y*S,l.rx*S,l.ry*S,l.r,0,6.2832);x.stroke();x.restore()}
+    else if(l.t==="dots"){for(var k=0;k<90;k++){var a=rnd()*6.2832,rr=Math.sqrt(rnd());var px=l.x+Math.cos(a)*rr*l.rx,py=l.y+Math.sin(a)*rr*l.ry;x.fillStyle="rgba(238,238,238,"+(l.a*(.4+rnd()*.6))+")";x.fillRect(px*S,py*S,3,3)}}
+  });
+  xcache[d.id]=c;return c;
+}
+
+/* ---------- anatomy masks ---------- */
+function thorax(u,v,k,hs){
+  var d1=Math.hypot((u-.33)/(.14*k),(v-.46)/(.27*k)),d2=Math.hypot((u-.67)/(.13*k),(v-.47)/(.26*k)),
+      dm=Math.hypot((u-.52)/(.12*k),(v-.55)/(.31*k)),m=Math.min(d1,d2,dm);
+  if(hs>1)m=Math.min(m,Math.hypot((u-.56)/(.115*hs*1.1*k),(v-.60)/(.125*hs*1.1*k)));
+  return 1-sstep(.9,1.1,m);
+}
+function gauss(u,v,p){var dx=u-p[0],dy=v-p[1],r=p[5]||0,c=Math.cos(r),s=Math.sin(r),a=dx*c+dy*s,b=-dx*s+dy*c;
+  return p[4]*Math.exp(-.5*(a*a/(p[2]*p[2])+b*b/(p[3]*p[3])))}
+
+/* ---------- the pipeline ---------- */
+function run(d,grounded,alpha,customCam){
+  var raw=new Float32Array(N*N),hs=d.hs||1,i,x,y;
+  if(customCam){raw.set(customCam)}
+  else{
+    var rnd=mulberry(hash(d.id)),grid=new Float32Array(49);for(i=0;i<49;i++)grid[i]=rnd();
+    var leaks=LEAK.concat(d.shortcut||[]);
+    for(y=0;y<N;y++)for(x=0;x<N;x++){
+      var u=(x+.5)/N,v=(y+.5)/N,s=0,j;
+      for(j=0;j<d.cam.length;j++)s+=gauss(u,v,d.cam[j]);
+      var gx=u*6,gy=v*6,ix=Math.min(5,gx|0),iy=Math.min(5,gy|0),fx=gx-ix,fy=gy-iy;
+      var n=(grid[iy*7+ix]*(1-fx)+grid[iy*7+ix+1]*fx)*(1-fy)+(grid[(iy+1)*7+ix]*(1-fx)+grid[(iy+1)*7+ix+1]*fx)*fy;
+      s+=n*.07;
+      for(j=0;j<leaks.length;j++)s+=gauss(u,v,leaks[j]);
+      raw[y*N+x]=s*(grounded?thorax(u,v,1.08,hs):1);
+    }
+  }
+  var coarse=new Float32Array(G*G),B=N/G,cnt=B*B,mx=1e-6;
+  for(y=0;y<N;y++)for(x=0;x<N;x++)coarse[((y/B)|0)*G+((x/B)|0)]+=raw[y*N+x]/cnt;
+  for(i=0;i<G*G;i++)mx=Math.max(mx,coarse[i]);
+  for(i=0;i<G*G;i++)coarse[i]/=mx;
+  var heat=new Float32Array(N*N),hm=1e-6;
+  for(y=0;y<N;y++)for(x=0;x<N;x++){
+    var fx2=clamp((x+.5)/N*G-.5,0,G-1),fy2=clamp((y+.5)/N*G-.5,0,G-1),x0=fx2|0,y0=fy2|0,x1=Math.min(G-1,x0+1),y1=Math.min(G-1,y0+1),tx=fx2-x0,ty=fy2-y0;
+    var vv=(coarse[y0*G+x0]*(1-tx)+coarse[y0*G+x1]*tx)*(1-ty)+(coarse[y1*G+x0]*(1-tx)+coarse[y1*G+x1]*tx)*ty;
+    heat[y*N+x]=vv;if(vv>hm)hm=vv;
+  }
+  for(i=0;i<N*N;i++)heat[i]/=hm;
+  var mask=new Uint8Array(N*N),area=0,peak={x:0,y:0,v:0},inL=0,tot=0;
+  for(y=0;y<N;y++)for(x=0;x<N;x++){
+    i=y*N+x;var h=heat[i];
+    if(h>=alpha){mask[i]=1;area++}
+    if(h>peak.v){peak={x:(x+.5)/N,y:(y+.5)/N,v:h}}
+    tot+=h;inL+=h*thorax((x+.5)/N,(y+.5)/N,1,hs);
+  }
+  var box=largest(mask),iou=null;
+  if(box&&d.gt&&!customCam)iou=boxIoU(box,d.gt);
+  return{coarse:coarse,heat:heat,mask:mask,box:box,iou:iou,area:area/(N*N),peak:peak,inLung:customCam?null:(tot?inL/tot:0)};
+}
+function largest(mask){
+  var seen=new Uint8Array(N*N),best=null,bs=0,st=[],i,k;
+  for(i=0;i<N*N;i++){
+    if(!mask[i]||seen[i])continue;
+    var sz=0,x0=N,y0=N,x1=0,y1=0;st.length=0;st.push(i);seen[i]=1;
+    while(st.length){k=st.pop();sz++;var x=k%N,y=(k/N)|0;
+      if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;
+      if(x>0&&mask[k-1]&&!seen[k-1]){seen[k-1]=1;st.push(k-1)}
+      if(x<N-1&&mask[k+1]&&!seen[k+1]){seen[k+1]=1;st.push(k+1)}
+      if(y>0&&mask[k-N]&&!seen[k-N]){seen[k-N]=1;st.push(k-N)}
+      if(y<N-1&&mask[k+N]&&!seen[k+N]){seen[k+N]=1;st.push(k+N)}}
+    if(sz>bs){bs=sz;best=[x0/N,y0/N,(x1+1)/N,(y1+1)/N]}
+  }
+  return best;
+}
+function boxIoU(a,b){var ix=Math.max(0,Math.min(a[2],b[2])-Math.max(a[0],b[0])),iy=Math.max(0,Math.min(a[3],b[3])-Math.max(a[1],b[1])),
+  inter=ix*iy,u=(a[2]-a[0])*(a[3]-a[1])+(b[2]-b[0])*(b[3]-b[1])-inter;return u>0?inter/u:0}
+function jaccard(a,b){var i=0,u=0;for(var k=0;k<N*N;k++){var p=a[k],q=b[k];if(p&&q)i++;if(p||q)u++}return u?i/u:0}
+
+/* ---------- canvas painting ---------- */
+function jet(v){return[clamp(1.5-Math.abs(4*v-3),0,1)*255,clamp(1.5-Math.abs(4*v-2),0,1)*255,clamp(1.5-Math.abs(4*v-1),0,1)*255]}
+function fieldCanvas(fn){var c=mk(N),x=c.getContext("2d"),im=x.createImageData(N,N),i,o;for(i=0;i<N*N;i++){o=fn(i);im.data[i*4]=o[0];im.data[i*4+1]=o[1];im.data[i*4+2]=o[2];im.data[i*4+3]=o[3]}x.putImageData(im,0,0);return c}
+function heatCanvas(heat){return fieldCanvas(function(i){var v=heat[i],c=jet(v);return[c[0],c[1],c[2],sstep(.05,.45,v)*230]})}
+function layerCtx(c){var x=c.getContext("2d");x.clearRect(0,0,S,S);x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";return x}
+
+var cv={xray:mk(S),gate:mk(S),feat:mk(S),heat:mk(S),mask:mk(S),box:mk(S)};
+
+/* ---------- state ---------- */
+var state={id:"pneu",cmp:"",alpha:.30,grounded:true,heatOp:.9,explode:.55,rot:false,step:0,hl:-1,custom:null};
+var LAYERS=[
+ {k:"xray",n:"Input X-ray",s:"512×512, letterboxed",c:"#8a8a8a"},
+ {k:"gate",n:"Anatomical gate",s:"lung mask, 6% dilation",c:"#3FD0C4"},
+ {k:"feat",n:"Coarse map 16×16",s:"one cell = 32 px",c:"#6fa8ff"},
+ {k:"heat",n:"Grad-CAM heatmap",s:"bilinear, ÷ max",c:"#f2d03f"},
+ {k:"mask",n:"Binary mask",s:"H ≥ α·max(H)",c:"#3FD0C4"},
+ {k:"box",n:"Box and IoU",s:"largest component",c:"#F2A93B"}];
+var vis=[1,1,1,1,1,1];
+var STEPS=[
+ {n:"Stack",vis:[1,1,1,1,1,1],t:"All six layers",f:"same 512×512 grid in every layer",d:"Drag to rotate. The gold line follows the activation peak straight down through every stage, so you can see where each step moves or blurs it."},
+ {n:"1 Input",vis:[1,0,0,0,0,0],t:"Input",f:"x ∈ ℝ³ˣ⁵¹²ˣ⁵¹²",d:"Grayscale is letterboxed to 512 px, repeated to three channels and ImageNet-normalised. Your docs fix 512 px because 224 px loses small nodules and shrinks the final map to 7×7."},
+ {n:"2 Gate",vis:[1,1,0,0,0,0],t:"Anatomical gate",f:"x̃ = x · (0.10 + 0.90 · dilate₆%(P_lung))",d:"Dense-UNet marks the lungs (Val Dice 0.9630, IoU 0.9300). Used for dilated soft-masking (6% dilation, 10% attenuation) and heatmap grounding. If detected lung area is under 5% (white-out fail-safe), masking is bypassed to protect diffuse lesions."},
+ {n:"3 Coarse map",vis:[1,0,1,0,0,0],t:"Coarse class activation map",f:"Mᶜ = ReLU(Σₖ αₖᶜ Aᵏ),  αₖᶜ = (1/Z) Σᵢⱼ ∂yᶜ/∂Aᵏᵢⱼ",d:"DenseNet-121 denseblock4 yields 1024×16×16. Each cell covers 32×32 input pixels, so the map cannot place a boundary more finely than that."},
+ {n:"4 Upsample",vis:[1,0,0,1,0,0],t:"Upsample and normalise",f:"H = bilinear₅₁₂(M) / max(M)",d:"Smooth interpolation makes the map look precise, but it contains no new information. The blur you see is the 16×16 grid."},
+ {n:"5 Binarise",vis:[1,0,0,0,1,0],t:"Adaptive binarisation",f:"B(x,y) = 𝟙[ H(x,y) ≥ α · max(H) ],  α ∈ [0.2, 0.4]",d:"Low α gives a fat mask and a large box. High α keeps only the core. Move the α slider and watch the IoU in the panel."},
+ {n:"6 Box + IoU",vis:[1,0,0,0,1,1],t:"Box and IoU",f:"IoU = |B̂ ∩ Bᴳᵀ| / |B̂ ∪ Bᴳᵀ|",d:"The bounding box of the largest connected component is compared with the expert box. Training never sees boxes; they exist only for evaluation."}];
+
+/* ---------- three.js ---------- */
+var ok=typeof THREE!=="undefined",planes=[],textures=[],renderer,scene,cam,group,axis,cur={gap:.64};
+var stage=$("#stage"),glc=$("#gl"),labs=[];
+function initGL(){
+  try{renderer=new THREE.WebGLRenderer({canvas:glc,antialias:true,alpha:true})}catch(e){ok=false}
+  if(!ok){$("#nogl").style.display="grid";return}
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  scene=new THREE.Scene();cam=new THREE.PerspectiveCamera(34,1,.1,100);cam.position.set(0,0,13.2);
+  group=new THREE.Group();group.rotation.set(-1.0,0,.55);scene.add(group);
+  var geo=new THREE.PlaneGeometry(4,4),edge=new THREE.EdgesGeometry(geo);
+  LAYERS.forEach(function(L,i){
+    var t=new THREE.CanvasTexture(cv[L.k]);t.generateMipmaps=false;t.minFilter=THREE.LinearFilter;
+    t.magFilter=(L.k==="feat")?THREE.NearestFilter:THREE.LinearFilter;
+    var m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:t,transparent:true,side:THREE.DoubleSide,depthWrite:false}));
+    var ln=new THREE.LineSegments(edge,new THREE.LineBasicMaterial({color:new THREE.Color(L.c),transparent:true,opacity:.7}));
+    m.add(ln);m.userData={cur:1,line:ln};group.add(m);planes.push(m);textures.push(t);
+    var d=document.createElement("div");d.className="lbl";d.textContent=(i+1)+" · "+L.n;$("#labels").appendChild(d);labs.push(d);
+  });
+  var g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,-1),new THREE.Vector3(0,0,1)]);
+  axis=new THREE.Line(g,new THREE.LineBasicMaterial({color:0xF2A93B}));group.add(axis);
+  var dragging=false,lx=0,ly=0;
+  glc.addEventListener("pointerdown",function(e){dragging=true;lx=e.clientX;ly=e.clientY;glc.setPointerCapture(e.pointerId)});
+  glc.addEventListener("pointermove",function(e){if(!dragging)return;
+    group.rotation.z+=(e.clientX-lx)*.008;
+    if(e.pointerType==="mouse")group.rotation.x=clamp(group.rotation.x+(e.clientY-ly)*.006,-1.5,-.15);
+    lx=e.clientX;ly=e.clientY});
+  var up=function(){dragging=false};glc.addEventListener("pointerup",up);glc.addEventListener("pointercancel",up);
+  new ResizeObserver(resize).observe(stage);resize();
+  (function loop(){
+    requestAnimationFrame(loop);
+    if(document.hidden)return;
+    if(state.rot&&!dragging&&!reduced)group.rotation.z+=.003;
+    var tg=.12+state.explode*.95;cur.gap+=(tg-cur.gap)*(reduced?1:.14);
+    var any=state.hl>=0;
+    planes.forEach(function(p,i){
+      p.position.z=(i-(LAYERS.length-1)/2)*cur.gap;
+      var tgt=vis[i]?(LAYERS[i].k==="heat"?state.heatOp:1):0;
+      if(any&&i!==state.hl)tgt*=.18;
+      p.userData.cur+=(tgt-p.userData.cur)*(reduced?1:.18);
+      p.material.opacity=p.userData.cur;p.userData.line.material.opacity=p.userData.cur*.7;
+      p.visible=p.userData.cur>.02;
+    });
+    axis.scale.z=Math.max(.01,((LAYERS.length-1)*cur.gap)/2+.25);
+    scene.updateMatrixWorld(true);labels();
+    renderer.render(scene,cam);
+  })();
+}
+var tv;
+function labels(){
+  var w=stage.clientWidth,h=stage.clientHeight;if(!tv)tv=new THREE.Vector3();
+  planes.forEach(function(p,i){tv.set(2.0,-2.0,0);p.localToWorld(tv);tv.project(cam);
+    labs[i].style.left=((tv.x+1)/2*w)+"px";labs[i].style.top=((1-tv.y)/2*h)+"px";
+    labs[i].style.opacity=(vis[i]&&(state.hl<0||state.hl===i))?1:0});
+}
+function resize(){var w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+
+/* ---------- refresh: run pipeline and repaint every layer ---------- */
+var resA,resB,pending=false;
+function refresh(){if(pending)return;pending=true;requestAnimationFrame(function(){pending=false;doRefresh()})}
+function doRefresh(){
+  var d=byId[state.id],cu=state.custom,hasCam=cu&&cu.cam;
+  resA=run(d,state.grounded,state.alpha,hasCam?cu.cam:null);
+  resB=(state.cmp&&!hasCam)?run(byId[state.cmp],state.grounded,state.alpha,null):null;
+  var x;
+  // 1 xray
+  x=layerCtx(cv.xray);x.fillStyle="#000";x.fillRect(0,0,S,S);
+  if(cu&&cu.xray){var im=cu.xray,sc=Math.min(S/im.width,S/im.height);x.drawImage(im,(S-im.width*sc)/2,(S-im.height*sc)/2,im.width*sc,im.height*sc)}
+  else x.drawImage(paintXray(d),0,0);
+  // 2 gate
+  x=layerCtx(cv.gate);var hs=d.hs||1;
+  x.drawImage(fieldCanvas(function(i){var m=thorax(((i%N)+.5)/N,(((i/N)|0)+.5)/N,1.08,hs);return[63,208,196,m*120]}),0,0,S,S);
+  x.strokeStyle="rgba(63,208,196,.0)";
+  // 3 coarse
+  x=layerCtx(cv.feat);x.imageSmoothingEnabled=false;var cs=S/G,gy,gx;
+  for(gy=0;gy<G;gy++)for(gx=0;gx<G;gx++){var v=resA.coarse[gy*G+gx];
+    x.fillStyle="rgba(111,168,255,"+(.06+v*.8)+")";x.fillRect(gx*cs,gy*cs,cs,cs);
+    x.strokeStyle="rgba(190,215,255,.35)";x.lineWidth=1;x.strokeRect(gx*cs+.5,gy*cs+.5,cs-1,cs-1);
+    if(v>.15){x.fillStyle=v>.6?"#04121f":"#dbe9ff";x.font="500 12px 'IBM Plex Mono',monospace";x.textAlign="center";x.textBaseline="middle";x.fillText(String(Math.round(v*99)),gx*cs+cs/2,gy*cs+cs/2)}}
+  // 4 heat
+  x=layerCtx(cv.heat);x.drawImage(heatCanvas(resA.heat),0,0,S,S);
+  // 5 mask
+  x=layerCtx(cv.mask);
+  x.drawImage(fieldCanvas(function(i){return resA.mask[i]?[63,208,196,150]:[0,0,0,0]}),0,0,S,S);
+  if(resB){var mb=resB.mask;
+    x.drawImage(fieldCanvas(function(i){if(!mb[i])return[0,0,0,0];var k=i%N,r=(i/N)|0,e=(k===0||r===0||k===N-1||r===N-1||!mb[i-1]||!mb[i+1]||!mb[i-N]||!mb[i+N]);return e?[181,146,255,255]:[181,146,255,45]}),0,0,S,S)}
+  // 6 box
+  x=layerCtx(cv.box);x.lineWidth=4;
+  function bx(b,col,dash){x.strokeStyle=col;x.setLineDash(dash||[]);x.strokeRect(b[0]*S,b[1]*S,(b[2]-b[0])*S,(b[3]-b[1])*S)}
+  if(d.gt&&!hasCam){x.fillStyle="rgba(242,169,59,.10)";x.fillRect(d.gt[0]*S,d.gt[1]*S,(d.gt[2]-d.gt[0])*S,(d.gt[3]-d.gt[1])*S);bx(d.gt,"#F2A93B",[14,8])}
+  if(resB&&resB.box)bx(resB.box,"#B592FF",[4,6]);
+  if(resA.box){bx(resA.box,"#3FD0C4");
+    x.setLineDash([]);x.font="600 24px 'IBM Plex Mono',monospace";x.textAlign="left";x.textBaseline="bottom";
+    var tx=resA.iou==null?"no reference box":"IoU "+resA.iou.toFixed(2);
+    var ty=Math.max(30,resA.box[1]*S-6),tw=x.measureText(tx).width+14;
+    x.fillStyle="rgba(7,11,18,.85)";x.fillRect(resA.box[0]*S,ty-28,tw,32);x.fillStyle="#3FD0C4";x.fillText(tx,resA.box[0]*S+7,ty)}
+  if(ok){
+    textures.forEach(function(t){t.needsUpdate=true});
+    var px=(resA.peak.x-.5)*4,py=-(resA.peak.y-.5)*4;axis.position.set(px,py,0);
+  }
+  metrics();tilesUpdate();
+}
+
+/* ---------- panels ---------- */
+function metrics(){
+  var d=byId[state.id],r=resA,cu=state.custom&&state.custom.cam,f=function(b){return b?"["+b.map(function(v){return Math.round(v*S)}).join(", ")+"]":"—"};
+  var verdict="—",cls="";
+  if(r.iou!=null){verdict=r.iou>=.35?"meets ≥ 0.35 target":"below 0.35 target";cls=r.iou>=.35?"ok":"bad"}
+  var il=r.inLung==null?"n/a":(r.inLung*100).toFixed(1)+"%",ilc=r.inLung==null?"":(r.inLung>=.8?"ok":"bad");
+  var h="<dt>Peak</dt><dd>("+Math.round(r.peak.x*S)+", "+Math.round(r.peak.y*S)+") px</dd>"+
+   "<dt>Active area (H ≥ α)</dt><dd>"+(r.area*100).toFixed(1)+"% of image</dd>"+
+   "<dt>In-lung energy</dt><dd class='"+ilc+"'>"+il+(r.inLung!=null?(r.inLung>=.8?" · ≥ 80%":" · < 80%"):"")+"</dd>"+
+   "<dt>Predicted box</dt><dd>"+f(r.box)+"</dd>"+
+   "<dt>Reference box</dt><dd>"+(cu?"—":(d.gt?f(d.gt):"none, diffuse pattern"))+"</dd>"+
+   "<dt>Box-IoU</dt><dd class='"+cls+"'>"+(r.iou==null?"—":r.iou.toFixed(3))+(r.iou==null?"":" · "+verdict)+"</dd>";
+  if(resB)h+="<dt>Mask overlap with "+byId[state.cmp].name+"</dt><dd style='color:var(--cmp)'>Jaccard "+jaccard(resA.mask,resB.mask).toFixed(2)+"</dd>";
+  $("#met").innerHTML=h;
+  $("#metsrc").textContent=cu?"your upload":"synthetic";
+  var dc=$("#dcard");
+  if(cu){dc.innerHTML="<h3>Custom output</h3><p>Showing your heatmap through the same coarse-map, threshold and box steps. Grounding is not re-applied to uploads.</p>"}
+  else dc.innerHTML="<h3>"+d.name+" <small class='mono' style='color:var(--muted);font-weight:400'>"+d.vi+" · "+d.icd+"</small></h3>"+
+   "<p><span class='tag'>WSOL difficulty: "+d.diff+"</span></p>"+
+   "<p><b>Where the map peaks</b>"+d.n[0]+"</p><p><b>Why it is hard or easy</b>"+d.n[1]+"</p><p><b>Try this</b>"+d.n[2]+"</p>";
+  $("#curhead").textContent=cu?"custom":"Head "+d.head;
+  $("#groundnote").textContent=cu?"Grounding is off for uploads.":(state.grounded?"Heat outside the thorax and mediastinum is removed before normalising.":"Raw attention: corner and border activations stay in. This is the audit view for shortcut learning.");
+}
+function setStep(i){
+  state.step=i;vis=STEPS[i].vis.slice();
+  Array.prototype.forEach.call($("#steps").children,function(b,k){b.setAttribute("aria-pressed",k===i?"true":"false")});
+  var c=$("#cap"),s=STEPS[i];c.children[0].textContent=s.t;c.children[1].textContent=s.f;c.children[2].textContent=s.d;
+  Array.prototype.forEach.call(document.querySelectorAll("#layers input"),function(inp,k){inp.checked=!!vis[k]});
+}
+var tileCanvases={};
+function tilesUpdate(){
+  D.forEach(function(d){
+    var r=(d.id===state.id&&!(state.custom&&state.custom.cam))?resA:run(d,state.grounded,state.alpha,null),t=tileCanvases[d.id];
+    var x=t.c.getContext("2d");x.clearRect(0,0,160,160);x.drawImage(paintXray(d),0,0,160,160);
+    x.drawImage(heatCanvas(r.heat),0,0,160,160);
+    x.lineWidth=2;
+    if(d.gt){x.strokeStyle="#F2A93B";x.setLineDash([5,3]);x.strokeRect(d.gt[0]*160,d.gt[1]*160,(d.gt[2]-d.gt[0])*160,(d.gt[3]-d.gt[1])*160)}
+    if(r.box){x.strokeStyle="#3FD0C4";x.setLineDash([]);x.strokeRect(r.box[0]*160,r.box[1]*160,(r.box[2]-r.box[0])*160,(r.box[3]-r.box[1])*160)}
+    if(state.cmp===d.id){x.strokeStyle="#B592FF";x.lineWidth=4;x.setLineDash([]);x.strokeRect(2,2,156,156)}
+    t.i.textContent=(r.iou==null?"no ref box":"IoU "+r.iou.toFixed(2))+" · "+(r.inLung*100).toFixed(0)+"% in-lung";
+    t.b.setAttribute("aria-pressed",d.id===state.id&&!state.custom?"true":"false");
+  });
+}
+function select(id){
+  state.id=id;state.custom=null;
+  Array.prototype.forEach.call(document.querySelectorAll(".chip"),function(b){b.setAttribute("aria-pressed",b.dataset.id===id?"true":"false")});
+  refresh();
+}
+
+/* ---------- build UI ---------- */
+function build(){
+  var chips=$("#chips");
+  [["A","Head A · NIH ChestX-ray14"],["B","Head B · Tuberculosis"],["C","Head C · COVID-19 screening"]].forEach(function(h){
+    var g=document.createElement("div");g.className="cg";g.innerHTML="<div class='cl'>"+h[1]+"</div>";
+    var row=document.createElement("div");row.className="crow";
+    D.filter(function(d){return d.head===h[0]}).forEach(function(d){var b=document.createElement("button");b.type="button";b.className="chip";b.textContent=d.name;b.dataset.id=d.id;b.setAttribute("aria-pressed",d.id===state.id?"true":"false");b.onclick=function(){select(d.id)};row.appendChild(b)});
+    g.appendChild(row);chips.appendChild(g)});
+  var sel=$("#s-cmp");D.forEach(function(d){var o=document.createElement("option");o.value=d.id;o.textContent=d.name;sel.appendChild(o)});
+  sel.onchange=function(){state.cmp=sel.value;refresh()};
+  var st=$("#steps");STEPS.forEach(function(s,i){var b=document.createElement("button");b.type="button";b.textContent=s.n;b.onclick=function(){setStep(i)};st.appendChild(b)});
+  var ly=$("#layers");LAYERS.forEach(function(L,i){
+    var lb=document.createElement("label");lb.innerHTML="<input type='checkbox' checked><i class='sw' style='background:"+L.c+"'></i><span>"+(i+1)+" "+L.n+"<br><small>"+L.s+"</small></span>";
+    lb.querySelector("input").onchange=function(e){vis[i]=e.target.checked?1:0;Array.prototype.forEach.call($("#steps").children,function(b){b.setAttribute("aria-pressed","false")})};
+    lb.onmouseenter=function(){state.hl=i};lb.onmouseleave=function(){state.hl=-1};
+    ly.appendChild(lb)});
+  var tl=$("#tiles");
+  D.forEach(function(d){
+    var b=document.createElement("button");b.type="button";b.className="tile";b.setAttribute("aria-label",d.name);
+    var c=document.createElement("canvas");c.width=c.height=160;
+    var n=document.createElement("span");n.className="tn";n.textContent=d.name;
+    var i=document.createElement("span");i.className="ti";
+    b.appendChild(c);b.appendChild(n);b.appendChild(i);
+    b.onclick=function(){select(d.id);document.getElementById("viewer").scrollIntoView({behavior:reduced?"auto":"smooth",block:"start"})};
+    tl.appendChild(b);tileCanvases[d.id]={c:c,i:i,b:b}});
+  function bind(id,out,fmt,key,pct){var e=$(id),o=$(out);var u=function(){var v=parseFloat(e.value);state[key]=v;o.textContent=fmt(v);if(key!=="explode"&&key!=="heatOp")refresh()};e.oninput=u;u()}
+  bind("#s-exp","#o-exp",function(v){return Math.round(v*100)+"%"},"explode");
+  bind("#s-alpha","#o-alpha",function(v){return v.toFixed(2)},"alpha");
+  bind("#s-heat","#o-heat",function(v){return Math.round(v*100)+"%"},"heatOp");
+  $("#c-ground").onchange=function(e){state.grounded=e.target.checked;refresh()};
+  $("#c-rot").onchange=function(e){state.rot=e.target.checked};
+  $("#b-reset").onclick=function(){state.custom=null;$("#f-x").value="";$("#f-h").value="";refresh()};
+  function loadImg(file,cb){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){cb(im);URL.revokeObjectURL(u)};im.src=u}
+  $("#f-x").onchange=function(e){var f=e.target.files[0];if(!f)return;loadImg(f,function(im){state.custom=state.custom||{};state.custom.xray=im;refresh()})};
+  $("#f-h").onchange=function(e){var f=e.target.files[0];if(!f)return;loadImg(f,function(im){
+    var c=mk(N),x=c.getContext("2d");x.drawImage(im,0,0,N,N);var p=x.getImageData(0,0,N,N).data,cam=new Float32Array(N*N),amin=255,amax=0,i;
+    for(i=0;i<N*N;i++){var a=p[i*4+3];if(a<amin)amin=a;if(a>amax)amax=a}
+    var useA=(amax-amin)>30;
+    for(i=0;i<N*N;i++){cam[i]=useA?p[i*4+3]/255:clamp((p[i*4]-p[i*4+2]+255)/510,0,1)*(Math.max(p[i*4],p[i*4+1],p[i*4+2])>25?1:0)}
+    state.custom=state.custom||{};state.custom.cam=cam;refresh()})};
+}
+
+build();
+initGL();
+setStep(0);
+doRefresh();
+})();
+</script>
+
+</body></html>

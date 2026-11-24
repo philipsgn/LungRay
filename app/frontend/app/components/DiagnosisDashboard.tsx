@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import ClinicalRagAssistant from "./ClinicalRagAssistant";
 import { PredictionResponse } from "../types";
 import { useLungRayLanguage, translations } from "../lib/i18n";
 import {
@@ -39,7 +40,7 @@ interface DiseaseMeta {
   icd10: string;
 }
 
-const NIH_14_DISEASES: DiseaseMeta[] = [
+export const NIH_14_DISEASES: DiseaseMeta[] = [
   { id: "Atelectasis", nameEn: "Atelectasis", nameVi: "Xẹp phổi", icd10: "J98.11" },
   { id: "Cardiomegaly", nameEn: "Cardiomegaly", nameVi: "Tim to", icd10: "I51.7" },
   { id: "Effusion", nameEn: "Effusion", nameVi: "Tràn dịch màng phổi", icd10: "J90" },
@@ -56,7 +57,7 @@ const NIH_14_DISEASES: DiseaseMeta[] = [
   { id: "Hernia", nameEn: "Hernia", nameVi: "Thoát vị hoành", icd10: "K44.9" },
 ];
 
-const NIH_THRESHOLDS: Record<string, number> = {
+export const NIH_THRESHOLDS: Record<string, number> = {
   Atelectasis: 0.4658,
   Cardiomegaly: 0.485,
   Effusion: 0.4844,
@@ -79,9 +80,7 @@ export default function DiagnosisDashboard({
   auditPass,
   selectedHead,
   selectedClass,
-  clinicalGrounding,
   onSelectPathology,
-  onToggleGrounding,
   onNavigateToScan,
   onBypassFailsafe,
   isExplaining = false,
@@ -98,6 +97,7 @@ export default function DiagnosisDashboard({
   const [searchQuery, setSearchQuery] = useState("");
 
   const isRejected = prediction?.safety?.decision === "REJECT";
+  const explanationUnsafe = isExplaining || (auditRatio !== null && auditRatio < 0.8) || auditPass === false;
 
   // Calculate positive findings count across all 3 heads
   const positiveFindingsCount = useMemo(() => {
@@ -152,24 +152,24 @@ export default function DiagnosisDashboard({
   };
 
   return (
-    <div className="space-y-3.5 font-mono">
+    <div className="space-y-3.5 font-sans">
       {/* Top Reading Room Header & Quick Navigation */}
-      <div className="bg-[#070B12] border border-slate-800 rounded-xl p-3 shadow-sm flex flex-wrap items-center justify-between gap-2.5">
+      <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex items-center gap-2">
           {onNavigateToScan && (
             <button
               type="button"
               onClick={onNavigateToScan}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-cyan-500/40 text-cyan-200 text-xs font-semibold hover:bg-slate-850 hover:text-white transition-all shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 border border-cyan-500/40 text-sky-700 text-xs font-semibold hover:bg-slate-850 hover:text-slate-900 transition-all shadow-sm"
             >
-              <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+              <ArrowLeft className="w-3.5 h-3.5 text-sky-700" />
               <span>{t.backToScanBtn}</span>
             </button>
           )}
 
           <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-cyan-400" />
-            <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+            <Activity className="w-4 h-4 text-sky-700" />
+            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               {t.quickSummaryTitle}
             </span>
           </div>
@@ -179,12 +179,12 @@ export default function DiagnosisDashboard({
         <div className="flex items-center gap-2">
           {prediction ? (
             isRejected ? (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rose-950 text-rose-300 border border-rose-800 flex items-center gap-1">
-                <Lock className="w-3 h-3 text-rose-400" />
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rose-50 text-rose-700 border border-rose-800 flex items-center gap-1">
+                <Lock className="w-3 h-3 text-rose-700" />
                 {t.failSafeRejectedBadge}
               </span>
             ) : (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-900 text-cyan-300 border border-slate-750">
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-sky-700 border border-slate-750">
                 {positiveFindingsCount > 0
                   ? `${positiveFindingsCount} ${t.findingsCount}`
                   : t.noFindingsDetected}
@@ -198,19 +198,19 @@ export default function DiagnosisDashboard({
 
       {/* Helpful Interactive Note */}
       {prediction && !isRejected && (
-        <div className="flex items-center gap-2 p-2 px-3 rounded-lg bg-slate-950 border border-slate-850 text-[11px] text-slate-400">
-          <Crosshair className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+        <div className="flex items-center gap-2 p-2 px-3 rounded-lg bg-slate-100 border border-slate-850 text-[11px] text-slate-600">
+          <Crosshair className="w-3.5 h-3.5 text-sky-700 shrink-0" />
           <span>{t.inspectOnXrayNote}</span>
         </div>
       )}
 
       {/* Consensus Ensemble Agreement Banner */}
-      {prediction?.ensemble_agreement !== undefined && (
-        <div className="bg-[#0B0F19] border border-purple-800/60 rounded-xl p-3 shadow-sm flex flex-col gap-2">
+      {typeof prediction?.ensemble_agreement === "number" && (
+        <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-              <span className="text-xs font-bold text-purple-200 uppercase tracking-wider">
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                 {lang === "vi" ? "Độ đồng thuận Ensemble" : "Ensemble Consensus Agreement"}
               </span>
             </div>
@@ -220,7 +220,7 @@ export default function DiagnosisDashboard({
                   ? "bg-emerald-950/80 text-emerald-300 border-emerald-700/60"
                   : prediction.ensemble_agreement >= 0.8
                   ? "bg-amber-950/80 text-amber-300 border-amber-700/60"
-                  : "bg-rose-950/80 text-rose-300 border-rose-700/60"
+                  : "bg-rose-50 text-rose-700 border-rose-700/60"
               }`}
             >
               {(prediction.ensemble_agreement * 100).toFixed(1)}%{" "}
@@ -234,14 +234,14 @@ export default function DiagnosisDashboard({
             </span>
           </div>
           {prediction.ensemble_models && (
-            <div className="text-[10px] text-slate-400 flex flex-wrap gap-1.5 items-center">
+            <div className="text-[10px] text-slate-600 flex flex-wrap gap-1.5 items-center">
               <span className="text-slate-500 font-semibold">
                 {lang === "vi" ? "Mô hình tham gia:" : "Participating Backbones:"}
               </span>
               {prediction.ensemble_models.map((m, idx) => (
                 <span
                   key={idx}
-                  className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-purple-300/80"
+                  className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-purple-300/80"
                 >
                   {m}
                 </span>
@@ -253,14 +253,14 @@ export default function DiagnosisDashboard({
 
       {/* TTA & Confidence Calibration Indicator */}
       {prediction?.tta_enabled && (
-        <div className="bg-[#0B0F19] border border-emerald-900/40 rounded-xl px-3 py-2 text-[11px] flex items-center justify-between text-slate-300 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-[11px] flex items-center justify-between text-slate-700 shadow-sm">
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span className="font-semibold text-emerald-300">
-              {lang === "vi" ? "Kiểm định đa góc độ (TTA 3-Pass)" : "Clinical 3-Pass TTA Active"}
+            <span className="font-semibold text-emerald-700">
+              {lang === "vi" ? "Suy luận ba lượt biến đổi ảnh (TTA)" : "Three-view test-time augmentation"}
             </span>
           </div>
-          <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+          <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
             {lang === "vi" ? "Hiệu chuẩn nhiệt độ: T=1.20" : "Calibrated: T=1.20"}
           </span>
         </div>
@@ -269,16 +269,16 @@ export default function DiagnosisDashboard({
       {/* ========================================================================= */}
       {/* ACCORDION 1: BÁO CÁO LÂM SÀNG TỔNG HỢP & CẢNH BÁO AN TOÀN OOD            */}
       {/* ========================================================================= */}
-      <div className="bg-[#070B12] rounded-xl border border-slate-800 shadow-md overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-md overflow-hidden">
         {/* Accordion Header / Toggle */}
         <button
           type="button"
           onClick={() => setOpenSection1((prev) => !prev)}
-          className="w-full p-3 flex items-center justify-between text-left hover:bg-slate-900/60 transition-colors border-b border-slate-850"
+          className="w-full p-3 flex items-center justify-between text-left hover:bg-slate-100/60 transition-colors border-b border-slate-850"
         >
           <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+            <FileText className="w-4 h-4 text-sky-700" />
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               {t.accordion1Title}
             </h3>
           </div>
@@ -287,17 +287,17 @@ export default function DiagnosisDashboard({
               <span
                 className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${
                   isRejected
-                    ? "bg-rose-950 text-rose-300 border-rose-800"
-                    : "bg-slate-900 text-cyan-300 border-slate-750"
+                    ? "bg-rose-50 text-rose-700 border-rose-800"
+                    : "bg-slate-100 text-sky-700 border-slate-750"
                 }`}
               >
                 {isRejected ? t.failSafeRejectedBadge : t.failSafeVerifiedBadge}
               </span>
             )}
             {openSection1 ? (
-              <ChevronUp className="w-4 h-4 text-slate-400" />
+              <ChevronUp className="w-4 h-4 text-slate-600" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
+              <ChevronDown className="w-4 h-4 text-slate-600" />
             )}
           </div>
         </button>
@@ -308,25 +308,25 @@ export default function DiagnosisDashboard({
             {/* OOD Safety Banner */}
             {prediction?.safety &&
               (isRejected ? (
-                <div className="bg-slate-900 border-2 border-rose-600/90 rounded-xl p-3.5 shadow-lg">
+                <div className="bg-slate-100 border-2 border-rose-600/90 rounded-xl p-3.5 shadow-lg">
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-rose-400 shrink-0" />
-                      <h4 className="font-bold text-rose-300 text-xs tracking-wider uppercase">
+                      <Lock className="w-4 h-4 text-rose-700 shrink-0" />
+                      <h4 className="font-bold text-rose-700 text-xs tracking-wider uppercase">
                         {t.failSafeRejectedTitle}
                       </h4>
                     </div>
-                    <span className="px-2 py-0.5 bg-rose-950 text-rose-300 border border-rose-700 font-bold text-[10px] rounded uppercase">
+                    <span className="px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-700 font-bold text-[10px] rounded uppercase">
                       {t.failSafeRejectedBadge}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-300 leading-relaxed mb-2">
+                  <p className="text-[11px] text-slate-700 leading-relaxed mb-2">
                     {t.failSafeRejectedDesc}
                   </p>
-                  <div className="grid grid-cols-2 gap-2 text-xs bg-slate-950 p-2 rounded border border-slate-800 my-1.5">
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-slate-100 p-2 rounded border border-slate-200 my-1.5">
                     <div>
                       <span className="text-slate-500">{t.helmholtzEnergyLabel} </span>
-                      <span className="font-bold text-rose-400">
+                      <span className="font-bold text-rose-700">
                         {prediction.safety.energy_score.toFixed(4)}
                       </span>
                       <span className="text-[9px] text-slate-500 block">
@@ -335,7 +335,7 @@ export default function DiagnosisDashboard({
                     </div>
                     <div>
                       <span className="text-slate-500">{t.shannonEntropyLabel} </span>
-                      <span className="font-bold text-rose-400">
+                      <span className="font-bold text-rose-700">
                         {prediction.safety.entropy_score.toFixed(4)}
                       </span>
                       <span className="text-[9px] text-slate-500 block">
@@ -343,27 +343,27 @@ export default function DiagnosisDashboard({
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-start gap-1.5 text-[10px] text-slate-300 mt-2 p-1.5 bg-slate-950/80 rounded border border-slate-800">
-                    <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-1.5 text-[10px] text-slate-700 mt-2 p-1.5 bg-slate-100/80 rounded border border-slate-200">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-700 shrink-0 mt-0.5" />
                     <span>
                       <strong>{t.clinicalRecLabel}</strong> {t.clinicalRecRejectText}
                     </span>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-1.5 leading-snug">
-                    💡 <span className="text-slate-300 font-semibold">{lang === "vi" ? "Gợi ý kỹ thuật:" : "Technical Tip:"}</span>{" "}
+                  <p className="text-[10px] text-slate-600 mt-1.5 leading-snug">
+                    💡 <span className="text-slate-700 font-semibold">{lang === "vi" ? "Gợi ý kỹ thuật:" : "Technical Tip:"}</span>{" "}
                     {lang === "vi"
                       ? "Ảnh tải lên nên có độ phân giải ≥ 512×512 px và tỷ lệ gần vuông chuẩn ngực thẳng (PA/AP) để tránh bị phân loại nhầm là ngoài phân phối."
                       : "Uploaded radiograph should have resolution ≥ 512×512 px with a near-square frontal PA/AP aspect ratio to prevent false OOD rejection."}
                   </p>
                   {onBypassFailsafe && (
                     <div className="mt-3 pt-2.5 border-t border-rose-900/40 flex items-center justify-between">
-                      <span className="text-[10px] text-slate-400">
+                      <span className="text-[10px] text-slate-600">
                         Xác nhận đây là phim X-quang hợp lệ của bệnh nhân?
                       </span>
                       <button
                         type="button"
                         onClick={onBypassFailsafe}
-                        className="px-3 py-1 bg-amber-900/50 hover:bg-amber-800/60 text-amber-200 border border-amber-600/60 rounded text-[10px] font-bold transition-all shadow-sm flex items-center gap-1.5"
+                        className="px-3 py-1 bg-amber-900/50 hover:bg-amber-800/60 text-amber-800 border border-amber-600/60 rounded text-[10px] font-bold transition-all shadow-sm flex items-center gap-1.5"
                       >
                         <ShieldAlert className="w-3.5 h-3.5 text-amber-300" />
                         <span>Bỏ qua khóa an toàn & Phân tích tiếp</span>
@@ -372,33 +372,33 @@ export default function DiagnosisDashboard({
                   )}
                 </div>
               ) : (
-                <div className="bg-slate-900 border border-slate-700/80 rounded-xl p-3 shadow-md flex items-center justify-between">
+                <div className="bg-slate-100 border border-slate-300/80 rounded-xl p-3 shadow-md flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <ShieldCheck className="w-4 h-4 text-sky-700 shrink-0" />
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-200 text-xs uppercase tracking-wide">
+                        <span className="font-bold text-slate-800 text-xs uppercase tracking-wide">
                           {t.failSafeVerifiedTitle}
                         </span>
-                        <span className="px-1.5 py-0.2 bg-slate-800 text-cyan-300 border border-slate-700 rounded text-[9px] font-semibold uppercase">
+                        <span className="px-1.5 py-0.2 bg-slate-200 text-sky-700 border border-slate-300 rounded text-[9px] font-semibold uppercase">
                           {t.failSafeVerifiedBadge}
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-0.5">
+                      <p className="text-[10px] text-slate-600 mt-0.5">
                         {t.failSafeVerifiedDesc}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right text-[10px] text-slate-400">
+                  <div className="text-right text-[10px] text-slate-600">
                     <div>
                       S_E:{" "}
-                      <span className="text-slate-200 font-semibold">
+                      <span className="text-slate-800 font-semibold">
                         {prediction.safety.energy_score.toFixed(2)}
                       </span>
                     </div>
                     <div>
                       H:{" "}
-                      <span className="text-slate-200 font-semibold">
+                      <span className="text-slate-800 font-semibold">
                         {prediction.safety.entropy_score.toFixed(2)}
                       </span>
                     </div>
@@ -409,36 +409,23 @@ export default function DiagnosisDashboard({
             {/* Grounded Clinical Narrative Report */}
             {prediction?.report ? (
               prediction.report.is_blocked ? (
-                <div className="text-[11px] text-rose-300 bg-rose-950/40 border border-rose-900/60 p-2.5 rounded">
+                <div className="text-[11px] text-rose-700 bg-rose-50/40 border border-rose-900/60 p-2.5 rounded">
                   <p className="font-bold mb-1">{t.reportBlockedTitle}</p>
-                  <p className="text-slate-300">{t.reportBlockedText}</p>
+                  <p className="text-slate-700">{t.reportBlockedText}</p>
+                </div>
+              ) : explanationUnsafe ? (
+                <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                  {isExplaining ? "Đang tạo bản đồ giải thích. Tạm ẩn kết luận và khuyến cáo tự động." : "Năng lượng của heatmap đang chọn trong phổi dưới ngưỡng 80%. Tạm ẩn kết luận và khuyến cáo tự động; cần bác sĩ đối chiếu phim và kết quả."}
                 </div>
               ) : (
-                <div className="space-y-3 text-[11px] text-slate-300 bg-slate-950/70 p-3.5 rounded-lg border border-slate-850">
-                  {/* Shortcut Guardrail Warning Banner */}
-                  {((auditRatio !== null && auditRatio < 0.80) || auditPass === false) && (
-                    <div className="p-2.5 rounded-lg bg-amber-950/50 border border-amber-600/80 text-amber-200 flex items-start gap-2 animate-in fade-in">
-                      <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                      <div className="text-[11px] leading-relaxed">
-                        <span className="font-bold text-amber-300 block uppercase tracking-wide">
-                          {lang === "vi" ? "CẢNH BÁO AN TOÀN AI (SHORTCUT LEARNING / DƯƠNG TÍNH GIẢ)" : "AI SAFETY GUARDRAIL (SHORTCUT LEARNING / FALSE POSITIVE)"}
-                        </span>
-                        <span>
-                          {lang === "vi"
-                            ? `Tỷ lệ năng lượng trong phế trường chỉ đạt ${(auditRatio! * 100).toFixed(1)}% (< 80%). Trọng tâm kích hoạt mô hình tập trung vào ký tự chữ (R/L) hoặc viền máy chụp ngoại vi thay vì tổn thương nhu mô phổi.`
-                            : `In-lung energy ratio is only ${(auditRatio! * 100).toFixed(1)}% (< 80%). Model activation attended to external markers (R/L) or thoracic borders instead of lung parenchyma.`}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
+                <div className="space-y-3 text-[11px] text-slate-700 bg-slate-100/70 p-3.5 rounded-lg border border-slate-850">
                   {/* Executive Impression (Narrative Synthesis) */}
                   <div className="pb-2 border-b border-slate-900">
-                    <span className="font-bold text-slate-400 block text-[10px] uppercase tracking-wider mb-1">
+                    <span className="font-bold text-slate-600 block text-[10px] uppercase tracking-wider mb-1">
                       {t.impressionHeading}
                     </span>
                     <p
-                      className="text-slate-100 text-xs leading-relaxed font-sans font-medium [&_u]:underline [&_u]:font-bold [&_u]:text-cyan-200 [&_u]:decoration-cyan-400/80 [&_u]:decoration-1"
+                      className="text-slate-900 text-xs leading-relaxed font-sans font-medium [&_u]:underline [&_u]:font-bold [&_u]:text-sky-700 [&_u]:decoration-cyan-400/80 [&_u]:decoration-1"
                       dangerouslySetInnerHTML={{
                         __html: prediction.report.impression || t.normalImpression,
                       }}
@@ -447,35 +434,35 @@ export default function DiagnosisDashboard({
 
                   {/* Findings */}
                   <div>
-                    <span className="font-bold text-slate-400 block text-[10px] uppercase tracking-wider mb-1">
+                    <span className="font-bold text-slate-600 block text-[10px] uppercase tracking-wider mb-1">
                       {t.findingsHeading}
                     </span>
                     {prediction.report.findings?.length > 0 ? (
-                      <ul className="space-y-1.5 text-slate-200 mt-1">
+                      <ul className="space-y-1.5 text-slate-800 mt-1">
                         {prediction.report.findings.map((f, i) => (
                           <li
                             key={i}
-                            className="text-[11px] leading-relaxed [&_u]:underline [&_u]:font-semibold [&_u]:text-slate-100 [&_u]:decoration-cyan-400/70"
+                            className="text-[11px] leading-relaxed [&_u]:underline [&_u]:font-semibold [&_u]:text-slate-900 [&_u]:decoration-cyan-400/70"
                             dangerouslySetInnerHTML={{ __html: f }}
                           />
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-slate-400 italic">{t.noFindings}</p>
+                      <p className="text-slate-600 italic">{t.noFindings}</p>
                     )}
                   </div>
 
                   {/* Recommendations */}
                   {prediction.report.recommendations?.length > 0 && (
                     <div className="pt-2 border-t border-slate-900">
-                      <span className="font-bold text-slate-400 block text-[10px] uppercase tracking-wider mb-1">
+                      <span className="font-bold text-slate-600 block text-[10px] uppercase tracking-wider mb-1">
                         {t.recommendationsHeading}
                       </span>
-                      <ul className="space-y-1 text-slate-300 mt-1">
+                      <ul className="space-y-1 text-slate-700 mt-1">
                         {prediction.report.recommendations.map((rec, i) => (
                           <li
                             key={i}
-                            className="text-[11px] leading-relaxed [&_u]:underline [&_u]:font-semibold [&_u]:text-slate-200 [&_u]:decoration-slate-400"
+                            className="text-[11px] leading-relaxed [&_u]:underline [&_u]:font-semibold [&_u]:text-slate-800 [&_u]:decoration-slate-400"
                             dangerouslySetInnerHTML={{ __html: rec }}
                           />
                         ))}
@@ -499,24 +486,24 @@ export default function DiagnosisDashboard({
       {/* ========================================================================= */}
       {/* ACCORDION 2: SÀNG LỌC LAO PHỔI & COVID-19 (HEAD B & HEAD C)              */}
       {/* ========================================================================= */}
-      <div className="bg-[#070B12] rounded-xl border border-slate-800 shadow-md overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-md overflow-hidden">
         {/* Accordion Header / Toggle */}
         <button
           type="button"
           onClick={() => setOpenSection2((prev) => !prev)}
-          className="w-full p-3 flex items-center justify-between text-left hover:bg-slate-900/60 transition-colors border-b border-slate-850"
+          className="w-full p-3 flex items-center justify-between text-left hover:bg-slate-100/60 transition-colors border-b border-slate-850"
         >
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+            <Layers className="w-4 h-4 text-sky-700" />
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               {t.accordion2Title}
             </h3>
           </div>
           <div className="flex items-center gap-2">
             {openSection2 ? (
-              <ChevronUp className="w-4 h-4 text-slate-400" />
+              <ChevronUp className="w-4 h-4 text-slate-600" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
+              <ChevronDown className="w-4 h-4 text-slate-600" />
             )}
           </div>
         </button>
@@ -528,7 +515,7 @@ export default function DiagnosisDashboard({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                     {t.headBTitle}
                   </h4>
                 </div>
@@ -542,8 +529,8 @@ export default function DiagnosisDashboard({
                   disabled={isExplaining || isRejected}
                   className={`w-full text-left p-2.5 rounded-lg border transition-all flex items-center justify-between ${
                     selectedHead === "head_b" && selectedClass === 0
-                      ? "bg-slate-800 border-cyan-500 ring-1 ring-cyan-500/40 shadow-sm"
-                      : "bg-slate-950/60 border-slate-850 hover:bg-slate-900 hover:border-slate-800"
+                      ? "bg-slate-200 border-cyan-500 ring-1 ring-cyan-500/40 shadow-sm"
+                      : "bg-slate-100/60 border-slate-850 hover:bg-slate-100 hover:border-slate-200"
                   } ${isRejected ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   <div className="flex items-center gap-2.5">
@@ -551,14 +538,14 @@ export default function DiagnosisDashboard({
                       className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
                         prediction.head_b_tb_screening.is_positive
                           ? "bg-slate-200 text-slate-950 border border-white"
-                          : "bg-slate-900 text-slate-400 border border-slate-800"
+                          : "bg-slate-100 text-slate-600 border border-slate-200"
                       }`}
                     >
                       {prediction.head_b_tb_screening.is_positive
                         ? t.tbPositive
                         : t.tbNegative}
                     </span>
-                    <span className="text-xs text-slate-300 tabular-nums">
+                    <span className="text-xs text-slate-700 tabular-nums">
                       {(
                         prediction.head_b_tb_screening.tb_probability * 100
                       ).toFixed(1)}
@@ -566,7 +553,7 @@ export default function DiagnosisDashboard({
                     </span>
                   </div>
                   {selectedHead === "head_b" && selectedClass === 0 && (
-                    <span className="text-[9px] text-cyan-400 font-bold uppercase">
+                    <span className="text-[9px] text-sky-700 font-bold uppercase">
                       {t.targetIndicator}
                     </span>
                   )}
@@ -580,7 +567,7 @@ export default function DiagnosisDashboard({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                     {t.headCTitle}
                   </h4>
                 </div>
@@ -595,49 +582,83 @@ export default function DiagnosisDashboard({
                     disabled={isExplaining || isRejected}
                     className={`w-full text-left p-2.5 rounded-lg border transition-all flex items-center justify-between ${
                       selectedHead === "head_c" && selectedClass === 0
-                        ? "bg-slate-800 border-cyan-500 ring-1 ring-cyan-500/40 shadow-sm"
-                        : "bg-slate-950/60 border-slate-850 hover:bg-slate-900 hover:border-slate-800"
+                        ? "bg-slate-200 border-cyan-500 ring-1 ring-cyan-500/40 shadow-sm"
+                        : "bg-slate-100/60 border-slate-850 hover:bg-slate-100 hover:border-slate-200"
                     } ${isRejected ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <div className="flex items-center gap-2.5">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
-                          prediction.head_c_covidx.is_positive
-                            ? "bg-slate-200 text-slate-950 border border-white"
-                            : "bg-slate-900 text-slate-400 border border-slate-800"
+                        (prediction.head_c_covidx.model_is_positive ?? prediction.head_c_covidx.is_positive)
+                            ? "bg-rose-50 text-rose-800 border border-rose-300"
+                            : "bg-slate-100 text-slate-600 border border-slate-200"
                         }`}
                       >
-                        {prediction.head_c_covidx.is_positive
+                        {(prediction.head_c_covidx.model_is_positive ?? prediction.head_c_covidx.is_positive)
                           ? t.covidPositive
                           : t.covidNegative}
                       </span>
-                      <span className="text-xs text-slate-300 tabular-nums">
+                      <span className="text-xs text-slate-700 tabular-nums">
                         {(
-                          prediction.head_c_covidx.covid_probability * 100
+                          (prediction.head_c_covidx.covid_probability ?? 0) * 100
                         ).toFixed(1)}
                         %
                       </span>
                     </div>
                     {selectedHead === "head_c" && selectedClass === 0 && (
-                      <span className="text-[9px] text-cyan-400 font-bold uppercase">
+                      <span className="text-[9px] text-sky-700 font-bold uppercase">
                         {t.targetIndicator}
                       </span>
                     )}
                   </button>
 
+                  <div className="px-1">
+                    <div
+                      role="progressbar"
+                      aria-label="COVID-19 model probability"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={Math.round((prediction.head_c_covidx.covid_probability ?? 0) * 100)}
+                      className="relative h-2 rounded-full bg-slate-200"
+                    >
+                      <div
+                        className={`h-2 rounded-full ${(prediction.head_c_covidx.model_is_positive ?? prediction.head_c_covidx.is_positive) ? "bg-rose-600" : "bg-slate-500"}`}
+                        style={{ width: `${Math.max(0, Math.min(100, (prediction.head_c_covidx.covid_probability ?? 0) * 100))}%` }}
+                      />
+                      <div
+                        className="absolute -top-1 h-4 w-0.5 bg-slate-950"
+                        style={{ left: `${Math.max(0, Math.min(100, (prediction.head_c_covidx.threshold ?? 0.5) * 100))}%` }}
+                        title={`Youden threshold ${((prediction.head_c_covidx.threshold ?? 0.5) * 100).toFixed(1)}%`}
+                      />
+                    </div>
+                    <div className="mt-1 flex justify-between text-[10px] text-slate-500">
+                      <span>0%</span>
+                      <span>Youden τ {(prediction.head_c_covidx.threshold ?? 0.5).toFixed(3)}</span>
+                      <span>100%</span>
+                    </div>
+                    {prediction.head_c_covidx.clinical_suspicion === false && (
+                      <p role="status" className="mt-1 rounded border border-slate-300 bg-slate-50 p-2 text-[10px] text-slate-700">
+                        Kết quả mô hình cần rà soát; cờ nghi ngờ lâm sàng đã được hạ bởi hàng rào an toàn.
+                        {prediction.head_c_covidx.guardrail_reasons?.length
+                          ? ` ${prediction.head_c_covidx.guardrail_reasons.join(" ")}`
+                          : ""}
+                      </p>
+                    )}
+                  </div>
+
                   {/* Shortcut Learning Audit Result */}
-                  {auditRatio !== null && (
-                    <div className="text-[11px] bg-slate-950 p-2.5 rounded-lg border border-slate-850 flex items-center justify-between">
-                      <span className="text-slate-400">{t.inLungRatioLabel}</span>
+                  {selectedHead === "head_c" && auditRatio !== null && auditPass !== null && (
+                    <div className="text-[11px] bg-slate-100 p-2.5 rounded-lg border border-slate-850 flex items-center justify-between">
+                      <span className="text-slate-600">{t.inLungRatioLabel}</span>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-200 tabular-nums">
+                        <span className="font-bold text-slate-800 tabular-nums">
                           {(auditRatio * 100).toFixed(1)}%
                         </span>
                         <span
                           className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
                             auditPass
-                              ? "bg-slate-800 text-slate-200 border border-slate-700"
-                              : "bg-rose-950 text-rose-300 border border-rose-800"
+                              ? "bg-slate-200 text-slate-800 border border-slate-300"
+                              : "bg-rose-50 text-rose-700 border border-rose-800"
                           }`}
                         >
                           {auditPass ? t.auditPass : t.auditFail}
@@ -657,25 +678,25 @@ export default function DiagnosisDashboard({
       {/* ========================================================================= */}
       {/* ACCORDION 3: 14 BỆNH LÝ LỒNG NGỰC - HEAD A (WHO ICD-10)                   */}
       {/* ========================================================================= */}
-      <div className="bg-[#070B12] rounded-xl border border-slate-800 shadow-md overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-md overflow-hidden">
         {/* Accordion Header / Toggle */}
         <button
           type="button"
           onClick={() => setOpenSection3((prev) => !prev)}
-          className="w-full p-3 flex items-center justify-between text-left hover:bg-slate-900/60 transition-colors border-b border-slate-850"
+          className="w-full p-3 flex items-center justify-between text-left hover:bg-slate-100/60 transition-colors border-b border-slate-850"
         >
           <div className="flex items-center gap-2">
-            <Crosshair className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+            <Crosshair className="w-4 h-4 text-sky-700" />
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               {t.accordion3Title}
             </h3>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-slate-500">{t.clickToExplain}</span>
             {openSection3 ? (
-              <ChevronUp className="w-4 h-4 text-slate-400" />
+              <ChevronUp className="w-4 h-4 text-slate-600" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
+              <ChevronDown className="w-4 h-4 text-slate-600" />
             )}
           </div>
         </button>
@@ -691,7 +712,7 @@ export default function DiagnosisDashboard({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t.searchPathologyPlaceholder}
-                className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 transition-colors"
+                className="w-full pl-8 pr-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-600 focus:outline-none focus:border-cyan-500 transition-colors"
               />
             </div>
 
@@ -720,8 +741,8 @@ export default function DiagnosisDashboard({
                         disabled={isExplaining || isRejected}
                         className={`w-full text-left p-2 rounded-lg border transition-all ${
                           isSelected
-                            ? "bg-slate-800 border-cyan-500 ring-1 ring-cyan-500/40 shadow-sm"
-                            : "bg-slate-950/60 border-slate-850 hover:bg-slate-900 hover:border-slate-800"
+                            ? "bg-slate-200 border-cyan-500 ring-1 ring-cyan-500/40 shadow-sm"
+                            : "bg-slate-100/60 border-slate-850 hover:bg-slate-100 hover:border-slate-200"
                         } ${isRejected ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
                         <div className="flex justify-between items-center text-xs mb-1">
@@ -729,19 +750,19 @@ export default function DiagnosisDashboard({
                             <span
                               className={`font-semibold ${
                                 isSelected
-                                  ? "text-cyan-300"
+                                  ? "text-sky-700"
                                   : isPositive
-                                  ? "text-slate-100"
-                                  : "text-slate-400"
+                                  ? "text-slate-900"
+                                  : "text-slate-600"
                               }`}
                             >
                               {lang === "vi" ? dMeta.nameVi : dMeta.nameEn}
                             </span>
-                            <span className="text-[9px] text-slate-400 font-normal">
+                            <span className="text-[9px] text-slate-600 font-normal">
                               {lang === "vi" ? `(${dMeta.nameEn})` : `(${dMeta.icd10})`}
                             </span>
                             {isSelected && (
-                              <span className="text-[9px] text-cyan-400 font-bold uppercase">
+                              <span className="text-[9px] text-sky-700 font-bold uppercase">
                                 {t.targetIndicator}
                               </span>
                             )}
@@ -751,7 +772,7 @@ export default function DiagnosisDashboard({
                               className={`text-[10px] px-1.5 py-0.2 rounded font-bold uppercase ${
                                 isPositive
                                   ? "bg-slate-200 text-slate-950 border border-white"
-                                  : "bg-slate-900 text-slate-500 border border-slate-800"
+                                  : "bg-slate-100 text-slate-500 border border-slate-200"
                               }`}
                             >
                               {isPositive ? t.positiveBadge : t.negativeBadge}
@@ -759,8 +780,8 @@ export default function DiagnosisDashboard({
                             <span
                               className={`text-[11px] tabular-nums ${
                                 isPositive
-                                  ? "text-slate-100 font-bold"
-                                  : "text-slate-400"
+                                  ? "text-slate-900 font-bold"
+                                  : "text-slate-600"
                               }`}
                             >
                               {(probability * 100).toFixed(1)}%
@@ -769,7 +790,7 @@ export default function DiagnosisDashboard({
                         </div>
 
                         {/* High contrast monochrome bar */}
-                        <div className="w-full h-1 bg-slate-950 rounded-full overflow-hidden border border-slate-850">
+                        <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden border border-slate-850">
                           <div
                             className={`h-full transition-all duration-300 ${
                               isPositive ? "bg-slate-200" : "bg-slate-700"
@@ -797,48 +818,12 @@ export default function DiagnosisDashboard({
         )}
       </div>
 
-      {/* Grounding Mode Controller in Report Section as well */}
-      <div className="bg-[#070B12] rounded-xl p-3 border border-slate-800 shadow-md">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-            {t.groundingTitle}
-          </span>
-          <span className="text-[10px] text-cyan-400">
-            {clinicalGrounding ? t.groundedBadge : t.unmaskedBadge}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-950 rounded-lg border border-slate-850">
-          <button
-            type="button"
-            onClick={() => onToggleGrounding(true)}
-            disabled={isExplaining || isRejected}
-            className={`py-1.5 px-2 rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
-              clinicalGrounding
-                ? "bg-slate-800 text-white border border-slate-700 shadow-sm"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-            <span>{t.groundedBtn}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onToggleGrounding(false)}
-            disabled={isExplaining || isRejected}
-            className={`py-1.5 px-2 rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
-              !clinicalGrounding
-                ? "bg-slate-800 text-white border border-slate-700 shadow-sm"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
-            }`}
-          >
-            <ShieldAlert className="w-3.5 h-3.5 text-slate-400" />
-            <span>{t.rawBtn}</span>
-          </button>
-        </div>
-        <p className="text-[10px] text-slate-500 mt-1.5 leading-relaxed">
-          {clinicalGrounding ? t.groundedHelp : t.rawHelp}
-        </p>
-      </div>
+      {prediction && <ClinicalRagAssistant
+        key={JSON.stringify([prediction, auditRatio, auditPass])}
+        prediction={prediction}
+        ratio={auditPass === null ? (prediction.in_lung_energy_ratio ?? null) : auditRatio}
+      />}
+
     </div>
   );
 }

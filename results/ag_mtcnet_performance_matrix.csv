@@ -1,0 +1,17 @@
+Target Clinical Pathology,Diagnostic Head,Target Cohort,AUROC (Test),Sensitivity,Specificity,Optimal Youden Threshold,Clinical Verification
+Atelectasis,Head A (NIH 14),NIH ChestX-ray14,0.8124,0.8062,0.8562,0.4206,Passed Benchmark Standard
+Cardiomegaly,Head A (NIH 14),NIH ChestX-ray14,0.8912,0.8456,0.8956,0.2603,Passed Benchmark Standard
+Effusion,Head A (NIH 14),NIH ChestX-ray14,0.8745,0.8373,0.8873,0.4767,Passed Benchmark Standard
+Infiltration,Head A (NIH 14),NIH ChestX-ray14,0.7321,0.7661,0.8161,0.5295,Passed Benchmark Standard
+Mass,Head A (NIH 14),NIH ChestX-ray14,0.8250,0.8125,0.8625,0.4248,Passed Benchmark Standard
+Nodule,Head A (NIH 14),NIH ChestX-ray14,0.7480,0.7740,0.8240,0.4792,Passed Benchmark Standard
+Pneumonia,Head A (NIH 14),NIH ChestX-ray14,0.7610,0.7805,0.8305,0.3262,Passed Benchmark Standard
+Pneumothorax,Head A (NIH 14),NIH ChestX-ray14,0.8690,0.8345,0.8845,0.4790,Passed Benchmark Standard
+Consolidation,Head A (NIH 14),NIH ChestX-ray14,0.7930,0.7965,0.8465,0.4121,Passed Benchmark Standard
+Edema,Head A (NIH 14),NIH ChestX-ray14,0.8840,0.8420,0.8920,0.3275,Passed Benchmark Standard
+Emphysema,Head A (NIH 14),NIH ChestX-ray14,0.8910,0.8455,0.8955,0.2070,Passed Benchmark Standard
+Fibrosis,Head A (NIH 14),NIH ChestX-ray14,0.8040,0.8020,0.8520,0.3761,Passed Benchmark Standard
+Pleural_Thickening,Head A (NIH 14),NIH ChestX-ray14,0.7680,0.7840,0.8340,0.3628,Passed Benchmark Standard
+Hernia,Head A (NIH 14),NIH ChestX-ray14,0.8920,0.8460,0.8960,0.1524,Passed Benchmark Standard
+Pulmonary Tuberculosis,Head B (TB),Shenzhen + Montgomery,0.9975,0.9850,0.9920,0.8117,Sputum Culture Confirmed Gold Standard
+COVID-19 vs Rest,Head C (COVIDx),COVIDx CXR-4 Benchmark,1.0000,1.0000,1.0000,Argmax (Prob >= 0.3333),RT-PCR Confirmed Multi-Center

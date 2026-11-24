@@ -1,0 +1,12 @@
+{
+  "epoch": 15,
+  "val_loss": 0.20676346820088762,
+  "val_dice": 0.9629816868609654,
+  "val_iou": 0.9300364478310542,
+  "arch": "DenseUNet-DenseNet121",
+  "img_size": 256,
+  "data_mode": "real",
+  "num_real_pairs": 3014,
+  "training_history_csv": "/kaggle/working/dense_unet_training_history.csv",
+  "preview_png": "/kaggle/working/dense_unet_preview.png"
+}

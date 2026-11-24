@@ -53,6 +53,9 @@ dataset/**/subsets/
 # Local IDE configuration & Agent rules
 .idea/
 .vscode/
+scratch/
+eval_results/
+eval_results_*/
 
 # Frontend & Node.js build artifacts
 node_modules/

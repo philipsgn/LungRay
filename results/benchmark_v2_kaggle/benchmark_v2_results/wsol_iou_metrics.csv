@@ -1,0 +1,5 @@
+Model,Dataset,Mean_Box_IoU,Success_Rate_IoU_30,Success_Rate_IoU_50,Evaluated_Cases
+DenseNet-121 Baseline,RSNA Pneumonia,0.22810090462084354,30.0,9.0,100
+ResNet-50,RSNA Pneumonia,0.20594052517299796,28.000000000000004,4.0,100
+AG-MTCNet Retrained,RSNA Pneumonia,0.025685013041220842,2.0,0.0,100
+WSOL Fine-tuned,RSNA Pneumonia,0.04496850806028725,3.0,0.0,100
