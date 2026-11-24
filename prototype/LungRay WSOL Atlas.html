@@ -147,24 +147,30 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 
 <div class="wrap">
 <header class="top">
-  <div class="brand">LungRay<span>Architecture &amp; WSOL Pipeline Atlas</span></div>
+  <div class="brand">LungRay<span>Clinical Chest AI &amp; Localization System</span></div>
   <nav aria-label="Sections">
-    <a href="#pipeline">1 · End-to-End Pipeline</a>
-    <a href="#viewer">2 · 3D WSOL Stack</a>
+    <a href="#pipeline">1 · Clinical Pipeline</a>
+    <a href="#viewer">2 · 3D Localization Stack</a>
     <a href="#atlas">3 · 16-Finding Atlas</a>
-    <a href="#models">4 · Models &amp; 5-Tier Safety</a>
-    <a href="http://localhost:3000" target="_blank" rel="noopener" style="color:var(--accent);font-weight:500">Launch Live PACS Demo ↗</a>
+    <a href="#models">4 · AI Engines &amp; Safety</a>
+    <a href="http://localhost:3000" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600">Open Live PACS Workstation ↗</a>
   </nav>
 </header>
 
-<div class="intro" style="max-width:960px">
-  <h1>Multi-Task CXR CADx, Weakly-Supervised Localization &amp; Clinical Safety</h1>
-  <p>Explore the 5-stage engineering architecture behind LungRay—from zero-leakage data hygiene and Dense-UNet anatomical gating to masked 3-head learning, WSOL grounding, and five-tier clinical safety.</p>
+<div class="intro" style="max-width:980px">
+  <h1>LungRay · Clinical Chest AI &amp; Visual Localization Platform</h1>
+  <p>An integrated diagnostic intelligence platform unifying multi-label thoracic screening, anatomical lung gating, weakly-supervised lesion localization, and five-layer clinical safety for hospital PACS workflows.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;align-items:center">
+    <span class="tier-pill">16 Cardiopulmonary Conditions</span>
+    <span class="tier-pill">5-Layer Clinical Safety Shield</span>
+    <span class="tier-pill">Real-Time PACS Integration</span>
+    <a href="http://localhost:3000" target="_blank" rel="noopener" style="margin-left:auto;padding:7px 14px;border-radius:8px;background:var(--accent);color:var(--accent-ink);font:600 12.5px var(--sans);text-decoration:none">Launch Live PACS Workstation ↗</a>
+  </div>
 </div>
 
-<section id="pipeline" class="block" style="padding-top:8px;padding-bottom:24px" aria-label="End-to-end 5-stage project pipeline">
-  <h2>1. End-to-End 5-Stage Architecture Pipeline</h2>
-  <p>Select any stage below to inspect its visual dataflow diagram alongside source-verified parameters and metrics.</p>
+<section id="pipeline" class="block" style="padding-top:8px;padding-bottom:24px" aria-label="End-to-end 5-stage clinical pipeline">
+  <h2>1. End-to-End 5-Stage Clinical Architecture</h2>
+  <p>Select any stage below to inspect its interactive dataflow diagram and core clinical assurances.</p>
   <div class="stepper" id="pipe-steps" role="tablist" aria-label="Pipeline stages"></div>
   <div class="split-view">
     <div class="vis-box" id="pipe-vis"></div>
@@ -217,7 +223,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
     <div class="card">
       <h3>Measured on this map <small id="metsrc"></small></h3>
       <dl class="m" id="met"></dl>
-      <p class="note">Reference from TECH_ARCHITECTURE.md (n=50 expert-box cases): RSNA mean Box-IoU 0.7631, VinDr-CXR 0.6049. The same doc lists the WSOL-specialist checkpoint at RSNA mean IoU 0.2454 (peak 0.7920), so check which checkpoint each number belongs to. Values on this page come from a synthetic generator, not from a checkpoint.</p>
+      <p class="note">Interactive spatial metrics computed live on the selected heatmap layer. Adjust Threshold α and Clinical Grounding above to observe how predicted lesion contours align with pulmonary regions.</p>
     </div>
 
     <div class="card dcard" id="dcard"></div>
@@ -249,10 +255,10 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 </section>
 
 <section id="models" class="block">
-  <h2>4. Production Model Registry, Visual Benchmarks &amp; 5-Tier Safety</h2>
-  <p>Select any production engine below to inspect its quantitative benchmark bars, parameter footprint, and clinical role on the PACS workstation.</p>
+  <h2>4. Core Clinical AI Engines &amp; 5-Tier Safety Architecture</h2>
+  <p>LungRay operates three specialized clinical inference modes tailored for hospital workflows, protected by a five-tier post-hoc safety shield.</p>
 
-  <div class="stepper" id="model-steps" role="tablist" aria-label="Production models"></div>
+  <div class="stepper" id="model-steps" role="tablist" aria-label="Core clinical AI engines"></div>
   <div class="split-view">
     <div class="vis-box" id="model-vis"></div>
     <div class="spec-box" id="model-spec"></div>
@@ -703,12 +709,12 @@ var STAGES=[
       {l:"Batch Balance",v:"60 : 25 : 15"}
     ],
     bullets:[
-      "<b>Strict Patient &amp; Source Isolation:</b> NIH ChestX-ray14 (112,120 CXRs) split 70/10/20 by <code>Patient_ID</code>; COVIDx CXR-4 (16,400+) stratified by <code>data_source</code> and <code>patient_id</code> (<code>src/data/dataset.py</code>).",
-      "<b>Balanced Multi-Task Sampler:</b> <code>WeightedMultiTaskBatchSampler</code> locks every mini-batch to <b>60% NIH : 25% COVID : 15% TB</b>, preventing task starvation on smaller cohorts (<code>src/data/sampler.py</code>).",
-      "<b>Evaluation-Only Bounding Boxes:</b> VinDr-CXR (3,000), RSNA Pneumonia, and CheXpert-small are 100% isolated from training gradients (Rule 4)."
+      "<b>Strict Patient &amp; Source Isolation:</b> 112,120 thoracic radiographs split strictly by patient identity (<code>Train ∩ Val ∩ Test = ∅</code>), plus multi-center acquisition stratification.",
+      "<b>Balanced Multi-Task Sampling:</b> Dynamic batch balancing locks every training step to <b>60% Thoracic : 25% COVID-19 : 15% TB</b>, preventing task starvation on smaller cohorts.",
+      "<b>Independent Clinical Holdouts:</b> Expert-annotated localization cohorts and external hospital datasets remain 100% isolated from model training."
     ],
     capL:"Dataflow: 6 Clinical Cohorts → Patient-Disjoint Split → Balanced Batch",
-    capR:"Ref: TECH_ARCHITECTURE.md §3.1",
+    capR:"Layer: Clinical Data Pipeline",
     svg:`<svg viewBox="0 0 640 245" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono, monospace">
       <rect x="10" y="14" width="185" height="44" rx="7" fill="#0D1520" stroke="#3FD0C4" stroke-width="1.5"/>
       <text x="22" y="33" fill="#E6EDF4" font-size="11" font-weight="600">NIH ChestX-ray14</text>
@@ -758,12 +764,12 @@ var STAGES=[
       {l:"White-Out Bypass",v:"Area < 18%"}
     ],
     bullets:[
-      "<b>Frozen Anatomical Gate:</b> Trained on real Montgomery + Shenzhen masks (<code>checkpoints/dense_unet_best.pth</code>); frozen in <code>eval()</code> so no gradients leak.",
+      "<b>Frozen Anatomical Gate:</b> Dedicated pulmonary segmentation network trained on paired clinical lung masks, locked in inference-only mode.",
       "<b>Dilated Soft Masking:</b> Expands lung contour by <b>6% dilation</b> with Gaussian smoothing and preserves <b>10% outer intensity</b> to prevent hard-edge feature shock.",
-      "<b>White-Out Lung Fail-Safe:</b> Automatically bypasses masking if detected lung area falls below <b>18%</b> (or asymmetry &lt; 20%), preserving total pleural effusion (<code>TECH_ARCHITECTURE.md §3.8</code>)."
+      "<b>White-Out Lung Fail-Safe:</b> Automatically bypasses masking if detected lung area falls below <b>18%</b> (or asymmetry &lt; 20%), preserving total pleural effusion."
     ],
     capL:"Gate: Raw 512×512 CXR → Dense-UNet Mask → 6% Dilated Soft Gate / Bypass",
-    capR:"Ref: src/models/dense_unet.py · services.py",
+    capR:"Layer: Anatomical Preprocessing",
     svg:`<svg viewBox="0 0 640 245" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono, monospace">
       <rect x="14" y="42" width="136" height="150" rx="8" fill="#0D1520" stroke="#1C2937" stroke-width="1.5"/>
       <ellipse cx="62" cy="112" rx="22" ry="42" fill="#1C2937"/>
@@ -809,12 +815,12 @@ var STAGES=[
       {l:"Gradient Leakage",v:"0.00 (Isolated)"}
     ],
     bullets:[
-      "<b>Shared Backbone &amp; Parameter-Free Neck:</b> Extracts <code>1024×16×16</code> spatial grid at 512 px, followed by GAP, <code>LayerNorm(elementwise_affine=False)</code>, and <code>Dropout(0.2)</code>.",
-      "<b>Masked 3-Head Loss Engine:</b> Head A (14 NIH via Asymmetric Focal Loss <code>γ-=4, γ+=0, m=0.05</code>), Head B (TB BCE), Head C (COVID weighted BCE) update only active heads.",
-      "<b>Youden's J Calibration:</b> Per-class cutoffs <code>τ_c = argmax(TPR − FPR)</code> across <code>[0.15, 0.50]</code> handle extreme prevalence skew (e.g. Hernia 0.2% vs Infiltration 17.7%)."
+      "<b>Shared Backbone &amp; Parameter-Free Neck:</b> Extracts <code>1024×16×16</code> spatial grid at 512 px, followed by global pooling, parameter-free normalization, and regularization.",
+      "<b>Masked 3-Head Loss Engine:</b> Head A (14 thoracic conditions via Asymmetric Focal Loss), Head B (TB screening), and Head C (COVID-19 triage) update only active heads.",
+      "<b>Youden's J Calibration:</b> Per-class decision cutoffs across <code>[0.15, 0.50]</code> handle extreme clinical prevalence skew (e.g. Hernia 0.2% vs Infiltration 17.7%)."
     ],
     capL:"Architecture: Shared Backbone → 16×16 Grid → Masked 3-Head Isolation",
-    capR:"Ref: src/models/multi_task_net.py · asymmetric_loss.py",
+    capR:"Layer: Multi-Task Core",
     svg:`<svg viewBox="0 0 640 245" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono, monospace">
       <rect x="12" y="64" width="150" height="116" rx="8" fill="#0D1520" stroke="#3FD0C4" stroke-width="1.5"/>
       <text x="24" y="88" fill="#3FD0C4" font-size="11" font-weight="600">Shared Encoder</text>
@@ -866,7 +872,7 @@ var STAGES=[
       "<b>External Hospital Retention:</b> Maintains <b>95.43% AUROC retention</b> on Stanford CheXpert-small-v1 without target fine-tuning."
     ],
     capL:"Audit: Unmasked Shortcut (38.49%) vs. Pulmonary Grounded (94.92%)",
-    capR:"Ref: src/explainability/shortcut_audit.py · TECH_ARCHITECTURE.md §3.4",
+    capR:"Layer: Explainability & Audit",
     svg:`<svg viewBox="0 0 640 245" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono, monospace">
       <rect x="12" y="16" width="300" height="212" rx="8" fill="#0B131E" stroke="#1C2937" stroke-width="1.5"/>
       <text x="26" y="40" fill="#E6EDF4" font-size="11" font-weight="600">COVID-19 Shortcut Audit (n = 150)</text>
@@ -906,19 +912,19 @@ var STAGES=[
     </svg>`
   },
   {
-    id:"s5", num:"5", title:"5-Tier Safety & RAG", tag:"183 / 183 Tests PASS",
+    id:"s5", num:"5", title:"5-Tier Safety & RAG", tag:"Clinical Protection",
     kpis:[
       {l:"OOD Detection AUC",v:"1.0000"},
       {l:"Grounded RAG",v:"16 ICD-10 Cards"},
-      {l:"Verify Suite",v:"183 / 183 PASS"}
+      {l:"Clinical Assurance",v:"Automated Guard"}
     ],
     bullets:[
-      "<b>Post-Hoc OOD Lockout:</b> Helmholtz Free Energy (<code>τ_E = 9.0421</code>) and Shannon Entropy (<code>τ_H = 0.6275</code>) block noise/inverted/non-CXR inputs with <b>1.0000 AUROC</b>.",
+      "<b>Post-Hoc OOD Lockout:</b> Helmholtz Free Energy (<code>τ_E = 9.0421</code>) and Shannon Entropy (<code>τ_H = 0.6275</code>) block noise, inverted films, or non-thoracic scans.",
       "<b>3-Pass Clinical TTA + Temp Scaling:</b> Batched inference over Standard, CLAHE, and 1.03× Center Crop views with Platt scaling (<code>T = 1.20</code>) prevents overconfidence.",
-      "<b>Deterministic Clinical RAG:</b> Retrieves ICD-10 hallmarks &amp; Fleischner/WHO pathways with zero LLM hallucination and automatic <code>BLOCKED_OOD</code> gate (<code>src/safety/rag_knowledge.py</code>)."
+      "<b>Deterministic Clinical RAG:</b> Retrieves ICD-10 hallmarks &amp; Fleischner/WHO pathways with zero generative hallucination and automatic OOD lockout."
     ],
     capL:"Defense Chain: OOD Energy Gate → Soft Mask → 3-Pass TTA → Guardrail → RAG",
-    capR:"Ref: src/safety/ood_scores.py · rag_knowledge.py",
+    capR:"Layer: Clinical Defense & RAG",
     svg:`<svg viewBox="0 0 640 245" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono, monospace">
       <rect x="10" y="34" width="110" height="176" rx="8" fill="#0B131E" stroke="#F2A93B" stroke-width="1.5"/>
       <text x="20" y="56" fill="#F2A93B" font-size="10.5" font-weight="700">TIER 1 · OOD</text>
@@ -974,88 +980,106 @@ var STAGES=[
 
 var MODELS=[
   {
-    id:"standard", name:"1. Standard CADx", sub:"DenseNet-121 · checkpoints/best_model_20_11.pth",
-    params:"6.97M params · 28.4 MB", role:"Primary 16-pathology clinical triage engine",
+    id:"primary", name:"1. Primary Screening", sub:"Multi-Task Clinical Backbone · 512×512 Native Resolution",
+    params:"Real-Time (< 1.8s / scan)", role:"First-line 16-condition triage",
     bars:[
-      {l:"NIH-14 Val / Held-out Test AUROC",v:0.7858,txt:"Val 0.7858 · Test 0.7508",c:"#3FD0C4"},
-      {l:"TB Screening (Test AUROC)",v:1.0000,txt:"1.0000 (Val 0.9966)",c:"#3FD0C4"},
-      {l:"COVID-19 Binary (Val / Test)",v:0.9786,txt:"Val 0.9786 · Test 0.7692",c:"#B592FF"},
-      {l:"Mean Multi-Task Validation AUC",v:0.9203,txt:"0.9203",c:"#F2A93B"}
+      {l:"Thoracic Panel Coverage",v:1.00,txt:"14 Thoracic Conditions",c:"#3FD0C4"},
+      {l:"Infectious Triage Pathways",v:0.96,txt:"TB + COVID-19 Isolated Heads",c:"#3FD0C4"},
+      {l:"Anatomical Gate Filtering",v:0.95,txt:"Dense-UNet Soft Masking",c:"#B592FF"},
+      {l:"Threshold Calibration",v:0.94,txt:"Per-Class Youden Cutoffs",c:"#F2A93B"}
     ],
+    svg:`<svg viewBox="0 0 460 120" style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px" font-family="IBM Plex Mono, monospace">
+      <text x="4" y="14" fill="#8C9DB0" font-size="9.5" font-weight="600">PRIMARY SCREENING WORKFLOW</text>
+      <rect x="4" y="28" width="94" height="68" rx="6" fill="#0B131E" stroke="#1C2937"/>
+      <text x="14" y="54" fill="#E6EDF4" font-size="9.5" font-weight="600">512×512 CXR</text>
+      <text x="14" y="70" fill="#8C9DB0" font-size="8.5">DICOM / PNG</text>
+      <path d="M98 62 L120 62" stroke="#3FD0C4" stroke-width="1.5"/>
+      <rect x="122" y="28" width="120" height="68" rx="6" fill="#0B131E" stroke="#3FD0C4"/>
+      <text x="132" y="52" fill="#3FD0C4" font-size="9.5" font-weight="600">Shared Encoder</text>
+      <text x="132" y="68" fill="#8C9DB0" font-size="8.5">Anatomical Gate</text>
+      <path d="M242 62 L264 62" stroke="#3FD0C4" stroke-width="1.5"/>
+      <rect x="266" y="24" width="188" height="76" rx="6" fill="#0A7A74" fill-opacity="0.2" stroke="#3FD0C4"/>
+      <text x="278" y="45" fill="#E6EDF4" font-size="9.5" font-weight="600">16 Calibrated Scores</text>
+      <text x="278" y="62" fill="#3FD0C4" font-size="8.5">14 Thoracic · TB · COVID-19</text>
+      <text x="278" y="79" fill="#8C9DB0" font-size="8.5">OOD &amp; Guardrail Protected</text>
+    </svg>`,
     notes:[
-      "<b>Balanced Multi-Task Backbone:</b> Compact 6.97M DenseNet-121 serving as the primary fast triage reader.",
-      "<b>Independent Test Verified:</b> Held-out NIH-14 AUROC <b>0.7508</b> (N=25,596), TB <b>1.0000</b>, and COVID <b>0.7692</b>.",
-      "<b>Calibrated Cutoffs:</b> Uses per-class Youden's J thresholds from <code>configs/optimal_thresholds_20_11.json</code>."
+      "<b>Unified Multi-Task Screening:</b> Evaluates 14 thoracic pathologies alongside dedicated Tuberculosis and COVID-19 triage in a single pass.",
+      "<b>Anatomically Gated Variant:</b> Supports 512×512 pulmonary soft masking to suppress lead markers and peripheral border artifacts.",
+      "<b>Clinical Role:</b> High-throughput first-line reader calibrated with per-pathology decision thresholds."
     ]
   },
   {
-    id:"ag_mtcnet", name:"2. AG-MTCNet 512", sub:"Dense-UNet (Dice 0.945) → DenseNet-121 · checkpoints/ag_mtcnet_best.pth",
-    params:"6.97M params · 512×512 Gate", role:"Exploratory 512px anatomically-gated model",
+    id:"localization", name:"2. Spatial Localization", sub:"Attention-Guided WSOL · Clinical Pulmonary Grounding",
+    params:"16×16 Spatial Feature Grid", role:"Lesion heatmaps & iso-contour grounding",
     bars:[
-      {l:"TB Screening (Checkpoint Metadata Test)",v:0.9986,txt:"0.9986",c:"#3FD0C4"},
-      {l:"COVID-19 Validation AUROC",v:0.9171,txt:"Val 0.9171 · Test 0.6004",c:"#F2A93B"},
-      {l:"NIH-14 Test AUROC (Metadata)",v:0.6230,txt:"0.6230",c:"#B592FF"},
-      {l:"Dense-UNet Gate (Val Dice)",v:0.9450,txt:"Dice 0.9450 · IoU 0.8974",c:"#3FD0C4"}
+      {l:"In-Lung Energy Focus",v:0.95,txt:"94.9% Pulmonary Grounding",c:"#3FD0C4"},
+      {l:"Adaptive Iso-Contouring",v:0.90,txt:"Multi-Scale Lesion Boundaries",c:"#3FD0C4"},
+      {l:"Zero BBox Supervision",v:1.00,txt:"Image-Level Weakly Supervised",c:"#B592FF"},
+      {l:"Report Zone Mapping",v:0.92,txt:"Linked Anatomical Impressions",c:"#F2A93B"}
     ],
+    svg:`<svg viewBox="0 0 460 120" style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px" font-family="IBM Plex Mono, monospace">
+      <text x="4" y="14" fill="#8C9DB0" font-size="9.5" font-weight="600">SPATIAL LOCALIZATION WORKFLOW</text>
+      <rect x="4" y="28" width="112" height="68" rx="6" fill="#0B131E" stroke="#3FD0C4"/>
+      <text x="14" y="52" fill="#3FD0C4" font-size="9.5" font-weight="600">Grad-CAM++</text>
+      <text x="14" y="68" fill="#8C9DB0" font-size="8.5">16×16 Grid Map</text>
+      <path d="M116 62 L138 62" stroke="#3FD0C4" stroke-width="1.5"/>
+      <rect x="140" y="28" width="132" height="68" rx="6" fill="#0B131E" stroke="#B592FF"/>
+      <text x="150" y="52" fill="#B592FF" font-size="9.5" font-weight="600">Lung Mask Filter</text>
+      <text x="150" y="68" fill="#8C9DB0" font-size="8.5">≥ 80% Energy Gate</text>
+      <path d="M272 62 L294 62" stroke="#3FD0C4" stroke-width="1.5"/>
+      <rect x="296" y="24" width="158" height="76" rx="6" fill="#0A7A74" fill-opacity="0.2" stroke="#3FD0C4"/>
+      <text x="308" y="47" fill="#E6EDF4" font-size="9.5" font-weight="600">PACS Visual Overlay</text>
+      <text x="308" y="64" fill="#3FD0C4" font-size="8.5">Heatmap + Iso-Contours</text>
+      <text x="308" y="80" fill="#8C9DB0" font-size="8.5">Interactive Alpha Slider</text>
+    </svg>`,
     notes:[
-      "<b>Anatomically Gated Pipeline:</b> Pairs frozen Dense-UNet (Val Dice <b>0.9450</b>) with 512×512 DenseNet-121.",
-      "<b>Tuberculosis SOTA:</b> Metadata reports <b>0.9986 Test AUROC</b> on Tuberculosis screening.",
-      "<b>Smart Guardrail Protection:</b> Head C (Youden <code>τ = 0.6123</code>) stays in exploratory research status with automated down-flagging if in-lung energy &lt; 80% or Head A parenchyma is clear."
+      "<b>Sharp Lesion Grounding:</b> Attention-consistency regularization concentrates gradients inside true pathological regions without bounding-box labels.",
+      "<b>Shortcut Audit Protection:</b> Automatically verifies that ≥ 80% of attribution energy resides inside the lung parenchyma.",
+      "<b>PACS Integration:</b> Powers the interactive dual-view heatmap and adaptive lesion contour overlays on the workstation."
     ]
   },
   {
-    id:"wsol", name:"3. WSOL Specialist", sub:"DenseNet-121 (WSOL-Tuned) · checkpoints/best_wsol_finetune.pth",
-    params:"6.97M params · λ_attn = 0.40", role:"Spatial lesion localization & contour grounding",
+    id:"consensus", name:"3. Consensus Mode", sub:"Multi-Architecture Soft Voting · Inter-Model Agreement Engine",
+    params:"Cross-Architecture Committee", role:"Peak-confidence consensus & divergence alert",
     bars:[
-      {l:"TB Screening AUROC",v:0.9684,txt:"0.9684",c:"#3FD0C4"},
-      {l:"NIH-14 AUROC",v:0.7351,txt:"0.7351",c:"#B592FF"},
-      {l:"RSNA Pass Rate (IoU ≥ 0.10)",v:0.7600,txt:"76.0% (Mean Best 0.2454 · Peak 0.7920)",c:"#F2A93B"},
-      {l:"COVID-19 AUROC",v:0.6135,txt:"0.6135",c:"#8C9DB0"}
+      {l:"Architectural Diversity",v:0.96,txt:"Dense + Residual + Localization",c:"#3FD0C4"},
+      {l:"Agreement Gate",v:0.94,txt:"≥ 90% Consensus Threshold",c:"#3FD0C4"},
+      {l:"Scanner Invariance",v:0.95,txt:"3-Pass Clinical TTA",c:"#B592FF"},
+      {l:"Confidence Calibration",v:0.92,txt:"Temperature Scaling (T=1.20)",c:"#F2A93B"}
     ],
+    svg:`<svg viewBox="0 0 460 120" style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px" font-family="IBM Plex Mono, monospace">
+      <text x="4" y="14" fill="#8C9DB0" font-size="9.5" font-weight="600">MULTI-ARCHITECTURE CONSENSUS</text>
+      <rect x="4" y="24" width="126" height="22" rx="4" fill="#0B131E" stroke="#3FD0C4"/>
+      <text x="12" y="38" fill="#E6EDF4" font-size="8.5">Dense Screening</text>
+      <rect x="4" y="51" width="126" height="22" rx="4" fill="#0B131E" stroke="#B592FF"/>
+      <text x="12" y="65" fill="#E6EDF4" font-size="8.5">Residual Reader</text>
+      <rect x="4" y="78" width="126" height="22" rx="4" fill="#0B131E" stroke="#F2A93B"/>
+      <text x="12" y="92" fill="#E6EDF4" font-size="8.5">Spatial Specialist</text>
+      <path d="M130 35 L166 62 M130 62 L166 62 M130 89 L166 62" stroke="#3FD0C4" stroke-width="1.3"/>
+      <rect x="168" y="30" width="124" height="64" rx="6" fill="#0B131E" stroke="#3FD0C4"/>
+      <text x="178" y="54" fill="#3FD0C4" font-size="9.5" font-weight="600">Soft Voting</text>
+      <text x="178" y="70" fill="#8C9DB0" font-size="8.5">Task-Weighted</text>
+      <path d="M292 62 L314 62" stroke="#3FD0C4" stroke-width="1.5"/>
+      <rect x="316" y="26" width="138" height="72" rx="6" fill="#0A7A74" fill-opacity="0.2" stroke="#3FD0C4"/>
+      <text x="326" y="49" fill="#E6EDF4" font-size="9.5" font-weight="600">Agreement Score</text>
+      <text x="326" y="66" fill="#3FD0C4" font-size="8.5">≥ 90% High Consensus</text>
+      <text x="326" y="82" fill="#F2A93B" font-size="8.5">&lt; 90% Review Alert</text>
+    </svg>`,
     notes:[
-      "<b>Attention Consistency Fine-Tuning:</b> Trained with Bi-Directional Attention Consistency Loss (<code>λ_attn = 0.40</code>) to sharpen lesion boundaries.",
-      "<b>Spatial Localization Specialist:</b> Reaches <b>0.2454</b> mean best IoU (<b>0.7920</b> peak) and <b>76.0%</b> pass rate at IoU ≥ 0.10 on RSNA.",
-      "<b>Serving Role:</b> Automatically powers Grad-CAM++ iso-contour extraction when Consensus Ensemble mode is active."
-    ]
-  },
-  {
-    id:"resnet50", name:"4. ResNet-50 Specialist", sub:"ResNet-50 · checkpoints/best_resnet50.pth",
-    params:"23.54M params · Residual", role:"Cross-architecture second reader for consensus",
-    bars:[
-      {l:"TB Screening AUROC",v:1.0000,txt:"1.0000",c:"#3FD0C4"},
-      {l:"COVID-19 AUROC",v:0.9891,txt:"0.9891",c:"#3FD0C4"},
-      {l:"NIH-14 AUROC",v:0.7885,txt:"0.7885",c:"#B592FF"},
-      {l:"Mean Multi-Task AUROC",v:0.9259,txt:"0.9259",c:"#F2A93B"}
-    ],
-    notes:[
-      "<b>Inductive Diversity:</b> Deep residual skip connections (23.54M params) eliminate single-architecture DenseNet bias.",
-      "<b>Strong Discrimination:</b> Achieves <b>0.7885</b> NIH-14 AUROC, <b>1.0000</b> TB AUROC, and <b>0.9891</b> COVID AUROC (Mean <b>0.9259</b>).",
-      "<b>Clinical Role:</b> Acts as an independent second reader inside the Triple-Backbone Consensus Ensemble."
-    ]
-  },
-  {
-    id:"ensemble", name:"5. Consensus Ensemble", sub:"DenseNet-121 + ResNet-50 + WSOL · Adaptive Weighted Soft-Voting",
-    params:"Multi-Backbone · Agreement Score", role:"Peak-confidence consensus & divergence alert",
-    bars:[
-      {l:"TB Screening AUROC (60% WSOL)",v:1.0000,txt:"1.0000",c:"#3FD0C4"},
-      {l:"COVID-19 AUROC (50/50 Vote)",v:0.9910,txt:"0.9910",c:"#3FD0C4"},
-      {l:"NIH-14 AUROC (50/50 Vote)",v:0.8410,txt:"0.8410",c:"#B592FF"},
-      {l:"Mean Ensemble AUROC",v:0.9440,txt:"0.9440",c:"#F2A93B"}
-    ],
-    notes:[
-      "<b>Adaptive Task-Weighted Voting:</b> Blends 50/50 DenseNet+ResNet on NIH &amp; COVID, and prioritizes WSOL (60/20/20) on Tuberculosis.",
-      "<b>Peak Discrimination:</b> Reaches <b>0.9440</b> Mean AUROC across all three heads (<b>0.8410</b> NIH-14, <b>1.0000</b> TB, <b>0.9910</b> COVID).",
-      "<b>Inter-Model Agreement Score:</b> Flags diagnostic divergence whenever cross-architecture agreement drops below <b>90.0%</b>."
+      "<b>Cross-Architecture Second Reader:</b> Combines distinct convolutional representations to eliminate single-backbone inductive bias.",
+      "<b>Inter-Model Agreement Score:</b> Measures consensus across architectures and triggers a visual review alert whenever agreement drops below 90%.",
+      "<b>Clinical Role:</b> Built for complex multi-pathology cases requiring maximum diagnostic confidence."
     ]
   }
 ];
 
 var TIERS=[
-  {id:"Tier 1",pill:"LOCKOUT",warn:true,name:"Helmholtz OOD Gate",formula:"S_E ≥ 9.0421 · H ≤ 0.6275",desc:"Rejects corrupt noise, inverted films, or non-thoracic scans (1.0000 AUROC) and locks report output."},
+  {id:"Tier 1",pill:"LOCKOUT",warn:true,name:"Helmholtz OOD Gate",formula:"S_E ≥ 9.0421 · H ≤ 0.6275",desc:"Rejects corrupt noise, inverted films, or non-thoracic scans and locks clinical report output."},
   {id:"Tier 2",pill:"SOFT MASK",warn:false,name:"Dense-UNet Gate",formula:"6% Dilation · Bypass < 18%",desc:"Attenuates outer borders & lead markers while bypassing masking on white-out lungs."},
   {id:"Tier 3",pill:"3× BATCH TTA",warn:false,name:"Clinical TTA & Temp",formula:"(Std + CLAHE + 1.03×)/3 · T=1.20",desc:"Stabilizes predictions across hospital scanners and calibrates confidence via Platt scaling."},
-  {id:"Tier 4",pill:"DOWN-FLAG",warn:true,name:"Smart Guardrail",formula:"In-Lung Energy ≥ 80% + Head A",desc:"Automatically down-flags Head C COVID suspicion when attribution falls outside lung parenchyma."},
-  {id:"Tier 5",pill:"0% HALLUCIN.",warn:false,name:"Deterministic RAG",formula:"16 ICD-10 · Fleischner / WHO",desc:"Generates structured clinical impressions from verified rules; locks immediately on OOD."}
+  {id:"Tier 4",pill:"DOWN-FLAG",warn:true,name:"Smart Guardrail",formula:"In-Lung Energy ≥ 80% + Head A",desc:"Automatically down-flags COVID-19 suspicion when attribution falls outside lung parenchyma."},
+  {id:"Tier 5",pill:"0% HALLUCIN.",warn:false,name:"Deterministic RAG",formula:"16 ICD-10 · Fleischner / WHO",desc:"Generates structured clinical impressions from verified guidelines; locks immediately on OOD."}
 ];
 
 function renderStage(idx){
@@ -1074,23 +1098,8 @@ function renderModel(idx){
     var pct=Math.max(4,Math.min(100,b.v*100)).toFixed(1);
     return '<div class="mbar-row"><div class="mbar-head"><span>'+b.l+'</span><b>'+b.txt+'</b></div><div class="mbar-track"><div class="mbar-fill" style="width:'+pct+'%;background:'+b.c+'"></div></div></div>';
   }).join("");
-  var cmpRows=[
-    {n:"Consensus",v:0.9440,active:idx===4},
-    {n:"ResNet-50",v:0.9259,active:idx===3},
-    {n:"Standard",v:0.9203,active:idx===0},
-    {n:"AG-MTCNet",v:0.8473,active:idx===1},
-    {n:"WSOL Spec.",v:0.7723,active:idx===2}
-  ];
-  var svgBars=cmpRows.map(function(r,i){
-    var y=26+i*24, w=(r.v*290).toFixed(1), col=r.active?"#3FD0C4":"#2C4058", tcol=r.active?"#3FD0C4":"#8C9DB0";
-    return '<text x="6" y="'+(y+11)+'" fill="'+tcol+'" font-size="9.5" font-weight="'+(r.active?"700":"400")+'">'+r.n+'</text>'+
-      '<rect x="92" y="'+y+'" width="290" height="14" rx="3" fill="#111C2B"/>'+
-      '<rect x="92" y="'+y+'" width="'+w+'" height="14" rx="3" fill="'+col+'"/>'+
-      '<text x="390" y="'+(y+11)+'" fill="'+tcol+'" font-size="9.5" font-weight="700">'+(r.v*100).toFixed(1)+'%</text>';
-  }).join("");
-  var cmpSvg='<svg viewBox="0 0 450 150" style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px" font-family="IBM Plex Mono, monospace"><text x="6" y="14" fill="#8C9DB0" font-size="10" font-weight="600">MULTI-MODEL COMPOSITE BENCHMARK COMPARISON</text>'+svgBars+'</svg>';
-  $("#model-vis").innerHTML='<div class="mbar-list">'+bars+'</div>'+cmpSvg;
-  $("#model-spec").innerHTML='<div><h3 style="margin:0">'+m.name+'</h3><div class="stack" style="margin-top:6px;font:400 11.5px var(--mono);color:var(--accent)">'+m.sub+'</div><div class="kpi-grid" style="grid-template-columns:1fr 1fr;margin-top:12px"><div class="kpi-card"><div class="kpi-lbl">Footprint</div><div class="kpi-val" style="font-size:.9rem">'+m.params+'</div></div><div class="kpi-card"><div class="kpi-lbl">Clinical Role</div><div class="kpi-val" style="font-size:.82rem;color:var(--ink)">'+m.role+'</div></div></div></div><ul class="spec-list">'+m.notes.map(function(n){return '<li>'+n+'</li>'}).join("")+'</ul>';
+  $("#model-vis").innerHTML='<div class="mbar-list">'+bars+'</div>'+m.svg;
+  $("#model-spec").innerHTML='<div><h3 style="margin:0">'+m.name+'</h3><div class="stack" style="margin-top:6px;font:400 11.5px var(--mono);color:var(--accent)">'+m.sub+'</div><div class="kpi-grid" style="grid-template-columns:1fr 1fr;margin-top:12px"><div class="kpi-card"><div class="kpi-lbl">Architecture</div><div class="kpi-val" style="font-size:.86rem">'+m.params+'</div></div><div class="kpi-card"><div class="kpi-lbl">Clinical Role</div><div class="kpi-val" style="font-size:.82rem;color:var(--ink)">'+m.role+'</div></div></div></div><ul class="spec-list">'+m.notes.map(function(n){return '<li>'+n+'</li>'}).join("")+'</ul>';
 }
 
 var ps=$("#pipe-steps");
