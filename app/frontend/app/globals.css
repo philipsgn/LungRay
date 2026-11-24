@@ -3,19 +3,25 @@
 @tailwind utilities;
 
 :root {
-  --background: #FBFBF9;
-  --foreground: #0F172A;
-  --accent: #0ea5e9;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --success: #22c55e;
+  --bg: #070B12;
+  --panel: #0D1520;
+  --panel-card: #111C2B;
+  --ink: #E6EDF4;
+  --muted: #8C9DB0;
+  --line: #1C2937;
+  --accent: #3FD0C4;
+  --accent-ink: #04201D;
+  --gt: #F2A93B;
+  --cmp: #B592FF;
+  --danger: #F87171;
+  --success: #34D399;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: 'Be Vietnam Pro', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #E6EDF4;
+  background-color: #070B12;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 @layer utilities {
@@ -24,7 +30,28 @@ body {
   }
 }
 
-h1,h2,h3,h4 { font-family: "Be Vietnam Pro", sans-serif; }
-body { font-family: Inter, sans-serif; }
-.font-mono { font-family: Inter, sans-serif; }
-@media print { header, button, input { display: none !important; } body { background: white; } }
+/* Custom scrollbar for dark radiology aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #070B12;
+}
+::-webkit-scrollbar-thumb {
+  background: #1C2937;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2D3F54;
+}
+
+@media print {
+  header, nav, button, input {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}

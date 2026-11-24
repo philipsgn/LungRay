@@ -2,9 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { ShieldAlert, ShieldCheck, AlertTriangle, Crosshair } from "lucide-react";
-import { useLungRayLanguage, translations } from "../lib/i18n";
-import { LesionMetadata } from "../types";
+import { ShieldAlert, ShieldCheck, AlertTriangle } from "lucide-react";
 
 interface HeatmapViewerProps {
   original: string | null;
@@ -12,16 +10,12 @@ interface HeatmapViewerProps {
   heatmapHasAlpha?: boolean;
   contour?: string | null;
   contourHasAlpha?: boolean;
-  lesions?: LesionMetadata[];
-  lesionAreaRatio?: number;
-  camResolution?: string;
   alpha: number;
   diseaseName?: string;
   isGrounded?: boolean;
   inLungRatio?: number | null;
   isExplaining?: boolean;
   isRejected?: boolean;
-  isTargetPositive?: boolean;
 }
 
 export default function HeatmapViewer({
@@ -30,29 +24,22 @@ export default function HeatmapViewer({
   heatmapHasAlpha = false,
   contour,
   contourHasAlpha = false,
-  lesions,
-  lesionAreaRatio,
-  camResolution,
   alpha,
   diseaseName,
   isGrounded = true,
   inLungRatio,
   isExplaining = false,
   isRejected = false,
-  isTargetPositive = true,
 }: HeatmapViewerProps) {
-  const [lang] = useLungRayLanguage();
-  const t = translations[lang];
-
   // Visualizer display mode: "both" | "heatmap" | "contour" | "raw"
-  const [viewMode, setViewMode] = useState<"both" | "heatmap" | "contour" | "raw">("heatmap");
+  const [viewMode, setViewMode] = useState<"both" | "heatmap" | "contour" | "raw">("both");
   const [inverted, setInverted] = useState(false);
   const [zoom, setZoom] = useState(1);
 
   return (
     <div
-      className={`relative w-full aspect-square bg-[#FBFBF9] rounded-xl overflow-hidden border shadow-2xl transition-all duration-200 select-none ${
-        isRejected ? "border-rose-600 ring-2 ring-rose-600/40" : "border-slate-200"
+      className={`relative w-full aspect-square bg-[#05080E] rounded-xl overflow-hidden border shadow-2xl transition-all duration-200 select-none ${
+        isRejected ? "border-rose-600 ring-2 ring-rose-600/40" : "border-[#1C2937]"
       }`}
     >
       {/* Background X-ray */}
@@ -66,15 +53,15 @@ export default function HeatmapViewer({
           priority
         />
       ) : (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-600 gap-2 font-sans">
-          <svg className="w-12 h-12 stroke-current opacity-30" viewBox="0 0 24 24" fill="none" strokeWidth="1.5">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-[#8C9DB0] gap-2 font-sans">
+          <svg className="w-12 h-12 stroke-current opacity-25" viewBox="0 0 24 24" fill="none" strokeWidth="1.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
           </svg>
-          <span className="text-xs tracking-wider uppercase font-semibold text-slate-600">
-            {t.noImageTitle}
+          <span className="text-xs tracking-wider uppercase font-semibold text-[#8C9DB0]">
+            No Radiograph Ingested
           </span>
-          <span className="text-[10px] text-slate-600">
-            {t.noImageSubtitle}
+          <span className="text-[11px] text-[#566475]">
+            Browse a file or select a clinical preset above to begin
           </span>
         </div>
       )}
@@ -103,186 +90,174 @@ export default function HeatmapViewer({
         />
       )}
 
-      {/* Medical Scanning Reticle / Crosshair (Subtle Clinical Markers) */}
+      {/* Medical Scanning Reticle / Crosshair */}
       {original && (
         <div className="absolute inset-0 pointer-events-none opacity-20 z-10">
-          {/* Center Crosshair */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8">
-            <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-cyan-400" />
-            <div className="absolute top-0 bottom-0 left-1/2 w-[1px] bg-cyan-400" />
+            <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-[#3FD0C4]" />
+            <div className="absolute top-0 bottom-0 left-1/2 w-[1px] bg-[#3FD0C4]" />
           </div>
-          {/* Corner Brackets */}
-          <div className="absolute top-4 left-4 w-4 h-4 border-t border-l border-slate-500" />
-          <div className="absolute top-4 right-4 w-4 h-4 border-t border-r border-slate-500" />
-          <div className="absolute bottom-4 left-4 w-4 h-4 border-b border-l border-slate-500" />
-          <div className="absolute bottom-4 right-4 w-4 h-4 border-b border-r border-slate-500" />
+          <div className="absolute top-4 left-4 w-4 h-4 border-t border-l border-slate-600" />
+          <div className="absolute top-4 right-4 w-4 h-4 border-t border-r border-slate-600" />
+          <div className="absolute bottom-4 left-4 w-4 h-4 border-b border-l border-slate-600" />
+          <div className="absolute bottom-4 right-4 w-4 h-4 border-b border-r border-slate-600" />
         </div>
       )}
 
-      {/* Medical Laser Scanning Sweep Beam (When Analyzing / Explaining) */}
+      {/* Laser Scanning Sweep Beam (When Explaining) */}
       {isExplaining && (
         <div className="absolute inset-0 pointer-events-none z-25 overflow-hidden">
-          <div className="w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] animate-pulse"
-               style={{
-                 animation: "scanLine 1.4s ease-in-out infinite",
-               }}
+          <div className="w-full h-1 bg-gradient-to-r from-transparent via-[#3FD0C4] to-transparent shadow-[0_0_15px_#3FD0C4] animate-pulse"
+               style={{ animation: "scanLine 1.4s ease-in-out infinite" }}
           />
           <style jsx>{`
             @keyframes scanLine {
-              0% { transform: translateY(0%); opacity: 0.1; }
-              15% { opacity: 0.9; }
-              85% { opacity: 0.9; }
-              100% { transform: translateY(500px); opacity: 0.1; }
+              0% { transform: translateY(0); }
+              50% { transform: translateY(500px); }
+              100% { transform: translateY(0); }
             }
           `}</style>
         </div>
       )}
 
-      {/* DICOM PACS Viewport HUD Overlays */}
+      {/* Viewport Top HUD Strip: Target Condition & Grounding Status */}
       {original && (
-        <>
-          <div className="absolute bottom-2 right-2 z-30 flex gap-2">
-            <button type="button" onClick={() => setInverted(!inverted)} className="rounded bg-white px-3 py-1 text-xs text-slate-900">Đảo màu</button>
-            <button type="button" onClick={() => setZoom(Math.min(zoom + 0.25, 2))} className="rounded bg-white px-3 py-1 text-xs text-slate-900">Phóng to</button>
-            <button type="button" onClick={() => setZoom(1)} className="rounded bg-white px-3 py-1 text-xs text-slate-900">Reset Zoom</button>
-          </div>
-          {/* Controls for the actual returned explanation layers. */}
-          <div className="absolute top-2.5 right-3 flex items-center gap-2 z-20">
-            {original && !isRejected && (heatmap || contour) && (
-              <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100/90 p-0.5 text-[10px] font-sans shadow-md backdrop-blur-md">
-                <button
-                  type="button"
-                  onClick={() => setViewMode("both")}
-                  className={`px-2 py-0.5 rounded transition-colors ${
-                    viewMode === "both"
-                      ? "bg-slate-200 text-sky-700 font-bold"
-                      : "text-slate-600 hover:text-slate-800"
-                  }`}
-                >
-                  {t.dualViewBoth}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("heatmap")}
-                  className={`px-2 py-0.5 rounded transition-colors ${
-                    viewMode === "heatmap"
-                      ? "bg-slate-200 text-sky-700 font-bold"
-                      : "text-slate-600 hover:text-slate-800"
-                  }`}
-                >
-                  {t.dualViewHeatmap}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("contour")}
-                  className={`px-2 py-0.5 rounded transition-colors ${
-                    viewMode === "contour"
-                      ? "bg-slate-200 text-sky-700 font-bold"
-                      : "text-slate-600 hover:text-slate-800"
-                  }`}
-                >
-                  {t.dualViewContour}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("raw")}
-                  className={`px-2 py-0.5 rounded transition-colors ${
-                    viewMode === "raw"
-                      ? "bg-slate-200 text-sky-700 font-bold"
-                      : "text-slate-600 hover:text-slate-800"
-                  }`}
-                >
-                  {t.dualViewRaw}
-                </button>
-              </div>
+        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 z-30 pointer-events-none">
+          <div className="flex items-center gap-2 pointer-events-auto flex-wrap">
+            {diseaseName && (
+              <span className="px-2.5 py-1 rounded-md bg-[#070B12]/80 border border-[#1C2937] text-xs font-mono font-medium text-[#E6EDF4] backdrop-blur-md shadow-sm">
+                Target: <strong className="text-[#3FD0C4]">{diseaseName}</strong>
+              </span>
+            )}
+
+            {isGrounded !== undefined && (
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium uppercase border backdrop-blur-md ${
+                  isGrounded
+                    ? "bg-[#0A7A74]/20 border-[#3FD0C4]/40 text-[#3FD0C4]"
+                    : "bg-slate-900/80 border-slate-700 text-slate-400"
+                }`}
+              >
+                {isGrounded ? "Anatomical Masked" : "Unmasked Frame"}
+              </span>
             )}
           </div>
 
-          {/* Lesion Telemetry HUD */}
-          {original && !isRejected && lesions && lesions.length > 0 && (viewMode === "both" || viewMode === "contour") && (
-            <div className="absolute bottom-11 left-3 bg-slate-100/90 backdrop-blur-md border border-cyan-800/80 rounded-md px-2.5 py-1 text-[10px] font-sans text-slate-700 flex items-center gap-2 shadow z-10 pointer-events-none">
-              <Crosshair className="w-3.5 h-3.5 text-sky-700" />
-              <span>
-                <strong className="text-sky-700">{lesions.length}</strong> {t.lesionFoci}
-              </span>
-              <span className="text-slate-600">|</span>
-              <span>
-                {((lesionAreaRatio ?? 0) * 100).toFixed(1)}% {lang === "vi" ? "phế trường" : "lung area"}
-              </span>
-              {camResolution && (
-                <>
-                  <span className="text-slate-600">|</span>
-                  <span className="text-sky-700/80 text-[9px] font-bold">{camResolution}</span>
-                </>
+          {/* In-Lung Activation Energy Audit Badge */}
+          {inLungRatio !== null && inLungRatio !== undefined && !isRejected && (
+            <div
+              className={`pointer-events-auto px-2.5 py-1 rounded-md text-[11px] font-mono border backdrop-blur-md flex items-center gap-1.5 shadow-sm ${
+                inLungRatio >= 0.8
+                  ? "bg-emerald-950/70 border-emerald-700/60 text-emerald-300"
+                  : "bg-amber-950/80 border-amber-600/70 text-amber-300"
+              }`}
+              title="Shortcut Audit: Lung field activation ratio (Threshold ≥ 80%)"
+            >
+              {inLungRatio >= 0.8 ? (
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
               )}
+              <span>In-Lung Energy: {(inLungRatio * 100).toFixed(1)}%</span>
             </div>
           )}
-
-          {/* Top Floating Target & Grounding Badges */}
-          <div className="absolute top-11 inset-x-3 flex flex-col gap-1.5 pointer-events-none z-10">
-            <div className="flex items-center justify-between">
-              {heatmap && diseaseName && !isRejected && (
-                <div className="bg-slate-100/80 backdrop-blur-md border border-slate-300 px-2.5 py-1 rounded text-[11px] font-sans font-semibold text-slate-800 flex items-center gap-1.5 shadow">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isTargetPositive ? "bg-cyan-400" : "bg-amber-400"}`} />
-                  {t.targetPrefix} <span className={isTargetPositive ? "text-sky-700 font-bold" : "text-amber-300 font-bold"}>{diseaseName}</span>
-                  {!isTargetPositive && (
-                    <span className="text-[9px] px-1 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-700/60 font-sans ml-1">
-                      {lang === "vi" ? "ÂM TÍNH" : "NEGATIVE"}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {inLungRatio !== undefined && inLungRatio !== null && !isRejected && (
-                <div
-                  className={`px-2.5 py-1 rounded text-[11px] font-sans font-semibold flex items-center gap-1.5 shadow backdrop-blur-md border ${
-                    inLungRatio < 0.80
-                      ? "bg-rose-50 border-rose-600/80 text-rose-200"
-                      : isGrounded
-                      ? "bg-slate-100/80 border-slate-300 text-slate-800"
-                      : "bg-slate-100/80 border-slate-300 text-slate-600"
-                  }`}
-                >
-                  {inLungRatio < 0.80 ? (
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-700" />
-                  ) : isGrounded ? (
-                    <ShieldCheck className="w-3.5 h-3.5 text-sky-700" />
-                  ) : (
-                    <ShieldAlert className="w-3.5 h-3.5 text-slate-500" />
-                  )}
-                  <span>{inLungRatio < 0.80 ? t.auditFailBadge : isGrounded ? t.auditPassBadge : t.unmaskedBadge}</span>
-                  <span className="opacity-80">({(inLungRatio * 100).toFixed(1)}% {t.inLungEnergy})</span>
-                </div>
-              )}
-            </div>
-
-            {/* If target is clinically negative, alert user that heatmap is model baseline audit */}
-            {!isTargetPositive && !isRejected && (
-              <div className="bg-amber-50 border border-amber-700/80 text-amber-800 text-[10px] px-2.5 py-1 rounded shadow backdrop-blur-md font-sans">
-                ⚠️ {t.negativeTargetNotice}
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Fail-Safe OOD Lockout Center Watermark */}
-      {isRejected && (
-        <div className="absolute inset-0 bg-slate-100/85 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 z-20 pointer-events-none">
-          <div className="px-4 py-2 rounded bg-rose-50 border-2 border-rose-600 text-rose-700 font-sans text-xs md:text-sm font-bold tracking-widest shadow-2xl mb-2 uppercase">
-            {t.oodLockoutTitle}
-          </div>
-          <p className="text-xs text-rose-200/90 max-w-sm font-sans leading-relaxed">
-            {t.oodLockoutDesc}
-          </p>
         </div>
       )}
 
-      {/* Subtle Bottom Processing Pill */}
-      {isExplaining && (
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-slate-100/90 border border-slate-300 px-3 py-1 rounded-full text-[10px] font-sans text-sky-700 flex items-center gap-2 shadow-lg z-20">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-          {t.extractingCam}
+      {/* Viewport Bottom Floating Controls Toolbar */}
+      {original && (
+        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2 z-30 pointer-events-auto">
+          {/* Layer View Mode Switcher */}
+          <div className="inline-flex rounded-lg border border-[#1C2937] bg-[#070B12]/85 p-0.5 backdrop-blur-md shadow-lg">
+            <button
+              type="button"
+              onClick={() => setViewMode("both")}
+              className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
+                viewMode === "both"
+                  ? "bg-[#0A7A74] text-white shadow-sm"
+                  : "text-[#8C9DB0] hover:text-[#E6EDF4]"
+              }`}
+            >
+              Dual View
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("heatmap")}
+              className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
+                viewMode === "heatmap"
+                  ? "bg-[#0A7A74] text-white shadow-sm"
+                  : "text-[#8C9DB0] hover:text-[#E6EDF4]"
+              }`}
+            >
+              Grad-CAM
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("contour")}
+              className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
+                viewMode === "contour"
+                  ? "bg-[#0A7A74] text-white shadow-sm"
+                  : "text-[#8C9DB0] hover:text-[#E6EDF4]"
+              }`}
+            >
+              Contours
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("raw")}
+              className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
+                viewMode === "raw"
+                  ? "bg-[#0A7A74] text-white shadow-sm"
+                  : "text-[#8C9DB0] hover:text-[#E6EDF4]"
+              }`}
+            >
+              Raw CXR
+            </button>
+          </div>
+
+          {/* Negative Invert & Zoom Reset */}
+          <div className="inline-flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setInverted((v) => !v)}
+              className={`px-2.5 py-1 rounded-lg border text-[11px] font-medium backdrop-blur-md transition-all ${
+                inverted
+                  ? "bg-slate-700 text-white border-slate-500"
+                  : "bg-[#070B12]/85 border-[#1C2937] text-[#8C9DB0] hover:text-[#E6EDF4]"
+              }`}
+              title="Toggle Negative Film Inversion"
+            >
+              Negative
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoom((z) => (z === 1 ? 1.5 : 1))}
+              className={`px-2.5 py-1 rounded-lg border text-[11px] font-medium backdrop-blur-md transition-all ${
+                zoom > 1
+                  ? "bg-[#0A7A74] text-white border-[#3FD0C4]"
+                  : "bg-[#070B12]/85 border-[#1C2937] text-[#8C9DB0] hover:text-[#E6EDF4]"
+              }`}
+              title="Toggle Zoom 1.5x"
+            >
+              {zoom > 1 ? "1.5×" : "1.0×"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* OOD Fail-Safe Lockout Overlay */}
+      {isRejected && (
+        <div className="absolute inset-0 bg-[#070B12]/92 backdrop-blur-md z-35 flex flex-col items-center justify-center p-6 text-center text-rose-300">
+          <div className="w-12 h-12 rounded-full bg-rose-950/80 border border-rose-600/80 flex items-center justify-center mb-3 text-rose-400">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold uppercase tracking-wider text-rose-200">
+            Fail-Safe OOD Lockout Triggered
+          </h3>
+          <p className="text-xs text-rose-300/80 max-w-md mt-1.5 leading-relaxed">
+            Extreme image degradation, inverted contrast, or non-thoracic radiograph detected.
+            Automated diagnostic prediction withheld to prevent clinical misinterpretation.
+          </p>
         </div>
       )}
     </div>

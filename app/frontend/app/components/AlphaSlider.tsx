@@ -1,6 +1,6 @@
 "use client";
 
-import { useLungRayLanguage, translations } from "../lib/i18n";
+import React from "react";
 
 interface AlphaSliderProps {
   value: number;
@@ -8,17 +8,17 @@ interface AlphaSliderProps {
 }
 
 export default function AlphaSlider({ value, onChange }: AlphaSliderProps) {
-  const [lang] = useLungRayLanguage();
-  const t = translations[lang];
-
   return (
-    <div className="bg-white rounded-xl p-3 border border-slate-200 font-sans">
+    <div className="bg-[#0D1520] rounded-xl p-3 border border-[#1C2937] font-sans select-none shadow-md">
       <div className="flex items-center justify-between mb-1.5">
-        <label htmlFor="alpha" className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider">
-          {t.alphaLabel}
+        <label
+          htmlFor="alpha"
+          className="text-xs font-semibold text-[#8C9DB0] uppercase tracking-wider"
+        >
+          Grad-CAM Heatmap Opacity (Alpha Blend)
         </label>
-        <span className="text-xs font-bold text-sky-700 tabular-nums">
-          {value}{t.alphaUnit}
+        <span className="text-xs font-mono font-bold text-[#3FD0C4] tabular-nums">
+          {value}%
         </span>
       </div>
       <input
@@ -28,14 +28,14 @@ export default function AlphaSlider({ value, onChange }: AlphaSliderProps) {
         max={100}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-cyan-400"
+        className="w-full h-1.5 bg-[#111C2B] rounded appearance-none cursor-pointer accent-[#3FD0C4]"
       />
-      <div className="flex justify-between text-[9px] text-slate-500 mt-1">
-        <span>0% (Film)</span>
+      <div className="flex justify-between text-[10px] text-[#8C9DB0] font-mono mt-1">
+        <span>0% (Raw Film)</span>
         <span>25%</span>
-        <span className="text-slate-600 font-semibold">45% (Default)</span>
+        <span className="text-[#3FD0C4] font-semibold">45% (Optimal)</span>
         <span>75%</span>
-        <span>100% (Dense)</span>
+        <span>100% (Dense Map)</span>
       </div>
     </div>
   );

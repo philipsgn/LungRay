@@ -1,16 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLungRayLanguage, translations } from "../lib/i18n";
 import {
   UploadCloud,
-  CheckCircle2,
   AlertTriangle,
   FolderOpen,
   ChevronDown,
   Layers,
   Sparkles,
-  Info,
 } from "lucide-react";
 
 interface DimensionWarning {
@@ -27,14 +24,42 @@ interface UploadDropzoneProps {
   hasFile?: boolean;
 }
 
+const PRESETS = [
+  {
+    id: "01_normal_cxr.png",
+    name: "Normal Control CXR",
+    desc: "Clear parenchyma, sharp costophrenic angles, normal cardiac ratio.",
+    badge: "Control",
+    badgeColor: "text-emerald-400 bg-emerald-950/60 border-emerald-800",
+  },
+  {
+    id: "02_effusion_cardiomegaly.png",
+    name: "Effusion & Cardiomegaly",
+    desc: "Bilateral fluid layering with enlarged cardiac silhouette.",
+    badge: "Thoracic Panel",
+    badgeColor: "text-sky-300 bg-sky-950/60 border-sky-800",
+  },
+  {
+    id: "03_active_tuberculosis.png",
+    name: "Active Apical Tuberculosis",
+    desc: "Bilateral upper-zone infiltrates and apical cavitation.",
+    badge: "TB Screening",
+    badgeColor: "text-amber-300 bg-amber-950/60 border-amber-800",
+  },
+  {
+    id: "04_ood_anomaly_synthetic.png",
+    name: "Out-of-Distribution Anomaly",
+    desc: "Corrupt projection / extreme noise to test Fail-Safe Gatekeeper.",
+    badge: "OOD Stress",
+    badgeColor: "text-rose-300 bg-rose-950/60 border-rose-800",
+  },
+];
+
 export default function UploadDropzone({
   onFileSelect,
   disabled = false,
   hasFile = false,
 }: UploadDropzoneProps) {
-  const [lang] = useLungRayLanguage();
-  const t = translations[lang];
-
   const [isDragging, setIsDragging] = useState(false);
   const [showDrawer, setShowDrawer] = useState(!hasFile);
   const [showPresetsMenu, setShowPresetsMenu] = useState(false);
@@ -57,21 +82,10 @@ export default function UploadDropzone({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
-
   const inspectAndSelectFile = useCallback(
     (file: File) => {
       setDimWarning(null);
 
-      // Pre-check dimension on image formats
       if (file.type.startsWith("image/") || file.name.match(/\.(png|jpe?g|webp)$/i)) {
         const objectUrl = URL.createObjectURL(file);
         const img = new Image();
@@ -101,10 +115,20 @@ export default function UploadDropzone({
       }
 
       onFileSelect(file);
-      setShowDrawer(false); // Auto-collapse drawer once an image is ingested
+      setShowDrawer(false);
     },
     [onFileSelect]
   );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -124,7 +148,7 @@ export default function UploadDropzone({
       if (selectedFile) {
         inspectAndSelectFile(selectedFile);
       }
-      e.target.value = ""; // Reset input so same file can be reloaded
+      e.target.value = "";
     },
     [inspectAndSelectFile]
   );
@@ -140,7 +164,7 @@ export default function UploadDropzone({
       const file = new File([blob], fileName, { type: "image/png" });
       onFileSelect(file);
       setShowPresetsMenu(false);
-      setShowDrawer(false); // Collapse drawer when preset is chosen
+      setShowDrawer(false);
     } catch (err) {
       console.error("Failed to load preset sample:", err);
     } finally {
@@ -149,19 +173,19 @@ export default function UploadDropzone({
   };
 
   return (
-    <div className="space-y-2 font-sans">
-      {/* Slim PACS Workstation Ingestion Toolbar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-2 px-3 flex flex-wrap items-center justify-between gap-2 shadow-sm">
-        {/* Left: Quick Actions */}
+    <div className="space-y-2.5 font-sans select-none">
+      {/* PACS Workstation Ingestion Toolbar */}
+      <div className="bg-[#0D1520] border border-[#1C2937] rounded-xl p-2.5 px-3 flex flex-wrap items-center justify-between gap-2.5 shadow-md">
+        {/* Left: Quick Ingestion Actions */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Primary Action: Browse CXR File */}
           <label
-            className={`inline-flex items-center gap-1.5 cursor-pointer rounded-lg bg-slate-100 border border-cyan-500/40 px-3 py-1.5 text-xs font-semibold text-sky-700 hover:bg-slate-850 hover:text-slate-900 transition-all shadow-sm ${
+            className={`inline-flex items-center gap-1.5 cursor-pointer rounded-lg bg-[#111C2B] border border-[#3FD0C4]/40 px-3 py-1.5 text-xs font-semibold text-[#3FD0C4] hover:bg-[#0A7A74]/20 hover:border-[#3FD0C4] transition-all shadow-sm ${
               disabled ? "opacity-50 pointer-events-none" : ""
             }`}
           >
-            <FolderOpen className="w-3.5 h-3.5 text-sky-700" />
-            <span>{t.browseBtn}</span>
+            <FolderOpen className="w-3.5 h-3.5" />
+            <span>Browse CXR File</span>
             <input
               type="file"
               accept=".png,.jpg,.jpeg,.dcm,image/png,image/jpeg,image/jpg"
@@ -177,12 +201,12 @@ export default function UploadDropzone({
               type="button"
               onClick={() => setShowPresetsMenu((prev) => !prev)}
               disabled={disabled || Boolean(loadingPreset)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 border border-slate-750 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-200 hover:text-slate-900 transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#111C2B] border border-[#1C2937] px-3 py-1.5 text-xs font-medium text-[#E6EDF4] hover:border-slate-600 transition-all disabled:opacity-50"
             >
-              <Layers className="w-3.5 h-3.5 text-slate-600" />
-              <span>{t.presetsMenuBtn}</span>
+              <Layers className="w-3.5 h-3.5 text-[#8C9DB0]" />
+              <span>Load Clinical Presets (4 Cases)</span>
               <ChevronDown
-                className={`w-3.5 h-3.5 text-slate-600 transition-transform ${
+                className={`w-3.5 h-3.5 text-[#8C9DB0] transition-transform ${
                   showPresetsMenu ? "rotate-180" : ""
                 }`}
               />
@@ -190,94 +214,42 @@ export default function UploadDropzone({
 
             {/* Presets Popover Dropdown */}
             {showPresetsMenu && (
-              <div className="absolute top-full left-0 mt-1.5 w-80 bg-[#0A0F1D] border border-slate-300 rounded-xl p-2.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1">
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 text-[10px] text-slate-600 font-semibold uppercase tracking-wider">
-                  <span>{t.presetsMenuTitle}</span>
+              <div className="absolute top-full left-0 mt-2 w-84 bg-[#0D1520] border border-[#1C2937] rounded-xl p-2.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#1C2937] text-[10px] text-[#8C9DB0] font-semibold uppercase tracking-wider">
+                  <span>Standard Clinical Case Library</span>
                   <button
                     type="button"
                     onClick={() => setShowPresetsMenu(false)}
-                    className="text-slate-500 hover:text-slate-700"
+                    className="text-[#8C9DB0] hover:text-[#E6EDF4]"
                   >
-                    {t.presetsMenuClose}
+                    Close
                   </button>
                 </div>
 
                 <div className="space-y-1.5">
-                  {/* Preset 1: Normal CXR */}
-                  <button
-                    type="button"
-                    onClick={() => handleLoadPreset("01_normal_cxr.png")}
-                    disabled={disabled || Boolean(loadingPreset)}
-                    className="w-full text-left p-2 rounded-lg bg-slate-100/90 hover:bg-slate-200 border border-slate-200 hover:border-slate-300 transition flex items-center justify-between group"
-                  >
-                    <div>
-                      <div className="text-[11px] font-bold text-slate-800 group-hover:text-sky-700">
-                        {t.presets.normal.name}
+                  {PRESETS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleLoadPreset(p.id)}
+                      disabled={disabled || Boolean(loadingPreset)}
+                      className="w-full text-left p-2 rounded-lg bg-[#111C2B] hover:bg-[#162233] border border-[#1C2937] hover:border-[#3FD0C4]/60 transition flex items-center justify-between group"
+                    >
+                      <div>
+                        <div className="text-xs font-semibold text-[#E6EDF4] group-hover:text-[#3FD0C4]">
+                          {p.name}
+                        </div>
+                        <div className="text-[10px] text-[#8C9DB0] line-clamp-1 mt-0.5">
+                          {p.desc}
+                        </div>
                       </div>
-                      <div className="text-[9px] text-slate-500 line-clamp-1">
-                        {t.presets.normal.desc}
-                      </div>
-                    </div>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 shrink-0 ml-2" />
-                  </button>
-
-                  {/* Preset 2: Effusion & Cardio */}
-                  <button
-                    type="button"
-                    onClick={() => handleLoadPreset("02_effusion_cardiomegaly.png")}
-                    disabled={disabled || Boolean(loadingPreset)}
-                    className="w-full text-left p-2 rounded-lg bg-slate-100/90 hover:bg-slate-200 border border-slate-200 hover:border-slate-300 transition flex items-center justify-between group"
-                  >
-                    <div>
-                      <div className="text-[11px] font-bold text-slate-800 group-hover:text-sky-700">
-                        {t.presets.effusion.name}
-                      </div>
-                      <div className="text-[9px] text-slate-500 line-clamp-1">
-                        {t.presets.effusion.desc}
-                      </div>
-                    </div>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 border border-slate-300 shrink-0 ml-2">
-                      Head A
-                    </span>
-                  </button>
-
-                  {/* Preset 3: Active TB */}
-                  <button
-                    type="button"
-                    onClick={() => handleLoadPreset("03_active_tuberculosis.png")}
-                    disabled={disabled || Boolean(loadingPreset)}
-                    className="w-full text-left p-2 rounded-lg bg-slate-100/90 hover:bg-slate-200 border border-slate-200 hover:border-slate-300 transition flex items-center justify-between group"
-                  >
-                    <div>
-                      <div className="text-[11px] font-bold text-slate-800 group-hover:text-sky-700">
-                        {t.presets.tb.name}
-                      </div>
-                      <div className="text-[9px] text-slate-500 line-clamp-1">
-                        {t.presets.tb.desc}
-                      </div>
-                    </div>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 border border-slate-300 shrink-0 ml-2">
-                      Head B
-                    </span>
-                  </button>
-
-                  {/* Preset 4: OOD Anomaly */}
-                  <button
-                    type="button"
-                    onClick={() => handleLoadPreset("04_ood_anomaly_synthetic.png")}
-                    disabled={disabled || Boolean(loadingPreset)}
-                    className="w-full text-left p-2 rounded-lg bg-slate-100/90 hover:bg-slate-200 border border-slate-200 hover:border-rose-900/60 transition flex items-center justify-between group"
-                  >
-                    <div>
-                      <div className="text-[11px] font-bold text-slate-800 group-hover:text-rose-700">
-                        {t.presets.ood.name}
-                      </div>
-                      <div className="text-[9px] text-slate-500 line-clamp-1">
-                        {t.presets.ood.desc}
-                      </div>
-                    </div>
-                    <AlertTriangle className="w-3.5 h-3.5 text-slate-500 group-hover:text-rose-700 shrink-0 ml-2" />
-                  </button>
+                      <span
+                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded border shrink-0 ml-2 ${p.badgeColor}`}
+                      >
+                        {p.badge}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -287,9 +259,9 @@ export default function UploadDropzone({
         {/* Right: Drawer On/Off Toggle & Ingestion Status */}
         <div className="flex items-center gap-2">
           {loadingPreset && (
-            <span className="text-[10px] text-sky-700 flex items-center gap-1 animate-pulse">
-              <Sparkles className="w-3 h-3 text-sky-700" />
-              {t.loadingSample}
+            <span className="text-[10px] text-[#3FD0C4] flex items-center gap-1 animate-pulse">
+              <Sparkles className="w-3 h-3 text-[#3FD0C4]" />
+              Loading preset radiograph...
             </span>
           )}
 
@@ -298,17 +270,17 @@ export default function UploadDropzone({
             onClick={() => setShowDrawer((prev) => !prev)}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-colors ${
               showDrawer
-                ? "bg-slate-200 text-sky-700 border-cyan-500/50"
-                : "bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-800 hover:bg-slate-850"
+                ? "bg-[#0A7A74]/30 text-[#3FD0C4] border-[#3FD0C4]/50"
+                : "bg-[#111C2B] text-[#8C9DB0] border-[#1C2937] hover:text-[#E6EDF4]"
             }`}
           >
             <UploadCloud className="w-3.5 h-3.5" />
-            <span>{t.toggleDropzoneBtn}</span>
+            <span>Dropzone</span>
             <span
               className={`text-[9px] px-1 py-0.2 rounded font-bold uppercase ${
                 showDrawer
-                  ? "bg-cyan-950 text-sky-700 border border-cyan-800"
-                  : "bg-slate-100 text-slate-500"
+                  ? "bg-[#0A7A74] text-white"
+                  : "bg-[#1C2937] text-[#8C9DB0]"
               }`}
             >
               {showDrawer ? "ON" : "OFF"}
@@ -317,100 +289,46 @@ export default function UploadDropzone({
         </div>
       </div>
 
-      {/* Soft Pre-Validation Dimension Warning Banner */}
+      {/* Pre-Validation Dimension Warning Banner */}
       {dimWarning && (
-        <div className="bg-amber-50 border border-amber-600/60 rounded-xl p-3 px-3.5 flex items-start gap-2.5 text-xs text-amber-800 animate-in fade-in slide-in-from-top-1 shadow-sm">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-          <div className="flex-1 space-y-1">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="font-bold text-amber-300">
-                {t.dimWarningTitle} {dimWarning.width} × {dimWarning.height} px (Tỷ lệ {dimWarning.ratio}:1)
-              </span>
-              <button
-                type="button"
-                onClick={() => setDimWarning(null)}
-                className="text-[10px] text-amber-400/80 hover:text-amber-800 uppercase font-semibold"
-              >
-                ✕ Đóng
-              </button>
-            </div>
-            <div className="text-[11px] text-amber-800/90 space-y-0.5 leading-relaxed">
-              {dimWarning.isSmall && (
-                <div>
-                  • {t.dimWarningSmall.replace("{width}", String(dimWarning.width)).replace("{height}", String(dimWarning.height))}
-                </div>
-              )}
-              {dimWarning.isRatioDeviant && (
-                <div>
-                  • {t.dimWarningRatio.replace("{ratio}", String(dimWarning.ratio))}
-                </div>
-              )}
-              <div className="mt-1 font-medium text-amber-100 flex items-center gap-1">
-                <Info className="w-3 h-3 text-amber-400 shrink-0" />
-                <span>{t.dimWarningAdvice}</span>
-              </div>
-            </div>
-          </div>
+        <div className="bg-amber-950/40 border border-amber-800/80 rounded-xl p-2.5 px-3.5 text-xs text-amber-200 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>
+            Non-standard image dimensions ({dimWarning.width}×{dimWarning.height} px, aspect {dimWarning.ratio}). LungRay will letterbox and normalize automatically to 512×512.
+          </span>
         </div>
       )}
 
-      {/* Collapsible Drag & Drop Ingestion Drawer */}
+      {/* Collapsible Drag-and-Drop Area */}
       {showDrawer && (
         <div
-          className={`border-2 border-dashed rounded-xl p-4 text-center bg-white/90 backdrop-blur-sm transition-all duration-150 animate-in fade-in slide-in-from-top-2 ${
-            isDragging
-              ? "border-cyan-400 bg-cyan-950/20"
-              : "border-slate-200 hover:border-slate-300"
-          } ${disabled ? "opacity-60 pointer-events-none" : ""}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 cursor-pointer ${
+            isDragging
+              ? "border-[#3FD0C4] bg-[#0A7A74]/10 shadow-lg shadow-[#3FD0C4]/10"
+              : "border-[#1C2937] bg-[#0D1520]/60 hover:border-slate-600 hover:bg-[#0D1520]"
+          }`}
         >
-          <div className="flex flex-col items-center justify-center gap-1">
-            <UploadCloud className="w-6 h-6 text-slate-500 stroke-[1.5]" />
-            <p className="text-xs text-slate-800 font-semibold uppercase tracking-wider">
-              {t.dragPrompt}
-            </p>
-            <p className="text-[10px] text-slate-500 max-w-md">
-              {t.formatsText}
-            </p>
-          </div>
-
-          {/* CXR Technical Standards & Dimension Guidelines */}
-          <div className="mt-3.5 pt-3 border-t border-slate-200/80 text-left">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
-              <Sparkles className="w-3.5 h-3.5 text-sky-700" />
-              <span>{t.guidelinesTitle}</span>
+          <input
+            type="file"
+            accept=".png,.jpg,.jpeg,.dcm,image/png,image/jpeg,image/jpg"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            onChange={handleChange}
+            disabled={disabled}
+          />
+          <div className="flex flex-col items-center justify-center space-y-2">
+            <div className="p-2.5 rounded-full bg-[#111C2B] border border-[#1C2937] text-[#3FD0C4]">
+              <UploadCloud className="w-6 h-6" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-              <div className="bg-slate-100/90 border border-slate-200/90 rounded-lg p-2.5 shadow-sm">
-                <div className="text-[10px] font-bold text-sky-700 uppercase flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-                  <span>1. Độ phân giải</span>
-                </div>
-                <div className="text-[10px] text-slate-600 mt-1 leading-snug font-normal">{t.guideDimensions}</div>
-              </div>
-              <div className="bg-slate-100/90 border border-slate-200/90 rounded-lg p-2.5 shadow-sm">
-                <div className="text-[10px] font-bold text-emerald-300 uppercase flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                  <span>2. Tỷ lệ khung hình</span>
-                </div>
-                <div className="text-[10px] text-slate-600 mt-1 leading-snug font-normal">{t.guideRatio}</div>
-              </div>
-              <div className="bg-slate-100/90 border border-slate-200/90 rounded-lg p-2.5 shadow-sm">
-                <div className="text-[10px] font-bold text-amber-300 uppercase flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                  <span>3. Tư thế chiếu chụp</span>
-                </div>
-                <div className="text-[10px] text-slate-600 mt-1 leading-snug font-normal">{t.guideProjection}</div>
-              </div>
-              <div className="bg-slate-100/90 border border-slate-200/90 rounded-lg p-2.5 shadow-sm">
-                <div className="text-[10px] font-bold text-purple-300 uppercase flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
-                  <span>4. Mẹo tránh OOD</span>
-                </div>
-                <div className="text-[10px] text-slate-600 mt-1 leading-snug font-normal">{t.guideOodTip}</div>
-              </div>
+            <div>
+              <p className="text-sm font-semibold text-[#E6EDF4]">
+                Drag and drop chest radiograph (CXR) here, or click to browse
+              </p>
+              <p className="text-xs text-[#8C9DB0] mt-1">
+                Standard DICOM (.dcm), 16-bit Grayscale, PNG, JPEG · Standardized to 512×512 input
+              </p>
             </div>
           </div>
         </div>
