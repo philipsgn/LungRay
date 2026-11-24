@@ -15,19 +15,17 @@ import {
   BarChart3,
   FileText,
   BookOpen,
-  Layers,
   ArrowRight,
   ShieldCheck,
   ShieldAlert,
   Printer,
   Sparkles,
-  ExternalLink,
 } from "lucide-react";
 
-type TabScreen = "viewport" | "findings" | "report" | "rag" | "atlas";
+type TabScreen = "viewport" | "findings" | "report" | "rag";
 
 export default function Home() {
-  // 5-Tab Modular Navigation State
+  // 4-Tab Core Clinical Navigation State
   const [activeTab, setActiveTab] = useState<TabScreen>("viewport");
   const [selectedModel, setSelectedModel] = useState<string>("standard");
   const [ttaEnabled, setTtaEnabled] = useState(true);
@@ -312,12 +310,11 @@ export default function Home() {
         }}
         connected={connected}
         disabled={loading || isExplaining}
-        onOpenAtlasTab={() => setActiveTab("atlas")}
       />
 
-      <main className="max-w-7xl mx-auto p-3 sm:p-5 space-y-4">
+      <main className="w-full max-w-[1750px] mx-auto p-3 sm:p-5 space-y-4">
         {/* ========================================================================= */}
-        {/* 5-TAB SCREEN SWITCHER                                                     */}
+        {/* 4-TAB SCREEN SWITCHER                                                     */}
         {/* ========================================================================= */}
         <div className="bg-[#0D1520] border border-[#1C2937] rounded-xl p-1.5 flex items-center justify-between gap-2 shadow-lg">
           <nav className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto" aria-label="Workstation Tabs">
@@ -381,20 +378,6 @@ export default function Home() {
               <BookOpen className="w-3.5 h-3.5 text-[#3FD0C4]" />
               <span>4 · Knowledge Assistant (RAG)</span>
             </button>
-
-            {/* Tab 5: Architecture & 3D Atlas */}
-            <button
-              type="button"
-              onClick={() => setActiveTab("atlas")}
-              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap ${
-                activeTab === "atlas"
-                  ? "bg-[#0A7A74] text-white border border-[#3FD0C4]/60 shadow-sm shadow-[#3FD0C4]/20"
-                  : "text-[#8C9DB0] hover:text-[#E6EDF4] hover:bg-[#111C2B]"
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5 text-[#3FD0C4]" />
-              <span>5 · Architecture &amp; 3D Atlas</span>
-            </button>
           </nav>
 
           {/* Quick Context Summary */}
@@ -433,6 +416,7 @@ export default function Home() {
               onFileSelect={handleFileSelect}
               disabled={loading || isExplaining}
               hasFile={Boolean(file)}
+              activeFileName={file?.name}
             />
 
             {/* Run Analysis Action Button Strip */}
@@ -669,7 +653,7 @@ export default function Home() {
         {/* TAB 2: DIAGNOSTIC FINDINGS PANEL                                         */}
         {/* ========================================================================= */}
         {activeTab === "findings" && (
-          <div className="animate-in fade-in duration-200">
+          <div className="space-y-4 animate-in fade-in duration-200">
             <DiagnosisDashboard
               prediction={prediction}
               auditRatio={inLungRatio ?? audit?.in_lung_energy_ratio ?? null}
@@ -681,6 +665,26 @@ export default function Home() {
               onBypassFailsafe={() => handleToggleFailsafe(false)}
               isExplaining={isExplaining || loading}
             />
+
+            {/* Workflow Navigation Bar between Tabs */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0D1520] border border-[#1C2937] rounded-xl p-3 px-4 shadow-md">
+              <button
+                type="button"
+                onClick={() => setActiveTab("viewport")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111C2B] border border-[#1C2937] hover:border-slate-600 text-xs text-[#8C9DB0] hover:text-[#E6EDF4] transition"
+              >
+                <span>← Return to Viewport</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("report")}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0A7A74] hover:bg-[#0A7A74]/80 text-white text-xs font-semibold shadow-sm transition"
+              >
+                <span>Proceed to Clinical Report</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -832,7 +836,7 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Action Buttons: Print & PDF Export */}
+              {/* Action Buttons: Print, PDF Export & Knowledge Assistant Link */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#1C2937]">
                 <div className="flex items-center gap-2">
                   <button
@@ -851,9 +855,15 @@ export default function Home() {
                     <span>Save as PDF</span>
                   </button>
                 </div>
-                <p className="text-[10px] text-[#566475] italic">
-                  Select &quot;Save as PDF&quot; in the print dialog to export a digital copy.
-                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("rag")}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#111C2B] border border-[#1C2937] hover:border-[#3FD0C4] text-[#3FD0C4] text-xs font-semibold transition"
+                >
+                  <span>Consult Knowledge Assistant (RAG)</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           </div>
@@ -863,12 +873,26 @@ export default function Home() {
         {/* TAB 4: CLINICAL KNOWLEDGE ASSISTANT (RAG)                                */}
         {/* ========================================================================= */}
         {activeTab === "rag" && (
-          <div className="animate-in fade-in duration-200">
+          <div className="space-y-4 animate-in fade-in duration-200">
             {prediction ? (
-              <ClinicalRagAssistant
-                prediction={prediction}
-                ratio={inLungRatio ?? audit?.in_lung_energy_ratio ?? null}
-              />
+              <>
+                <div className="flex items-center justify-between bg-[#0D1520] border border-[#1C2937] rounded-xl p-2.5 px-4 shadow-md">
+                  <span className="text-xs text-[#8C9DB0]">
+                    Evidence-grounded clinical knowledge contextualized to active findings.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("findings")}
+                    className="inline-flex items-center gap-1.5 text-xs text-[#3FD0C4] hover:underline"
+                  >
+                    <span>← Return to Findings</span>
+                  </button>
+                </div>
+                <ClinicalRagAssistant
+                  prediction={prediction}
+                  ratio={inLungRatio ?? audit?.in_lung_energy_ratio ?? null}
+                />
+              </>
             ) : (
               <div className="bg-[#0D1520] border border-[#1C2937] rounded-xl p-8 text-center text-[#8C9DB0] space-y-2">
                 <BookOpen className="w-8 h-8 mx-auto text-[#566475]" />
@@ -888,43 +912,6 @@ export default function Home() {
                 </button>
               </div>
             )}
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 5: ARCHITECTURE & 3D ATLAS                                           */}
-        {/* ========================================================================= */}
-        {activeTab === "atlas" && (
-          <div className="space-y-3 animate-in fade-in duration-200">
-            <div className="bg-[#0D1520] border border-[#1C2937] rounded-xl p-3 px-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#E6EDF4]">
-                  LungRay Interactive 3D WSOL Stack &amp; Pipeline Atlas
-                </h3>
-                <p className="text-[10px] text-[#8C9DB0]">
-                  Volumetric spatial feature map decomposition &amp; three-stage multi-task pipeline
-                </p>
-              </div>
-
-              <a
-                href="/pipeline-atlas.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111C2B] border border-[#1C2937] hover:border-[#3FD0C4] text-xs font-medium text-[#3FD0C4] transition"
-              >
-                <span>Open in Full Screen</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-
-            {/* Embedded Interactive 3D WSOL Atlas Iframe */}
-            <div className="w-full rounded-xl overflow-hidden border border-[#1C2937] bg-[#070B12] shadow-2xl">
-              <iframe
-                src="/pipeline-atlas.html"
-                title="LungRay 3D WSOL Pipeline Atlas"
-                className="w-full h-[82vh] border-0"
-              />
-            </div>
           </div>
         )}
       </main>

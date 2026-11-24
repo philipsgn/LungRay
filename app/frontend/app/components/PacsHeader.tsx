@@ -12,15 +12,14 @@ interface Props {
   onToggleTta: (enabled: boolean) => void;
   connected: boolean | null;
   disabled: boolean;
-  onOpenAtlasTab?: () => void;
 }
 
 const MODELS: [string, string, string][] = [
   ["standard", "Standard CADx", "DenseNet-121 primary clinical backbone"],
-  ["ag_mtcnet", "AG-MTCNet (Gated)", "Dense-UNet anatomically gated 512×512 network"],
+  ["ag_mtcnet", "AG-MTCNet", "Anatomically gated dual-pathway network"],
   ["wsol", "WSOL Specialist", "Attention-regularized weak localization model"],
-  ["resnet50", "ResNet-50", "Deep residual 50-layer representation"],
-  ["ensemble", "Consensus Ensemble", "Multi-backbone soft voting consensus"],
+  ["resnet50", "ResNet-50", "Residual 50-layer representation"],
+  ["ensemble", "Consensus Ensemble", "Multi-backbone consensus voting"],
 ];
 
 export default function PacsHeader({
@@ -32,15 +31,14 @@ export default function PacsHeader({
   onToggleTta,
   connected,
   disabled,
-  onOpenAtlasTab,
 }: Props) {
   return (
-    <header className="border-b border-[#1C2937] bg-[#0D1520] px-4 sm:px-6 py-3.5 select-none sticky top-0 z-40 shadow-xl shadow-black/40">
-      <div className="mx-auto max-w-7xl space-y-3">
-        {/* Top Row: Brand & System Connection */}
+    <header className="border-b border-[#1C2937] bg-[#0D1520] px-3 sm:px-6 lg:px-8 py-3 select-none sticky top-0 z-40 shadow-xl shadow-black/40">
+      <div className="w-full max-w-[1750px] mx-auto space-y-2.5">
+        {/* Top Row: Brand, Architecture Link & System Status */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0A7A74] border border-[#3FD0C4]/60 font-mono text-sm font-bold text-white shadow-sm shadow-[#3FD0C4]/20">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0A7A74] border border-[#3FD0C4]/60 font-mono text-sm font-bold text-white shadow-sm shadow-[#3FD0C4]/20">
               LR
             </div>
             <div>
@@ -48,42 +46,30 @@ export default function PacsHeader({
                 <h1 className="text-base sm:text-lg font-bold tracking-tight text-[#E6EDF4]">
                   LungRay
                 </h1>
-                <span className="rounded-md border border-[#3FD0C4]/40 bg-[#0A7A74]/20 px-2 py-0.5 text-[11px] font-medium text-[#3FD0C4]">
-                  Clinical Workstation
+                <span className="rounded border border-[#3FD0C4]/40 bg-[#0A7A74]/20 px-1.5 py-0.2 text-[10px] font-semibold uppercase tracking-wider text-[#3FD0C4]">
+                  Workstation
                 </span>
               </div>
-              <p className="text-xs text-[#8C9DB0]">
-                Multi-Task Chest Radiography CADx &amp; WSOL Platform
+              <p className="text-[11px] text-[#8C9DB0]">
+                Intelligent Chest Diagnostics
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Quick Link to 3D Pipeline Atlas */}
-            {onOpenAtlasTab ? (
-              <button
-                type="button"
-                onClick={onOpenAtlasTab}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#1C2937] bg-[#111C2B] px-2.5 py-1 text-xs font-medium text-[#8C9DB0] transition-colors hover:border-[#3FD0C4] hover:text-[#3FD0C4]"
-                title="Switch to interactive 3D Pipeline Atlas tab"
-              >
-                <span>3D Pipeline Atlas</span>
-                <ExternalLink className="h-3 w-3" />
-              </button>
-            ) : (
-              <a
-                href="/pipeline-atlas.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#1C2937] bg-[#111C2B] px-2.5 py-1 text-xs font-medium text-[#8C9DB0] transition-colors hover:border-[#3FD0C4] hover:text-[#3FD0C4]"
-                title="Open full interactive 3D WSOL Pipeline Atlas in a new tab"
-              >
-                <span>3D Pipeline Atlas</span>
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
+            {/* Direct Link to Architecture 3D Atlas in a Separate Tab */}
+            <a
+              href="/pipeline-atlas.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#1C2937] bg-[#111C2B] px-2.5 py-1 text-xs font-medium text-[#8C9DB0] transition-colors hover:border-[#3FD0C4] hover:text-[#3FD0C4]"
+              title="Open interactive 3D Pipeline Atlas in a new tab"
+            >
+              <span>Architecture Atlas</span>
+              <ExternalLink className="h-3 w-3" />
+            </a>
 
-            {/* API Health Status Pill */}
+            {/* Clean System Status Pill (No Port or Backend Jargon) */}
             <div
               className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-mono font-medium ${
                 connected === true
@@ -104,20 +90,20 @@ export default function PacsHeader({
               />
               <span>
                 {connected === true
-                  ? "Online (Port 8000)"
+                  ? "System Online"
                   : connected === false
-                  ? "Offline (Port 8000)"
-                  : "Checking API..."}
+                  ? "Disconnected"
+                  : "Connecting..."}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Bottom Row: Model Engine Selector & Safety Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-[#1C2937]/60">
+        {/* Bottom Row: AI Engine Selector & Minimalist Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1 border-t border-[#1C2937]/60">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#8C9DB0] mr-1.5">
-              AI Engine:
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8C9DB0] mr-1">
+              Engine:
             </span>
             {MODELS.map(([id, label, desc]) => {
               const isSelected = selectedModel === id;
@@ -128,7 +114,7 @@ export default function PacsHeader({
                   disabled={disabled}
                   onClick={() => onSelectModel(id)}
                   title={desc}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                  className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-all ${
                     isSelected
                       ? "border-[#3FD0C4] bg-[#0A7A74] text-white shadow-sm shadow-[#3FD0C4]/25"
                       : "border-[#1C2937] bg-[#111C2B] text-[#8C9DB0] hover:border-slate-600 hover:text-[#E6EDF4]"
@@ -140,9 +126,9 @@ export default function PacsHeader({
             })}
           </div>
 
-          {/* Clinical Safety & Inference Toggles */}
-          <div className="flex items-center gap-4 text-xs font-medium text-[#E6EDF4]">
-            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+          {/* Minimalist Clinical Safety & Precision Toggles */}
+          <div className="flex items-center gap-3.5 text-xs font-medium text-[#E6EDF4]">
+            <label className="inline-flex items-center gap-1.5 cursor-pointer" title="Automatic safety gate for out-of-distribution or corrupt radiographs">
               <input
                 type="checkbox"
                 checked={failsafeEnabled}
@@ -150,15 +136,12 @@ export default function PacsHeader({
                 onChange={(e) => onToggleFailsafe(e.target.checked)}
                 className="rounded border-[#1C2937] bg-[#111C2B] text-[#3FD0C4] focus:ring-0 focus:ring-offset-0 cursor-pointer"
               />
-              <span
-                className={failsafeEnabled ? "text-[#3FD0C4]" : "text-[#8C9DB0]"}
-                title="Helmholtz Free Energy & Shannon Entropy OOD Gatekeeper"
-              >
-                Fail-Safe Guard
+              <span className={failsafeEnabled ? "text-[#3FD0C4]" : "text-[#8C9DB0]"}>
+                Safety Gate
               </span>
             </label>
 
-            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+            <label className="inline-flex items-center gap-1.5 cursor-pointer" title="Multi-scale test-time augmentation for higher localization precision">
               <input
                 type="checkbox"
                 checked={ttaEnabled}
@@ -166,11 +149,8 @@ export default function PacsHeader({
                 onChange={(e) => onToggleTta(e.target.checked)}
                 className="rounded border-[#1C2937] bg-[#111C2B] text-[#3FD0C4] focus:ring-0 focus:ring-offset-0 cursor-pointer"
               />
-              <span
-                className={ttaEnabled ? "text-[#3FD0C4]" : "text-[#8C9DB0]"}
-                title="3-Pass Test-Time Augmentation (Horizontal Flip + Scaling)"
-              >
-                3-Pass TTA
+              <span className={ttaEnabled ? "text-[#3FD0C4]" : "text-[#8C9DB0]"}>
+                Precision Mode
               </span>
             </label>
           </div>

@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Layers,
   Sparkles,
+  FileCheck,
 } from "lucide-react";
 
 interface DimensionWarning {
@@ -22,35 +23,36 @@ interface UploadDropzoneProps {
   onFileSelect: (file: File) => void;
   disabled?: boolean;
   hasFile?: boolean;
+  activeFileName?: string;
 }
 
 const PRESETS = [
   {
     id: "01_normal_cxr.png",
-    name: "Normal Control CXR",
-    desc: "Clear parenchyma, sharp costophrenic angles, normal cardiac ratio.",
-    badge: "Control",
+    name: "Normal Control",
+    desc: "Clear parenchyma, sharp costophrenic angles, normal cardiac silhouette.",
+    badge: "Normal",
     badgeColor: "text-emerald-400 bg-emerald-950/60 border-emerald-800",
   },
   {
     id: "02_effusion_cardiomegaly.png",
     name: "Effusion & Cardiomegaly",
     desc: "Bilateral fluid layering with enlarged cardiac silhouette.",
-    badge: "Thoracic Panel",
+    badge: "Effusion",
     badgeColor: "text-sky-300 bg-sky-950/60 border-sky-800",
   },
   {
     id: "03_active_tuberculosis.png",
-    name: "Active Apical Tuberculosis",
+    name: "Active Tuberculosis",
     desc: "Bilateral upper-zone infiltrates and apical cavitation.",
-    badge: "TB Screening",
+    badge: "Active TB",
     badgeColor: "text-amber-300 bg-amber-950/60 border-amber-800",
   },
   {
     id: "04_ood_anomaly_synthetic.png",
-    name: "Out-of-Distribution Anomaly",
-    desc: "Corrupt projection / extreme noise to test Fail-Safe Gatekeeper.",
-    badge: "OOD Stress",
+    name: "Out-of-Distribution Noise",
+    desc: "Extreme Gaussian noise / corrupt projection for safety testing.",
+    badge: "OOD Noise",
     badgeColor: "text-rose-300 bg-rose-950/60 border-rose-800",
   },
 ];
@@ -59,9 +61,9 @@ export default function UploadDropzone({
   onFileSelect,
   disabled = false,
   hasFile = false,
+  activeFileName,
 }: UploadDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [showDrawer, setShowDrawer] = useState(!hasFile);
   const [showPresetsMenu, setShowPresetsMenu] = useState(false);
   const [loadingPreset, setLoadingPreset] = useState<string | null>(null);
   const [dimWarning, setDimWarning] = useState<DimensionWarning | null>(null);
@@ -115,7 +117,6 @@ export default function UploadDropzone({
       }
 
       onFileSelect(file);
-      setShowDrawer(false);
     },
     [onFileSelect]
   );
@@ -164,7 +165,6 @@ export default function UploadDropzone({
       const file = new File([blob], fileName, { type: "image/png" });
       onFileSelect(file);
       setShowPresetsMenu(false);
-      setShowDrawer(false);
     } catch (err) {
       console.error("Failed to load preset sample:", err);
     } finally {
@@ -173,162 +173,175 @@ export default function UploadDropzone({
   };
 
   return (
-    <div className="space-y-2.5 font-sans select-none">
-      {/* PACS Workstation Ingestion Toolbar */}
-      <div className="bg-[#0D1520] border border-[#1C2937] rounded-xl p-2.5 px-3 flex flex-wrap items-center justify-between gap-2.5 shadow-md">
-        {/* Left: Quick Ingestion Actions */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Primary Action: Browse CXR File */}
-          <label
-            className={`inline-flex items-center gap-1.5 cursor-pointer rounded-lg bg-[#111C2B] border border-[#3FD0C4]/40 px-3 py-1.5 text-xs font-semibold text-[#3FD0C4] hover:bg-[#0A7A74]/20 hover:border-[#3FD0C4] transition-all shadow-sm ${
-              disabled ? "opacity-50 pointer-events-none" : ""
-            }`}
-          >
-            <FolderOpen className="w-3.5 h-3.5" />
-            <span>Browse CXR File</span>
-            <input
-              type="file"
-              accept=".png,.jpg,.jpeg,.dcm,image/png,image/jpeg,image/jpg"
-              className="hidden"
-              onChange={handleChange}
-              disabled={disabled}
-            />
-          </label>
-
-          {/* Clinical Presets Dropdown Menu */}
-          <div className="relative" ref={presetsMenuRef}>
-            <button
-              type="button"
-              onClick={() => setShowPresetsMenu((prev) => !prev)}
-              disabled={disabled || Boolean(loadingPreset)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#111C2B] border border-[#1C2937] px-3 py-1.5 text-xs font-medium text-[#E6EDF4] hover:border-slate-600 transition-all disabled:opacity-50"
-            >
-              <Layers className="w-3.5 h-3.5 text-[#8C9DB0]" />
-              <span>Load Clinical Presets (4 Cases)</span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 text-[#8C9DB0] transition-transform ${
-                  showPresetsMenu ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            {/* Presets Popover Dropdown */}
-            {showPresetsMenu && (
-              <div className="absolute top-full left-0 mt-2 w-84 bg-[#0D1520] border border-[#1C2937] rounded-xl p-2.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1">
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#1C2937] text-[10px] text-[#8C9DB0] font-semibold uppercase tracking-wider">
-                  <span>Standard Clinical Case Library</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowPresetsMenu(false)}
-                    className="text-[#8C9DB0] hover:text-[#E6EDF4]"
-                  >
-                    Close
-                  </button>
-                </div>
-
-                <div className="space-y-1.5">
-                  {PRESETS.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => handleLoadPreset(p.id)}
-                      disabled={disabled || Boolean(loadingPreset)}
-                      className="w-full text-left p-2 rounded-lg bg-[#111C2B] hover:bg-[#162233] border border-[#1C2937] hover:border-[#3FD0C4]/60 transition flex items-center justify-between group"
-                    >
-                      <div>
-                        <div className="text-xs font-semibold text-[#E6EDF4] group-hover:text-[#3FD0C4]">
-                          {p.name}
-                        </div>
-                        <div className="text-[10px] text-[#8C9DB0] line-clamp-1 mt-0.5">
-                          {p.desc}
-                        </div>
-                      </div>
-                      <span
-                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded border shrink-0 ml-2 ${p.badgeColor}`}
-                      >
-                        {p.badge}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right: Drawer On/Off Toggle & Ingestion Status */}
-        <div className="flex items-center gap-2">
-          {loadingPreset && (
-            <span className="text-[10px] text-[#3FD0C4] flex items-center gap-1 animate-pulse">
-              <Sparkles className="w-3 h-3 text-[#3FD0C4]" />
-              Loading preset radiograph...
-            </span>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setShowDrawer((prev) => !prev)}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-colors ${
-              showDrawer
-                ? "bg-[#0A7A74]/30 text-[#3FD0C4] border-[#3FD0C4]/50"
-                : "bg-[#111C2B] text-[#8C9DB0] border-[#1C2937] hover:text-[#E6EDF4]"
-            }`}
-          >
-            <UploadCloud className="w-3.5 h-3.5" />
-            <span>Dropzone</span>
-            <span
-              className={`text-[9px] px-1 py-0.2 rounded font-bold uppercase ${
-                showDrawer
-                  ? "bg-[#0A7A74] text-white"
-                  : "bg-[#1C2937] text-[#8C9DB0]"
-              }`}
-            >
-              {showDrawer ? "ON" : "OFF"}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Pre-Validation Dimension Warning Banner */}
+    <div className="space-y-2 font-sans select-none">
+      {/* Pre-Validation Dimension Warning */}
       {dimWarning && (
         <div className="bg-amber-950/40 border border-amber-800/80 rounded-xl p-2.5 px-3.5 text-xs text-amber-200 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
           <span>
-            Non-standard image dimensions ({dimWarning.width}×{dimWarning.height} px, aspect {dimWarning.ratio}). LungRay will letterbox and normalize automatically to 512×512.
+            Non-standard image dimensions ({dimWarning.width}×{dimWarning.height} px, aspect {dimWarning.ratio}). LungRay normalizes automatically to 512×512.
           </span>
         </div>
       )}
 
-      {/* Collapsible Drag-and-Drop Area */}
-      {showDrawer && (
+      {/* STATE A: A SCAN IS LOADED -> Minimalist 1-Line Status Bar */}
+      {hasFile ? (
+        <div className="bg-[#0D1520] border border-[#1C2937] rounded-xl p-2 px-4 flex flex-wrap items-center justify-between gap-2.5 shadow-md">
+          {/* Active File Info */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#0A7A74]/20 border border-[#3FD0C4]/40 text-[#3FD0C4] font-medium font-mono">
+              <FileCheck className="w-3.5 h-3.5" />
+              <span>Loaded Scan</span>
+            </span>
+            <span className="text-[#E6EDF4] font-mono truncate max-w-[280px] sm:max-w-[400px]">
+              {activeFileName ?? "Radiograph active"}
+            </span>
+          </div>
+
+          {/* Quick Actions: Change File or Switch Preset */}
+          <div className="flex items-center gap-2">
+            {loadingPreset && (
+              <span className="text-[11px] text-[#3FD0C4] flex items-center gap-1 animate-pulse mr-1 font-mono">
+                <Sparkles className="w-3 h-3 text-[#3FD0C4]" />
+                Switching case...
+              </span>
+            )}
+
+            {/* Change Scan Button */}
+            <label
+              className={`inline-flex items-center gap-1.5 cursor-pointer rounded-lg bg-[#111C2B] border border-[#1C2937] px-2.5 py-1 text-xs font-medium text-[#8C9DB0] hover:text-[#E6EDF4] hover:border-slate-600 transition shadow-sm ${
+                disabled ? "opacity-50 pointer-events-none" : ""
+              }`}
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              <span>Change Scan</span>
+              <input
+                type="file"
+                accept=".png,.jpg,.jpeg,.dcm,image/png,image/jpeg,image/jpg"
+                className="hidden"
+                onChange={handleChange}
+                disabled={disabled}
+              />
+            </label>
+
+            {/* Presets Dropdown */}
+            <div className="relative" ref={presetsMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowPresetsMenu((prev) => !prev)}
+                disabled={disabled || Boolean(loadingPreset)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#111C2B] border border-[#1C2937] px-2.5 py-1 text-xs font-medium text-[#8C9DB0] hover:text-[#E6EDF4] hover:border-slate-600 transition disabled:opacity-50"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Sample Cases</span>
+                <ChevronDown
+                  className={`w-3 h-3 transition-transform ${
+                    showPresetsMenu ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {/* Presets Dropdown Menu */}
+              {showPresetsMenu && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-[#0D1520] border border-[#1C2937] rounded-xl p-2.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1">
+                  <div className="text-[10px] text-[#8C9DB0] font-semibold uppercase tracking-wider pb-2 mb-2 border-b border-[#1C2937]">
+                    Select Clinical Sample Case
+                  </div>
+                  <div className="space-y-1.5">
+                    {PRESETS.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleLoadPreset(p.id)}
+                        disabled={disabled || Boolean(loadingPreset)}
+                        className="w-full text-left p-2 rounded-lg bg-[#111C2B] hover:bg-[#162233] border border-[#1C2937] hover:border-[#3FD0C4]/60 transition flex items-center justify-between group"
+                      >
+                        <div>
+                          <div className="text-xs font-semibold text-[#E6EDF4] group-hover:text-[#3FD0C4]">
+                            {p.name}
+                          </div>
+                          <div className="text-[10px] text-[#8C9DB0] line-clamp-1 mt-0.5">
+                            {p.desc}
+                          </div>
+                        </div>
+                        <span
+                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded border shrink-0 ml-2 ${p.badgeColor}`}
+                        >
+                          {p.badge}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* STATE B: NO SCAN LOADED -> Single Elegant Ingestion Card (Zero Duplication) */
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 cursor-pointer ${
+          className={`relative border-2 border-dashed rounded-xl p-7 text-center transition-all duration-200 ${
             isDragging
               ? "border-[#3FD0C4] bg-[#0A7A74]/10 shadow-lg shadow-[#3FD0C4]/10"
-              : "border-[#1C2937] bg-[#0D1520]/60 hover:border-slate-600 hover:bg-[#0D1520]"
+              : "border-[#1C2937] bg-[#0D1520] hover:border-slate-600"
           }`}
         >
-          <input
-            type="file"
-            accept=".png,.jpg,.jpeg,.dcm,image/png,image/jpeg,image/jpg"
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            onChange={handleChange}
-            disabled={disabled}
-          />
-          <div className="flex flex-col items-center justify-center space-y-2">
-            <div className="p-2.5 rounded-full bg-[#111C2B] border border-[#1C2937] text-[#3FD0C4]">
-              <UploadCloud className="w-6 h-6" />
+          {/* Main Drop Content */}
+          <div className="flex flex-col items-center justify-center space-y-3">
+            <div className="p-3 rounded-full bg-[#111C2B] border border-[#1C2937] text-[#3FD0C4]">
+              <UploadCloud className="w-7 h-7" />
             </div>
+
             <div>
               <p className="text-sm font-semibold text-[#E6EDF4]">
-                Drag and drop chest radiograph (CXR) here, or click to browse
+                Drop chest radiograph here, or choose from computer
               </p>
-              <p className="text-xs text-[#8C9DB0] mt-1">
-                Standard DICOM (.dcm), 16-bit Grayscale, PNG, JPEG · Standardized to 512×512 input
+              <p className="text-xs text-[#8C9DB0] mt-0.5">
+                Supports DICOM (.dcm), PNG, JPEG
               </p>
+            </div>
+
+            {/* Single Unified Browse Button */}
+            <label
+              className={`inline-flex items-center gap-1.5 cursor-pointer rounded-lg bg-[#0A7A74] hover:bg-[#0A7A74]/80 border border-[#3FD0C4]/50 px-4 py-2 text-xs font-semibold text-white transition-all shadow-md shadow-[#3FD0C4]/20 ${
+                disabled ? "opacity-50 pointer-events-none" : ""
+              }`}
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              <span>Select CXR File</span>
+              <input
+                type="file"
+                accept=".png,.jpg,.jpeg,.dcm,image/png,image/jpeg,image/jpg"
+                className="hidden"
+                onChange={handleChange}
+                disabled={disabled}
+              />
+            </label>
+
+            {/* Integrated Quick Sample Cases (Clickable Pills) */}
+            <div className="pt-3 mt-1 border-t border-[#1C2937]/80 w-full max-w-xl">
+              <p className="text-[11px] text-[#8C9DB0] uppercase tracking-wider font-semibold mb-2">
+                Or test with a clinical sample case:
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleLoadPreset(p.id)}
+                    disabled={disabled || Boolean(loadingPreset)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111C2B] border border-[#1C2937] hover:border-[#3FD0C4] text-xs text-[#E6EDF4] transition disabled:opacity-50 group"
+                  >
+                    <span className="font-medium group-hover:text-[#3FD0C4]">{p.name}</span>
+                    <span className={`text-[9px] font-mono px-1 py-0.2 rounded border ${p.badgeColor}`}>
+                      {p.badge}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
