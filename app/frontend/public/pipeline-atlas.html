@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>LungRay WSOL Atlas</title>
+<title>LungRay · Intelligent Chest Diagnostics</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap">
 <style>
 /* Layout: sticky 3D stack on the left, controls and per-disease algorithm card on the right; atlas of 16 signatures and model advice below. */
 :root{
@@ -31,9 +31,13 @@ h3{font-size:1rem;font-weight:600}
 p{margin:0}
 code,.mono{font-family:var(--mono);font-size:.86em}
 a{color:var(--accent)}
-.top{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-block:16px;border-bottom:1px solid var(--line)}
-.brand{font-weight:600;letter-spacing:.01em}
-.brand span{color:var(--muted);font-weight:400;margin-left:6px}
+.top{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-block:14px;border-bottom:1px solid var(--line)}
+.brand-lockup{display:flex;align-items:center;gap:12px}
+.brand-mark{width:42px;height:42px;display:block;object-fit:contain;filter:drop-shadow(0 0 10px rgba(63,208,196,.35));flex:none}
+.brand-title{display:flex;align-items:center;gap:9px;font:700 1.25rem/1 "Space Grotesk",var(--sans);letter-spacing:-.02em}
+.brand-title .w1{color:var(--ink)}.brand-title .w2{color:var(--accent)}
+.brand-badge{font:600 10px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;padding:4px 8px;border-radius:5px;border:1px solid rgba(63,208,196,.4);background:rgba(10,122,116,.2);color:var(--accent)}
+.brand-sub{font:400 11.5px var(--sans);color:var(--muted);margin-top:3px;letter-spacing:.01em}
 .top nav{display:flex;gap:18px;font-size:.9rem}
 .top nav a{color:var(--muted);text-decoration:none}
 .top nav a:hover{color:var(--ink)}
@@ -147,7 +151,13 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 
 <div class="wrap">
 <header class="top">
-  <div class="brand">LungRay<span>Clinical Chest AI &amp; Localization System</span></div>
+  <div class="brand-lockup">
+    <img class="brand-mark" src="/brand-icon.png" alt="LungRay" width="42" height="42">
+    <div>
+      <div class="brand-title"><span class="w1">Lung</span><span class="w2">Ray</span><span class="brand-badge">Architecture</span></div>
+      <div class="brand-sub">Intelligent Chest Diagnostics</div>
+    </div>
+  </div>
   <nav aria-label="Sections">
     <a href="#pipeline">1 · Clinical Pipeline</a>
     <a href="#viewer">2 · 3D Localization Stack</a>

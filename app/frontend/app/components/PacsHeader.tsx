@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { ExternalLink } from "lucide-react";
 
 interface Props {
@@ -38,19 +39,28 @@ export default function PacsHeader({
         {/* Top Row: Brand, Architecture Link & System Status */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0A7A74] border border-[#3FD0C4]/60 font-mono text-sm font-bold text-white shadow-sm shadow-[#3FD0C4]/20">
-              LR
-            </div>
+            <Image
+              src="/brand-icon.png"
+              alt="LungRay"
+              width={42}
+              height={42}
+              className="h-10 w-10 object-contain drop-shadow-[0_0_10px_rgba(63,208,196,0.35)] shrink-0"
+              priority
+            />
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold tracking-tight text-[#E6EDF4]">
-                  LungRay
+              <div className="flex items-center gap-2.5">
+                <h1
+                  className="text-lg sm:text-xl font-bold tracking-tight leading-none"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  <span className="text-[#E6EDF4]">Lung</span>
+                  <span className="text-[#3FD0C4]">Ray</span>
                 </h1>
-                <span className="rounded border border-[#3FD0C4]/40 bg-[#0A7A74]/20 px-1.5 py-0.2 text-[10px] font-semibold uppercase tracking-wider text-[#3FD0C4]">
+                <span className="rounded-md border border-[#3FD0C4]/40 bg-[#0A7A74]/20 px-2 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-widest text-[#3FD0C4]">
                   Workstation
                 </span>
               </div>
-              <p className="text-[11px] text-[#8C9DB0]">
+              <p className="text-[11px] text-[#8C9DB0] mt-0.5 tracking-wide">
                 Intelligent Chest Diagnostics
               </p>
             </div>
