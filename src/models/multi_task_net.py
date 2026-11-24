@@ -208,4 +208,8 @@ class MultiTaskChestXrayNet(nn.Module):
         elif "resnet" in self.backbone_name:
             if hasattr(self.backbone, "layer4"):
                 return self.backbone.layer4
+        elif "convnext" in self.backbone_name:
+            if hasattr(self.backbone, "stages"):
+                # timm ConvNeXt: stages is an nn.Sequential of 4 stages; extract last block
+                return self.backbone.stages[-1].blocks[-1]
         return None

@@ -173,8 +173,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, default=25)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--lr-backbone", type=float, default=None, help="Differential learning rate for backbone")
+    parser.add_argument("--lr-heads", type=float, default=None, help="Differential learning rate for classification heads")
     parser.add_argument("--weight-decay", type=float, default=1e-5)
-    parser.add_argument("--backbone", type=str, default="densenet121")
+    parser.add_argument(
+        "--backbone",
+        type=str,
+        default="densenet121",
+        help="Shared encoder architecture: densenet121, convnext_tiny, convnext_small, resnet50",
+    )
     parser.add_argument(
         "--head-norm",
         type=str,
@@ -254,9 +261,40 @@ def main() -> None:
     )
     criterion = build_criterion(args)
 
-    optimizer = torch.optim.AdamW(
-        model.parameters(), lr=args.lr, weight_decay=args.weight_decay
-    )
+    # Configure optimizer with optional differential learning rates
+    lr_backbone = args.lr_backbone
+    lr_heads = args.lr_heads
+    weight_decay = args.weight_decay
+
+    # Auto-configure differential LR for ConvNeXt if not explicitly specified
+    if "convnext" in args.backbone.lower() and lr_backbone is None and lr_heads is None:
+        lr_backbone = 2e-5
+        lr_heads = 1e-4
+        weight_decay = 1e-2
+        print(
+            f"[Optimizer] Auto-configured differential LR for ConvNeXt: "
+            f"backbone={lr_backbone}, heads={lr_heads}, weight_decay={weight_decay}"
+        )
+
+    if lr_backbone is not None and lr_heads is not None:
+        head_params = (
+            list(model.head_a.parameters())
+            + list(model.head_b.parameters())
+            + list(model.head_c.parameters())
+        )
+        head_param_ids = set(id(p) for p in head_params)
+        backbone_params = [p for p in model.parameters() if id(p) not in head_param_ids]
+        optimizer = torch.optim.AdamW(
+            [
+                {"params": backbone_params, "lr": lr_backbone},
+                {"params": head_params, "lr": lr_heads},
+            ],
+            weight_decay=weight_decay,
+        )
+    else:
+        optimizer = torch.optim.AdamW(
+            model.parameters(), lr=args.lr, weight_decay=weight_decay
+        )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=max(1, args.epochs), eta_min=1e-6
     )

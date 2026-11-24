@@ -148,6 +148,11 @@ def build_backbone(
         in_features = model.num_features  # 2048
         return model, in_features
 
+    elif "convnext" in name:
+        model = _create_with_fallback(name, pretrained)
+        in_features = model.num_features  # 768 for convnext_tiny / convnext_small
+        return model, in_features
+
     elif "vit" in name:
         model = _create_with_fallback(name, pretrained)
         if img_size != 224:
@@ -156,4 +161,4 @@ def build_backbone(
         return model, in_features
 
     else:
-        raise ValueError(f"Unsupported backbone: {name}. Choose from densenet121, resnet50, vit_base_patch16_224.")
+        raise ValueError(f"Unsupported backbone: {name}. Choose from densenet121, resnet50, convnext_tiny, convnext_small, vit_base_patch16_224.")

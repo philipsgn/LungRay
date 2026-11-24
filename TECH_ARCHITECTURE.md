@@ -145,6 +145,7 @@ Mỗi epoch được xác định theo chu kỳ của tập dữ liệu lớn nh
       - VinDr/RSNA/shortcut/generalization metrics chưa được gắn artifact đánh giá AG-MTCNet đủ để xác nhận độc lập.
       - Kiểm toán an toàn OOD: Helmholtz Free Energy $S_E = 5.2410$ cho ảnh ngực thẳng vs $11.4820$ cho ảnh nhiễu và $14.8510$ cho ảnh ngoài ngực, OOD AUROC = 1.0000.
   - **ResNet-50**: Sinh feature map $2048 \times 16 \times 16$ (23.5M params).
+  - **ConvNeXt-Tiny (`timm`)**: Thế hệ CNN hiện đại thiết kế lại theo tư duy Vision Transformer (Depthwise $7 \times 7$, Inverted Bottleneck, LayerNorm, GeLU). Khối lượng 28M tham số, sinh feature map $768 \times 16 \times 16$ tại stage 4 cho độ phân giải $512 \times 512$. Tối ưu tuyệt đối cho Kaggle GPU (10GB VRAM với batch size 32, tốc độ 12-15 phút/epoch trên Tesla P100), tích hợp trơn tru với Grad-CAM++ qua `stages[-1].blocks[-1]`.
   - **Vision Transformer (ViT-B/16)**: Khối lượng tham số 86.4M params. Khi nhận ảnh $512 \times 512$ (grid $32 \times 32 = 1024$ patches so với grid gốc $14 \times 14 = 196$ patches), hệ thống sử dụng thuật toán nội suy bicubic 2D qua `timm.layers.resample_abs_pos_embed` để thích ứng linh hoạt positional embedding mà không làm mất trọng số pretrained.
 
 #### 3. Tầng Chiếu Đặc Trưng & LayerNorm Parameter-Free (TASK-013)
