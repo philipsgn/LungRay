@@ -16,6 +16,7 @@ import os
 import sys
 from typing import Dict
 
+import cv2
 import matplotlib.pyplot as plt
 import pandas as pd
 import torch
@@ -112,8 +113,41 @@ def plot_and_save_curves(history_df: pd.DataFrame, output_path: str) -> None:
     print(f"[Plotting] Training curves exported to {output_path}")
 
 
+
+def validate_training_splits(df, dataset, patient_columns):
+    """Reject missing identifiers and patient leakage before reading image data."""
+    patient_column = _select_column(df, patient_columns)
+    required = [patient_column, "split"] + (["data_source"] if dataset == "COVIDx" else [])
+    for column in required:
+        if column not in df or df[column].isna().any() or df[column].astype(str).str.strip().eq("").any():
+            raise ValueError(f"{dataset}: empty {column} metadata")
+    if set(df["split"].unique()) != {"train", "val", "test"}:
+        raise ValueError(f"{dataset}: explicit train/val/test partitions required")
+    patients = df[patient_column].astype(str).str.strip()
+    if df.assign(_patient=patients).groupby("_patient")["split"].nunique().gt(1).any():
+        raise ValueError(f"{dataset}: patient leakage across partitions")
+    if dataset == "NIH":
+        counts = df.assign(_patient=patients).groupby("split")["_patient"].nunique()
+        fractions = counts / counts.sum()
+        tolerance = max(0.03, 2 / counts.sum())
+        if any(abs(fractions[split] - target) > tolerance
+               for split, target in (("train", 0.7), ("val", 0.1), ("test", 0.2))):
+            raise ValueError(f"NIH: expected patient allocation near 70/10/20, got {fractions.to_dict()}")
+    if dataset == "COVIDx":
+        if "data_source" not in df:
+            raise ValueError("COVIDx: verified data_source metadata required")
+        if df["data_source"].astype(str).str.lower().isin({"unknown", "unspecified", "covidx_cxr4"}).any():
+            raise ValueError("COVIDx: acquisition source metadata required; generic dataset-name source is insufficient")
+        for split, frame in df.groupby("split"):
+            if set(frame["label"].unique()) != {0, 1}:
+                raise ValueError(f"COVIDx {split}: both binary labels required")
+        print("[Split audit] COVIDx source/label distribution:")
+        print(df.groupby(["split", "data_source", "label"]).size().to_string())
+    print(f"[Split audit] {dataset}: disjoint patient partitions verified")
+
 def build_dataloaders(
-    paths: Dict[str, object], batch_size: int, allow_missing: bool
+    paths: Dict[str, object], batch_size: int, allow_missing: bool,
+    train_transform=None, val_transform=None,
 ) -> Dict[str, DataLoader]:
     """Builds the unified train loader and one validation loader per head."""
     required_splits = [paths["nih_split_csv"], paths["tb_split_csv"]]
@@ -127,6 +161,9 @@ def build_dataloaders(
         str(paths["covid_dir"]),
         split_dirs=[str(paths["split_dir"]), os.path.join(project_root, "dataset", "splits")],
     )
+
+    validate_training_splits(df_nih, "NIH", ["Patient ID", "Patient_ID", "patient_id"])
+    validate_training_splits(df_covid, "COVIDx", ["patient_id", "Patient_ID"])
 
     nih_col = _select_column(df_nih, ["Image Index", "filename", "image_id"])
     tb_col = _select_column(df_tb, ["filename", "Image Index", "image_id"])
@@ -152,8 +189,8 @@ def build_dataloaders(
     train_tb = df_tb[df_tb["split"] == "train"].reset_index(drop=True)
     val_tb = df_tb[df_tb["split"] == "val"].reset_index(drop=True)
 
-    train_transforms = get_train_transforms(image_size=512)
-    val_transforms = get_val_transforms(image_size=512)
+    train_transforms = train_transform if train_transform is not None else get_train_transforms(image_size=512)
+    val_transforms = val_transform if val_transform is not None else get_val_transforms(image_size=512)
     ignore_missing = bool(allow_missing)
 
     ds_train_nih = ChestXrayDataset(

@@ -379,6 +379,8 @@ class MultiTaskTrainer:
         """Atomically saves a resumable checkpoint (survives Kaggle interruptions)."""
         payload = {
             "epoch": epoch,
+            "backbone_name": getattr(self.model, "backbone_name", None),
+            "img_size": getattr(self.model, "img_size", None),
             "stage": stage,
             "model_state_dict": self.model.state_dict(),
             "optimizer_state_dict": self.optimizer.state_dict(),

@@ -40,6 +40,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+probing = ["transformers>=4.38,<5", "safetensors>=0.4"]
 dev = [
     "pytest>=7.3.0",
     "pytest-cov>=4.1.0",

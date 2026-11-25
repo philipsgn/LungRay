@@ -166,21 +166,22 @@ def calibrate_thresholds(
     return thresholds
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="LungRay Optimized Multi-Task Training on Kaggle GPU"
     )
     parser.add_argument("--epochs", type=int, default=25)
-    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--lr-backbone", type=float, default=None, help="Differential learning rate for backbone")
     parser.add_argument("--lr-heads", type=float, default=None, help="Differential learning rate for classification heads")
-    parser.add_argument("--weight-decay", type=float, default=1e-5)
+    parser.add_argument("--weight-decay", type=float, default=None)
     parser.add_argument(
         "--backbone",
         type=str,
-        default="densenet121",
-        help="Shared encoder architecture: densenet121, convnext_tiny, convnext_small, resnet50",
+        default="convnext_tiny",
+        choices=["convnext_tiny", "densenet121", "resnet50"],
+        help="Shared encoder architecture: convnext_tiny, densenet121, resnet50",
     )
     parser.add_argument(
         "--head-norm",
@@ -226,8 +227,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--save-name",
         type=str,
-        default="checkpoint_multitask_optimized.pth",
+        default=None,
     )
+    parser.add_argument("--grad-checkpointing", action="store_true", help="Trade compute for lower training activation memory")
+    parser.add_argument("--from-scratch", action="store_true", help="Explicitly train without pretrained weights")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--allow-missing", action="store_true")
     parser.add_argument("--no-calibrate", action="store_true")
@@ -235,15 +238,37 @@ def parse_args() -> argparse.Namespace:
         "--thresholds-out",
         type=str,
         default=None,
-        help="Defaults to <project_root>/configs/optimal_thresholds.json",
+        help="Defaults to configs/optimal_thresholds_convnext.json for ConvNeXt",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
+
+
+def build_optimizer(model, args):
+    """Resolve each LR independently so a partial override retains two groups."""
+    convnext = "convnext" in args.backbone
+    backbone_lr = args.lr_backbone if args.lr_backbone is not None else (2e-5 if convnext else args.lr)
+    heads_lr = args.lr_heads if args.lr_heads is not None else (1e-4 if convnext else args.lr)
+    decay = args.weight_decay if args.weight_decay is not None else (1e-2 if convnext else 1e-5)
+    heads = list(model.head_a.parameters()) + list(model.head_b.parameters()) + list(model.head_c.parameters())
+    head_ids = {id(parameter) for parameter in heads}
+    backbone = [parameter for parameter in model.parameters() if id(parameter) not in head_ids]
+    return torch.optim.AdamW([
+        {"params": backbone, "lr": backbone_lr, "name": "backbone"},
+        {"params": heads, "lr": heads_lr, "name": "heads"},
+    ], weight_decay=decay)
 
 def main() -> None:
     args = parse_args()
 
+    if args.epochs < 1 or args.batch_size < 3:
+        raise ValueError("epochs must be positive and batch-size must include all three tasks")
+    if os.path.isdir("/kaggle") and not torch.cuda.is_available():
+        raise RuntimeError("Kaggle GPU required; enable a GPU accelerator before training")
     paths = resolve_dataset_paths()
+    paths["output_dir"] = os.path.join(str(paths["output_dir"]), args.backbone)
+    paths["results_dir"] = os.path.join(str(paths["results_dir"]), args.backbone)
+    args.save_name = args.save_name or f"best_{args.backbone}.pth"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
     print(f"[Device] Using compute hardware: {device} ({gpu_name})")
@@ -254,47 +279,21 @@ def main() -> None:
 
     model = MultiTaskChestXrayNet(
         backbone_name=args.backbone,
-        pretrained=True,
+        pretrained=not args.from_scratch,
         img_size=512,
         num_classes_c=1,
         head_norm=args.head_norm,
     )
+    if args.grad_checkpointing:
+        setter = getattr(model.backbone, "set_grad_checkpointing", None)
+        if not callable(setter):
+            raise ValueError("Selected backbone does not support gradient checkpointing")
+        setter(True)
     criterion = build_criterion(args)
 
-    # Configure optimizer with optional differential learning rates
-    lr_backbone = args.lr_backbone
-    lr_heads = args.lr_heads
-    weight_decay = args.weight_decay
-
-    # Auto-configure differential LR for ConvNeXt if not explicitly specified
-    if "convnext" in args.backbone.lower() and lr_backbone is None and lr_heads is None:
-        lr_backbone = 2e-5
-        lr_heads = 1e-4
-        weight_decay = 1e-2
-        print(
-            f"[Optimizer] Auto-configured differential LR for ConvNeXt: "
-            f"backbone={lr_backbone}, heads={lr_heads}, weight_decay={weight_decay}"
-        )
-
-    if lr_backbone is not None and lr_heads is not None:
-        head_params = (
-            list(model.head_a.parameters())
-            + list(model.head_b.parameters())
-            + list(model.head_c.parameters())
-        )
-        head_param_ids = set(id(p) for p in head_params)
-        backbone_params = [p for p in model.parameters() if id(p) not in head_param_ids]
-        optimizer = torch.optim.AdamW(
-            [
-                {"params": backbone_params, "lr": lr_backbone},
-                {"params": head_params, "lr": lr_heads},
-            ],
-            weight_decay=weight_decay,
-        )
-    else:
-        optimizer = torch.optim.AdamW(
-            model.parameters(), lr=args.lr, weight_decay=weight_decay
-        )
+    if not args.from_scratch and not getattr(model.backbone, "pretrained_loaded", False):
+        raise RuntimeError("Pretrained encoder unavailable. Attach offline weights or explicitly use --from-scratch.")
+    optimizer = build_optimizer(model, args)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=max(1, args.epochs), eta_min=1e-6
     )
@@ -342,6 +341,8 @@ def main() -> None:
         state = checkpoint.get("model_state_dict", checkpoint)
         model.load_state_dict(state)
         print(f"[Calibration] Loaded best checkpoint from {best_path}")
+    else:
+        raise RuntimeError("No best checkpoint was produced; calibration is aborted")
 
     train_kaggle.plot_and_save_curves(
         history_df,
@@ -353,13 +354,14 @@ def main() -> None:
             model,
             loaders,
             device,
-            max_batches=(
-                args.max_val_batches if args.max_val_batches > 0 else None
-            ),
+            max_batches=None,
         )
         thresholds_out = args.thresholds_out or os.path.join(
-            project_root, "configs", "optimal_thresholds.json"
+            project_root, "configs", ("optimal_thresholds_convnext.json" if "convnext" in args.backbone else f"optimal_thresholds_{args.backbone}.json")
         )
+        thresholds["backbone"] = args.backbone
+        thresholds["checkpoint"] = os.path.abspath(best_path)
+        thresholds["calibration_split"] = "validation_all"
         save_thresholds_json(thresholds, thresholds_out)
         print(f"[Calibration] Optimal thresholds saved to {thresholds_out}")
 

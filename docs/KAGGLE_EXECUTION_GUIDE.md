@@ -116,7 +116,7 @@ Kịch bản `kaggle/train_multitask_kaggle.py` hỗ trợ cấu hình toàn di�
 
 | Tham số dòng lệnh | Kiểu dữ liệu | Giá trị mặc định | Giải thích ý nghĩa & Cơ sở kỹ thuật |
 |:---|:---:|:---:|:---|
-| `--backbone` | `str` | `densenet121` | Kiến trúc trích xuất đặc trưng (`densenet121`, `resnet50`, `vit_base_patch16_224`). |
+| `--backbone` | `str` | `convnext_tiny` | Training encoder: `convnext_tiny`, `densenet121`, `resnet50`. |
 | `--head-norm` | `str` | `layernorm` | Tầng chuẩn hóa đặc trưng (`layernorm`, `batchnorm`, `none`). Sử dụng LayerNorm parameter-free (`elementwise_affine=False`). |
 | `--head-a-criterion`| `str` | `focal` | Hàm mất mát cho Head A (`focal`, `asl`, `bce`). Mặc định trong code là focal; truyền `--head-a-criterion asl` để huấn luyện SOTA Asymmetric Loss. |
 | `--head-c-criterion`| `str` | `focal` | Hàm mất mát cho Head C (`focal`, `asl`, `bce`). |
@@ -127,15 +127,15 @@ Kịch bản `kaggle/train_multitask_kaggle.py` hỗ trợ cấu hình toàn di�
 | `--focal-gamma` | `float` | `2.0` | Số mũ focusing gamma cho Focal Loss. |
 | `--pos-weight-clamp`| `float` | `50.0` | Ngưỡng kẹp trần tối đa cho trọng số positive động $(N_{neg} / N_{pos})$ trên các bệnh cực hiếm. |
 | `--epochs` | `int` | `25` | Tổng số chu kỳ huấn luyện. |
-| `--batch-size` | `int` | `16` | Kích thước mini-batch cho ảnh 512x512 trên 16GB VRAM. |
+| `--batch-size` | `int` | `32` | Target at 512 pixels; profile GPU memory before a full run. |
 | `--lr` | `float` | `1e-4` | Learning rate đỉnh của bộ tối ưu AdamW. |
-| `--weight-decay` | `float` | `1e-5` | Hệ số suy giảm trọng số (L2 regularization). |
+| `--weight-decay` | `float` | architecture-dependent | 0.01 for ConvNeXt, 0.00001 for DenseNet/ResNet; explicit override supported. |
 | `--max-batches` | `int` | `600` | Giới hạn batch mỗi epoch cho chế độ chạy nhanh Kaggle (`0` = chạy toàn bộ ~4,200 batches). |
 | `--max-val-batches` | `int` | `120` | Giới hạn batch validation mỗi head (`0` = chạy toàn bộ tập validation). |
-| `--save-name` | `str` | `checkpoint_multitask_optimized.pth` | Tên tệp checkpoint validation tốt nhất được xuất ra. |
+| `--save-name` | `str` | `best_<backbone>.pth` | Best validation checkpoint in the architecture subdirectory. |
 | `--resume` | `flag` | `False` | Tự động khôi phục mô hình, optimizer, scheduler và epoch từ `last_model.pth`. |
 | `--no-calibrate` | `flag` | `False` | Bỏ qua bước hiệu chuẩn ngưỡng Youden's J sau khi huấn luyện xong. |
-| `--thresholds-out` | `str` | `None` | Đường dẫn xuất file JSON kết quả hiệu chuẩn ngưỡng (mặc định lưu tại `configs/optimal_thresholds.json`). |
+| `--thresholds-out` | `str` | `None` | Đường dẫn xuất file JSON kết quả hiệu chuẩn ngưỡng (ConvNeXt mặc định lưu tại `configs/optimal_thresholds_convnext.json`). |
 | `--allow-missing` | `flag` | `False` | Cờ cho phép chạy thử nghiệm cục bộ nếu thiếu một phần dữ liệu ảnh. |
 
 ---
@@ -284,3 +284,18 @@ Ví dụ cấu trúc tệp xuất ra:
 3. **Mô hình không tìm thấy tệp ảnh trên Kaggle Input**:
    - *Nguyên nhân*: Người dùng đổi tên dataset hoặc cấu trúc thư mục lồng nhau khác chuẩn.
    - *Khắc phục*: Hàm `find_kaggle_dataset()` trong `src/data/ingestion.py` sẽ tự động quét các thư mục con. Hãy đảm bảo dataset được add chính xác vào thanh panel bên phải của Kaggle Notebook.
+
+
+### ConvNeXt and frozen RAD-DINO execution — 2026-11-25
+
+The training factory supports ConvNeXt-Tiny and ConvNeXt-Small with pooled 768-dimensional features and independent 14/1/1 heads. The last stage block supplies the spatial Grad-CAM++ hook (768 by 16 by 16 for a 512-pixel input). The Kaggle multitask CLI now defaults to convnext_tiny, batch size 32, AdamW with backbone/head learning rates 0.00002/0.0001 and weight decay 0.01, CUDA AMP with GradScaler, and cosine annealing to 0.000001. Partial LR overrides preserve the two optimizer groups. Batch allocation uses the existing largest-remainder sampler: at B=32 the feasible integer composition is 19 NIH, 8 COVID, and 5 TB; exact 60/25/15 percentages are impossible at that batch size. Batch 32 is an unmeasured target, not a verified 10.5-GB memory guarantee; use gradient checkpointing or an explicitly smaller batch if profiling requires it. Pretrained initialization checks offline encoder coverage and the entrypoint refuses a silent random fallback unless --from-scratch is supplied. Input preflight requires disjoint patient metadata, NIH patient allocation near 70/10/20, COVID acquisition sources and both binary classes per split; it logs source/label distributions and does not establish metadata authenticity. Official COVID manifest loading retains its patient/source-stratified validation logic. Model artifacts are isolated by architecture. Monitoring defaults remain capped at 600 train and 120 validation batches; use --max-batches 0 --max-val-batches 0 for full training and checkpoint selection. Youden thresholds are calibrated on all validation samples from the selected checkpoint and written to configs/optimal_thresholds_convnext.json, separate from serving thresholds.
+
+A second entrypoint, kaggle/train_raddino_probing.py, loads a frozen microsoft/rad-dino encoder from a complete local Hugging Face snapshot/cache (downloads require --allow-download). It uses the checkpoint processor, normally 518-pixel crops with its own normalization, extracts the 768-dimensional CLS vector, keeps the encoder in eval mode under no_grad, and trains only three linear heads with AdamW for 10 epochs by default. It reuses the audited splits and sampler, exports training history, a run manifest, validation predictions, per-head validation AUROC with eligible-class counts, and validation-calibrated thresholds under raddino_probing. These validation metrics support model development and are not independent-test results. No ConvNeXt or RAD-DINO training result, GPU throughput, latency, localization score, or comparative superiority is reported by this implementation change; serving checkpoints are not replaced.
+
+```bash
+python kaggle/train_multitask_kaggle.py --backbone convnext_tiny --batch-size 32 --grad-checkpointing --max-batches 0 --max-val-batches 0
+pip install '.[probing]'
+python kaggle/train_raddino_probing.py --model-dir /kaggle/input/rad-dino/snapshot --epochs 10
+```
+
+Attach an actual pretrained ConvNeXt file named convnext_tiny*.pth (native timm or convertible official encoder state) for offline training. RAD-DINO needs config.json, preprocessor_config.json, and model weights in the selected snapshot. No weight download or Kaggle GPU training was performed locally. The probe processor may differ in resolution and normalization from ConvNeXt, so comparisons must report both protocols and use the same evaluation cohort. RAD-DINO native processor reference: https://huggingface.co/microsoft/rad-dino/blob/main/preprocessor_config.json .

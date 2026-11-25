@@ -116,7 +116,16 @@ def build_backbone(
                     state_dict = state_dict["state_dict"]
                 elif "model" in state_dict:
                     state_dict = state_dict["model"]
-                m.load_state_dict(state_dict, strict=False)
+                if "convnext" in arch_name:
+                    from timm.models.convnext import checkpoint_filter_fn
+                    state_dict = checkpoint_filter_fn(state_dict, m)
+                # A classification checkpoint may include a discarded ImageNet head.
+                state_dict = {key: value for key, value in state_dict.items()
+                              if key not in {"head.fc.weight", "head.fc.bias", "classifier.weight", "classifier.bias", "fc.weight", "fc.bias"}}
+                incompatible = m.load_state_dict(state_dict, strict=False)
+                if incompatible.missing_keys:
+                    raise RuntimeError(f"Incomplete encoder checkpoint: {incompatible.missing_keys}")
+                m.pretrained_loaded = True
                 print(f"[OK] Successfully loaded local pretrained weights into {arch_name}!")
                 return m
             
@@ -125,7 +134,9 @@ def build_backbone(
             try:
                 if pretrained_flag:
                     socket.setdefaulttimeout(20.0)
-                return timm.create_model(arch_name, pretrained=pretrained_flag, num_classes=0)
+                m = timm.create_model(arch_name, pretrained=pretrained_flag, num_classes=0)
+                m.pretrained_loaded = pretrained_flag
+                return m
             finally:
                 socket.setdefaulttimeout(old_timeout)
         except Exception as err:
@@ -135,7 +146,9 @@ def build_backbone(
                 print("[!] Kaggle Tip: Ensure 'Internet: ON' is enabled in the right panel (Notebook Settings),")
                 print("    or add a Kaggle dataset containing pretrained .pth checkpoints.")
                 print("[*] Falling back to uninitialized weights (pretrained=False) to prevent deadlock...")
-                return timm.create_model(arch_name, pretrained=False, num_classes=0)
+                m = timm.create_model(arch_name, pretrained=False, num_classes=0)
+                m.pretrained_loaded = False
+                return m
             raise err
 
     if name == "densenet121":
@@ -148,7 +161,7 @@ def build_backbone(
         in_features = model.num_features  # 2048
         return model, in_features
 
-    elif "convnext" in name:
+    elif name in {"convnext_tiny", "convnext_small"}:
         model = _create_with_fallback(name, pretrained)
         in_features = model.num_features  # 768 for convnext_tiny / convnext_small
         return model, in_features

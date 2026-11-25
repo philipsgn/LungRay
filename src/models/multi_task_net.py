@@ -6,7 +6,7 @@ Shared Encoder Backbone with 3 independent clinical classification heads:
 - Head B: Tuberculosis screening (TB Database, binary)
 - Head C: COVID-19 screening (COVIDx CXR-4, binary positive vs negative)
 
-Supports DenseNet-121 (default CheXNet baseline), ResNet-50, and Vision Transformer (ViT).
+Supports DenseNet-121 (default baseline), ResNet-50, ConvNeXt-Tiny/Small, and ViT.
 Standard input resolution: 512x512.
 
 Feature projection (TASK-013):
@@ -199,6 +199,7 @@ class MultiTaskChestXrayNet(nn.Module):
         Retrieves the last convolutional layer module for Grad-CAM explainability.
         - DenseNet-121: backbone.features.denseblock4 or backbone.features.norm5
         - ResNet-50: backbone.layer4
+        - ConvNeXt: final stage block, with NCHW spatial output before pooling
         """
         if "densenet" in self.backbone_name:
             if hasattr(self.backbone, "features"):
