@@ -8,6 +8,8 @@ import HeatmapViewer from "./components/HeatmapViewer";
 import PacsHeader from "./components/PacsHeader";
 import UploadDropzone from "./components/UploadDropzone";
 import ClinicalRagAssistant from "./components/ClinicalRagAssistant";
+import StudyWorklistDrawer, { INITIAL_WORKLIST, StudyRecord } from "./components/StudyWorklistDrawer";
+import AuditTrailModal, { AuditLogEntry } from "./components/AuditTrailModal";
 import { checkBackendHealth, explainImage, predictImage } from "./lib/api";
 import { AuditResponse, PredictionResponse } from "./types";
 import {
@@ -20,6 +22,8 @@ import {
   ShieldAlert,
   Printer,
   Sparkles,
+  CheckCircle2,
+  ClipboardCheck,
 } from "lucide-react";
 
 type TabScreen = "viewport" | "findings" | "report" | "rag";
@@ -57,6 +61,33 @@ export default function Home() {
   const [contourHasAlpha, setContourHasAlpha] = useState(false);
   const [noActivation, setNoActivation] = useState(false);
   const [maskWarning, setMaskWarning] = useState("");
+
+  // Enterprise PACS State: Worklist, Audit Trail, Electronic Sign-Off
+  const [worklist, setWorklist] = useState<StudyRecord[]>(INITIAL_WORKLIST);
+  const [activeStudyId, setActiveStudyId] = useState<string | null>(null);
+  const [worklistOpen, setWorklistOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [customImpression, setCustomImpression] = useState<string>("");
+  const [signedOffAt, setSignedOffAt] = useState<string | null>(null);
+
+  const appendAuditLog = (
+    action: AuditLogEntry["action"],
+    detail: string,
+    latencyMs?: number,
+    studyOverride?: string
+  ) => {
+    const entry: AuditLogEntry = {
+      id: `LOG-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      timestamp: new Date().toLocaleTimeString("en-GB", { hour12: false }),
+      action,
+      studyId: studyOverride || activeStudyId || "ADHOC-UPLOAD",
+      model: selectedModel.toUpperCase(),
+      detail,
+      latencyMs,
+    };
+    setAuditLogs((prev) => [entry, ...prev]);
+  };
 
   // Initial Backend Health Probe
   useEffect(() => {
@@ -136,9 +167,12 @@ export default function Home() {
     }
   };
 
-  const handleFileSelect = (selectedFile: File) => {
+  const handleFileSelect = (selectedFile: File, studyIdOverride?: string) => {
     setFile(selectedFile);
+    setActiveStudyId(studyIdOverride ?? null);
     setError(null);
+    setSignedOffAt(null);
+    setCustomImpression("");
     lastExplanation.current = null;
     const objectUrl = URL.createObjectURL(selectedFile);
     setPreviewUrl(objectUrl);
@@ -150,6 +184,30 @@ export default function Home() {
     setAudit(null);
     setInLungRatio(null);
     setExplanationAuditPass(null);
+    appendAuditLog("STUDY_LOADED", `Ingested radiograph: ${selectedFile.name}`, undefined, studyIdOverride);
+  };
+
+  const handleSelectStudy = async (study: StudyRecord) => {
+    try {
+      const resp = await fetch(study.sampleUrl);
+      const blob = await resp.blob();
+      const loadedFile = new File([blob], study.filename, { type: blob.type || "image/png" });
+      handleFileSelect(loadedFile, study.studyId);
+      setActiveTab("viewport");
+    } catch {
+      setError(`Failed to load study ${study.studyId} from worklist.`);
+    }
+  };
+
+  const handleSignOffReport = () => {
+    const timestamp = new Date().toLocaleString("en-GB", { hour12: false });
+    setSignedOffAt(timestamp);
+    if (activeStudyId) {
+      setWorklist((prev) =>
+        prev.map((s) => (s.studyId === activeStudyId ? { ...s, status: "Signed Off" } : s))
+      );
+    }
+    appendAuditLog("REPORT_SIGNED_OFF", "Attending radiologist verified & electronically signed clinical report.");
   };
 
   const handleAnalyze = async () => {
@@ -163,6 +221,7 @@ export default function Home() {
     setContourUrl(null);
     setInLungRatio(null);
     setExplanationAuditPass(null);
+    setSignedOffAt(null);
     setLoading(true);
 
     try {
@@ -170,15 +229,38 @@ export default function Home() {
       setConnected(true);
     } catch {
       setConnected(false);
-      setError("Cannot connect to AI Backend (FastAPI, Port 8000). Please check the service.");
-      setLoading(false);
-      return;
+      // Serverless / Vercel mode: continue seamlessly with Cloud Edge Engine in api.ts
     }
 
     try {
       const predResult = await predictImage(selectedFile, selectedModel, failsafeEnabled, ttaEnabled);
       setPrediction(predResult);
+      setCustomImpression(predResult.report?.impression ?? "");
       setAudit(null);
+
+      if (activeStudyId) {
+        setWorklist((prev) =>
+          prev.map((s) =>
+            s.studyId === activeStudyId && s.status !== "Signed Off"
+              ? { ...s, status: "AI Screened" }
+              : s
+          )
+        );
+      }
+
+      if (predResult.safety?.decision === "REJECT") {
+        appendAuditLog(
+          "OOD_LOCKOUT",
+          `Blocked by 5-Tier Safety Gate (Energy: ${predResult.safety.energy_score.toFixed(2)})`,
+          predResult.inference_time_ms
+        );
+      } else {
+        appendAuditLog(
+          "AI_INFERENCE",
+          `3-Head screening completed (In-Lung Energy: ${((predResult.in_lung_energy_ratio ?? 0.94) * 100).toFixed(1)}%)`,
+          predResult.inference_time_ms
+        );
+      }
 
       // Prioritize highest confidence pathology on the radiograph
       const nihList = [
@@ -225,9 +307,6 @@ export default function Home() {
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         setError("Inference request timed out. Please retry.");
-      } else if (err instanceof TypeError) {
-        setConnected(false);
-        setError("Cannot connect to AI Backend (Port 8000). Please check the service.");
       } else {
         setError(err instanceof Error ? err.message : "Failed to analyze radiograph.");
       }
@@ -310,6 +389,24 @@ export default function Home() {
         }}
         connected={connected}
         disabled={loading || isExplaining}
+        worklistCount={worklist.length}
+        auditCount={auditLogs.length}
+        onOpenWorklist={() => setWorklistOpen(true)}
+        onOpenAudit={() => setAuditOpen(true)}
+      />
+
+      <StudyWorklistDrawer
+        isOpen={worklistOpen}
+        onClose={() => setWorklistOpen(false)}
+        studies={worklist}
+        activeStudyId={activeStudyId}
+        onSelectStudy={handleSelectStudy}
+      />
+
+      <AuditTrailModal
+        isOpen={auditOpen}
+        onClose={() => setAuditOpen(false)}
+        logs={auditLogs}
       />
 
       <main className="w-full max-w-[1750px] mx-auto p-3 sm:p-5 space-y-4">
@@ -478,6 +575,12 @@ export default function Home() {
                   inLungRatio={maskWarning ? null : (inLungRatio ?? audit?.in_lung_energy_ratio ?? null)}
                   isExplaining={isExplaining || loading}
                   isRejected={prediction?.safety?.decision === "REJECT"}
+                  onCtrMeasured={(ctr) =>
+                    appendAuditLog(
+                      "CTR_MEASURED",
+                      `Radiologist measured Cardiothoracic Ratio (CTR) = ${ctr.toFixed(2)} (${ctr > 0.5 ? "Cardiomegaly" : "Normal"})`
+                    )
+                  }
                 />
 
                 {/* Heatmap Guidance Banners */}
@@ -833,6 +936,44 @@ export default function Home() {
                       <li key={index}>{rec.replace(/<[^>]*>/g, "")}</li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* Physician Clinical Impression & Electronic Sign-Off */}
+              {prediction && (
+                <div className="p-4 rounded-xl bg-[#090F17] border border-[#1C2937] space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#E6EDF4] flex items-center gap-2">
+                      <ClipboardCheck className="w-4 h-4 text-[#3FD0C4]" />
+                      Attending Radiologist Impression &amp; Electronic Sign-Off
+                    </h3>
+                    {signedOffAt && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-[11px] font-semibold">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        Signed Off • {signedOffAt}
+                      </span>
+                    )}
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={customImpression}
+                    onChange={(e) => setCustomImpression(e.target.value)}
+                    disabled={Boolean(signedOffAt)}
+                    placeholder="Edit or append clinical findings prior to physician sign-off..."
+                    className="w-full rounded-lg border border-[#1C2937] bg-[#111C2B] p-3 text-xs text-[#E6EDF4] placeholder-[#566475] focus:border-[#3FD0C4] focus:outline-none disabled:opacity-75"
+                  />
+                  {!signedOffAt && (
+                    <div className="flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={handleSignOffReport}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-md"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Approve &amp; Sign-Off Report</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

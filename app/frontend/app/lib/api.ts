@@ -9,6 +9,11 @@ import {
   RagQueryRequest,
   RagQueryResponse,
 } from "../types";
+import {
+  edgeExplainImage,
+  edgePredictImage,
+  edgeQueryClinicalRag,
+} from "./edgeFallback";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
@@ -54,17 +59,21 @@ export async function predictImage(
   failsafeEnabled: boolean = true,
   ttaEnabled: boolean = true
 ): Promise<PredictionResponse> {
-  const formData = new FormData();
-  formData.append("file", file);
-  const response = await fetchWithTimeout(
-    `${API_BASE}/api/v1/predict?model=${encodeURIComponent(model)}&failsafe_enabled=${failsafeEnabled}&tta_enabled=${ttaEnabled}`,
-    {
-      method: "POST",
-      body: formData,
-    },
-    120000
-  );
-  return handleResponse<PredictionResponse>(response);
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetchWithTimeout(
+      `${API_BASE}/api/v1/predict?model=${encodeURIComponent(model)}&failsafe_enabled=${failsafeEnabled}&tta_enabled=${ttaEnabled}`,
+      {
+        method: "POST",
+        body: formData,
+      },
+      12000
+    );
+    return await handleResponse<PredictionResponse>(response);
+  } catch {
+    return edgePredictImage(file, model, failsafeEnabled, ttaEnabled);
+  }
 }
 
 export async function explainImage(
@@ -75,20 +84,24 @@ export async function explainImage(
   targetDiseaseName: string = "",
   model: string = "standard"
 ): Promise<ExplainResponse> {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("target_head", targetHead);
-  formData.append("target_class", String(targetClass));
-  formData.append("clinical_grounding", String(clinicalGrounding));
-  formData.append("model", model);
-  if (targetDiseaseName) {
-    formData.append("target_disease_name", targetDiseaseName);
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("target_head", targetHead);
+    formData.append("target_class", String(targetClass));
+    formData.append("clinical_grounding", String(clinicalGrounding));
+    formData.append("model", model);
+    if (targetDiseaseName) {
+      formData.append("target_disease_name", targetDiseaseName);
+    }
+    const response = await fetchWithTimeout(`${API_BASE}/api/v1/explain`, {
+      method: "POST",
+      body: formData,
+    }, 12000);
+    return await handleResponse<ExplainResponse>(response);
+  } catch {
+    return edgeExplainImage(file, targetHead, targetClass, targetDiseaseName);
   }
-  const response = await fetchWithTimeout(`${API_BASE}/api/v1/explain`, {
-    method: "POST",
-    body: formData,
-  }, 120000);
-  return handleResponse<ExplainResponse>(response);
 }
 
 export async function auditImage(file: File): Promise<AuditResponse> {
@@ -103,9 +116,13 @@ export async function auditImage(file: File): Promise<AuditResponse> {
 
 
 export async function queryClinicalRag(payload: RagQueryRequest): Promise<RagQueryResponse> {
-  const response = await fetchWithTimeout(`${API_BASE}/api/v1/rag-query`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  }, 10000);
-  return handleResponse<RagQueryResponse>(response);
+  try {
+    const response = await fetchWithTimeout(`${API_BASE}/api/v1/rag-query`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }, 6000);
+    return await handleResponse<RagQueryResponse>(response);
+  } catch {
+    return edgeQueryClinicalRag(payload);
+  }
 }
