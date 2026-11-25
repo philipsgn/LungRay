@@ -1,5 +1,6 @@
 "use client";
 
+import { filterStudies } from "../lib/pacsUtils";
 import React, { useMemo, useState } from "react";
 import { Search, X, Clock, AlertCircle, CheckCircle2, FileImage, ArrowRight } from "lucide-react";
 
@@ -89,16 +90,7 @@ export default function StudyWorklistDrawer({
   const [filterPriority, setFilterPriority] = useState<string>("ALL");
 
   const filtered = useMemo(() => {
-    return studies.filter((s) => {
-      const matchesPriority = filterPriority === "ALL" || s.priority === filterPriority;
-      const q = query.trim().toLowerCase();
-      const matchesQuery =
-        !q ||
-        s.studyId.toLowerCase().includes(q) ||
-        s.patientId.toLowerCase().includes(q) ||
-        s.indication.toLowerCase().includes(q);
-      return matchesPriority && matchesQuery;
-    });
+    return filterStudies(studies, query, filterPriority);
   }, [studies, query, filterPriority]);
 
   if (!isOpen) return null;

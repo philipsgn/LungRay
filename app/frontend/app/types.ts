@@ -8,8 +8,10 @@ export interface HealthResponse {
 export interface ModelInfo {
   id: string;
   name: string;
-  description: string;
-  best_for: string;
+  role: string;
+  metrics: Record<string, unknown>;
+  description?: string;
+  best_for?: string;
   checkpoint: string;
 }
 
@@ -52,6 +54,7 @@ export interface HeadCScreening {
 }
 
 export interface PredictionResponse {
+  inference_source?: "backend" | "unavailable";
   head_a_prediction: Record<string, number>;
   head_b_tb_screening: HeadBScreening;
   head_c_covidx: HeadCScreening;
@@ -87,6 +90,7 @@ export interface LesionMetadata {
 }
 
 export interface ExplainResponse {
+  inference_source?: "backend" | "unavailable";
   heatmap_base64: string;
   heatmap_rgba_base64?: string | null;
   heatmap_has_activation?: boolean | null;

@@ -10,7 +10,7 @@ import UploadDropzone from "./components/UploadDropzone";
 import ClinicalRagAssistant from "./components/ClinicalRagAssistant";
 import StudyWorklistDrawer, { INITIAL_WORKLIST, StudyRecord } from "./components/StudyWorklistDrawer";
 import AuditTrailModal, { AuditLogEntry } from "./components/AuditTrailModal";
-import { checkBackendHealth, explainImage, predictImage } from "./lib/api";
+import { checkBackendHealth, explainImage, predictImage, getModels } from "./lib/api";
 import { AuditResponse, PredictionResponse } from "./types";
 import {
   Monitor,
@@ -31,6 +31,7 @@ type TabScreen = "viewport" | "findings" | "report" | "rag";
 export default function Home() {
   // 4-Tab Core Clinical Navigation State
   const [activeTab, setActiveTab] = useState<TabScreen>("viewport");
+  const [availableModels, setAvailableModels] = useState<string[]>(["standard"]);
   const [selectedModel, setSelectedModel] = useState<string>("standard");
   const [ttaEnabled, setTtaEnabled] = useState(true);
   const [failsafeEnabled, setFailsafeEnabled] = useState<boolean>(true);
@@ -48,6 +49,8 @@ export default function Home() {
   const [isExplaining, setIsExplaining] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const lastExplanation = useRef<{ file: File; head: string; classIdx: number; diseaseName: string; grounding: boolean; modelName: string } | null>(null);
+  const caseVersion = useRef(0);
+  const explanationVersion = useRef(0);
   const [connected, setConnected] = useState<boolean | null>(null);
 
   // Interactive Pathology & Grounding State
@@ -92,7 +95,7 @@ export default function Home() {
   // Initial Backend Health Probe
   useEffect(() => {
     checkBackendHealth()
-      .then(() => setConnected(true))
+      .then(async () => { setConnected(true); setAvailableModels((await getModels()).map(model => model.id)); })
       .catch(() => setConnected(false));
   }, []);
 
@@ -118,6 +121,8 @@ export default function Home() {
     grounding: boolean,
     modelName: string = selectedModel
   ) => {
+    const currentCase = caseVersion.current;
+    const currentExplanation = ++explanationVersion.current;
     lastExplanation.current = { file: currentFile, head, classIdx, diseaseName, grounding, modelName };
     setIsExplaining(true);
     setHeatmapUrl(null);
@@ -136,6 +141,7 @@ export default function Home() {
         diseaseName,
         modelName
       );
+      if (currentCase !== caseVersion.current || currentExplanation !== explanationVersion.current) return;
       setHeatmapHasAlpha(Boolean(explainResult.heatmap_rgba_base64));
       setHeatmapUrl(`data:image/png;base64,${explainResult.heatmap_rgba_base64 || explainResult.heatmap_base64}`);
       setNoActivation(explainResult.heatmap_has_activation === false);
@@ -154,6 +160,7 @@ export default function Home() {
       setSelectedDiseaseName(diseaseName);
       setClinicalGrounding(grounding);
     } catch (err) {
+      if (currentCase !== caseVersion.current || currentExplanation !== explanationVersion.current) return;
       if (err instanceof Error && err.name === "AbortError") {
         setError("Explanation computation timed out. Please retry.");
       } else if (err instanceof TypeError) {
@@ -163,11 +170,15 @@ export default function Home() {
         setError(err instanceof Error ? err.message : "Failed to generate heatmap.");
       }
     } finally {
-      setIsExplaining(false);
+      if (currentCase === caseVersion.current && currentExplanation === explanationVersion.current) setIsExplaining(false);
     }
   };
 
   const handleFileSelect = (selectedFile: File, studyIdOverride?: string) => {
+    caseVersion.current += 1;
+    setLoading(false);
+    setIsExplaining(false);
+    setWorklist(prev => prev.map(study => study.studyId === studyIdOverride ? { ...study, status: "Pending" } : study));
     setFile(selectedFile);
     setActiveStudyId(studyIdOverride ?? null);
     setError(null);
@@ -188,10 +199,13 @@ export default function Home() {
   };
 
   const handleSelectStudy = async (study: StudyRecord) => {
+    const version = ++caseVersion.current;
     try {
       const resp = await fetch(study.sampleUrl);
+      if (!resp.ok) throw new Error("Study image unavailable");
       const blob = await resp.blob();
       const loadedFile = new File([blob], study.filename, { type: blob.type || "image/png" });
+      if (version !== caseVersion.current) return;
       handleFileSelect(loadedFile, study.studyId);
       setActiveTab("viewport");
     } catch {
@@ -200,6 +214,8 @@ export default function Home() {
   };
 
   const handleSignOffReport = () => {
+    if (!prediction || loading || isExplaining || prediction.safety?.is_safe !== true || prediction.report?.is_blocked || prediction.inference_source === "unavailable" || signedOffAt) return;
+    if (activeStudyId && worklist.find(study => study.studyId === activeStudyId)?.status !== "AI Screened") return;
     const timestamp = new Date().toLocaleString("en-GB", { hour12: false });
     setSignedOffAt(timestamp);
     if (activeStudyId) {
@@ -213,6 +229,8 @@ export default function Home() {
   const handleAnalyze = async () => {
     if (!file) return;
     const selectedFile = file;
+    const currentCase = ++caseVersion.current;
+    setWorklist(prev => prev.map(study => study.studyId === activeStudyId ? { ...study, status: "Pending" } : study));
     setError(null);
     setPrediction(null);
     setHeatmapUrl(null);
@@ -229,15 +247,22 @@ export default function Home() {
       setConnected(true);
     } catch {
       setConnected(false);
-      // Serverless / Vercel mode: continue seamlessly with Cloud Edge Engine in api.ts
+      // Continue to the request; transport failure produces a blocked unavailable response.
     }
 
     try {
       const predResult = await predictImage(selectedFile, selectedModel, failsafeEnabled, ttaEnabled);
+      if (currentCase !== caseVersion.current) return;
       setPrediction(predResult);
       setCustomImpression(predResult.report?.impression ?? "");
       setAudit(null);
 
+      if (predResult.inference_source === "unavailable") {
+        setConnected(false);
+        setError(predResult.report?.impression ?? "Backend unavailable");
+        return;
+      }
+      setConnected(true);
       if (activeStudyId) {
         setWorklist((prev) =>
           prev.map((s) =>
@@ -257,7 +282,7 @@ export default function Home() {
       } else {
         appendAuditLog(
           "AI_INFERENCE",
-          `3-Head screening completed (In-Lung Energy: ${((predResult.in_lung_energy_ratio ?? 0.94) * 100).toFixed(1)}%)`,
+          `3-Head screening completed (In-Lung Energy: ${predResult.in_lung_energy_ratio == null ? "unavailable" : `${(predResult.in_lung_energy_ratio * 100).toFixed(1)}%`})`,
           predResult.inference_time_ms
         );
       }
@@ -305,13 +330,14 @@ export default function Home() {
         await fetchExplanation(selectedFile, bestHead, bestClass, bestName, clinicalGrounding);
       }
     } catch (err) {
+      if (currentCase !== caseVersion.current) return;
       if (err instanceof Error && err.name === "AbortError") {
         setError("Inference request timed out. Please retry.");
       } else {
         setError(err instanceof Error ? err.message : "Failed to analyze radiograph.");
       }
     } finally {
-      setLoading(false);
+      if (currentCase === caseVersion.current) setLoading(false);
     }
   };
 
@@ -340,6 +366,9 @@ export default function Home() {
   };
 
   const handleModelChange = (newModel: string) => {
+    caseVersion.current += 1;
+    setLoading(false); setIsExplaining(false); setSignedOffAt(null);
+    setWorklist(prev => prev.map(study => study.studyId === activeStudyId ? { ...study, status: "Pending" } : study));
     setSelectedModel(newModel);
     setError(null);
     lastExplanation.current = null;
@@ -372,6 +401,7 @@ export default function Home() {
       <PacsHeader
         selectedModel={selectedModel}
         onSelectModel={handleModelChange}
+        availableModels={availableModels}
         failsafeEnabled={failsafeEnabled}
         onToggleFailsafe={handleToggleFailsafe}
         ttaEnabled={ttaEnabled}
@@ -564,6 +594,8 @@ export default function Home() {
               <div className="space-y-3">
                 {/* High-Resolution Viewport Canvas */}
                 <HeatmapViewer
+                  key={previewUrl}
+                  isUnavailable={prediction?.inference_source === "unavailable"}
                   original={previewUrl}
                   heatmap={heatmapUrl}
                   heatmapHasAlpha={heatmapHasAlpha}
@@ -967,6 +999,7 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={handleSignOffReport}
+                        disabled={loading || isExplaining || prediction.safety?.is_safe !== true || prediction.report?.is_blocked || prediction.inference_source === "unavailable"}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-md"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
@@ -983,6 +1016,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => window.print()}
+                    disabled={!prediction || prediction.safety?.is_safe !== true || prediction.report?.is_blocked}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0A7A74] hover:bg-[#0A7A74]/80 text-white text-xs font-semibold transition"
                   >
                     <Printer className="w-3.5 h-3.5" />
@@ -991,6 +1025,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => window.print()}
+                    disabled={!prediction || prediction.safety?.is_safe !== true || prediction.report?.is_blocked}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#111C2B] hover:bg-[#162233] border border-[#1C2937] text-[#E6EDF4] text-xs font-semibold transition"
                   >
                     <span>Save as PDF</span>

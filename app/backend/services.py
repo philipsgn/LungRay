@@ -78,11 +78,12 @@ class LungRayService:
         if getattr(self, "_initialized", False):
             return
 
+        self.serving_profile = os.getenv("LUNGRAY_SERVING_PROFILE", "auto")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.version = "v7.0"
         self.img_size = 512
         self.thresholds = self._load_thresholds("configs/optimal_thresholds_20_11.json")
-        self.ag_thresholds = self._load_thresholds("configs/ag_mtcnet_thresholds.json")
+        self.ag_thresholds = self._load_thresholds("configs/ag_mtcnet_thresholds.json") if self.serving_profile != "standard" else {}
         self.models: dict[str, MultiTaskChestXrayNet] = {}
         self.model_info: dict[str, dict[str, Any]] = {}
         self._load_hybrid_models()
@@ -117,6 +118,8 @@ class LungRayService:
             DENSE_UNET_CHECKPOINT: path to the trained lung-segmentation weights
                 (default ``checkpoints/dense_unet.pth``).
         """
+        if self.serving_profile == "standard":
+            return None
         checkpoint = os.getenv("DENSE_UNET_CHECKPOINT", "checkpoints/dense_unet_best.pth")
         if not os.path.exists(checkpoint):
             logger.info(
@@ -280,7 +283,7 @@ class LungRayService:
         self.resnet_path = "checkpoints/best_resnet50.pth"
 
         # 1. Standard CADx model (SOTA Asymmetric Net)
-        self.models["standard"] = self._instantiate_and_load(self.standard_path, backbone_name="densenet121")
+        self.models["standard"] = self._instantiate_and_load(self.standard_path, backbone_name="densenet121", strict=True)
         self.current_checkpoint = self.standard_path
         self.model_info["standard"] = {
             "id": "standard",
@@ -294,6 +297,9 @@ class LungRayService:
                 "metric_source": "stored independent-test artifact; not recomputed at API startup",
             },
         }
+
+        if self.serving_profile == "standard":
+            return
 
         # 2. WSOL Specialist model (Attention-Regularized WSOL Net)
         if os.path.exists(self.wsol_path):
@@ -311,9 +317,6 @@ class LungRayService:
                     "rsna_pass_iou_01": 0.760,
                 },
             }
-        else:
-            self.models["wsol"] = self.models["standard"]
-            self.model_info["wsol"] = self.model_info["standard"]
 
         # 3. ResNet-50 Residual Specialist (if checkpoint exists)
         if os.path.exists(self.resnet_path):
@@ -345,6 +348,9 @@ class LungRayService:
             },
         }
 
+        if "wsol" not in self.models:
+            self.model_info.pop("ensemble", None)
+
         # 5. AG-MTCNet Flagship (Anatomically-Gated Multi-Task Network)
         candidates_ag = [
             os.getenv("AG_MTCNET_CHECKPOINT", ""),
@@ -352,7 +358,8 @@ class LungRayService:
         ]
         ag_ckpt = next((p for p in candidates_ag if p and os.path.isfile(p)), None)
         if ag_ckpt is None:
-            raise FileNotFoundError("Required AG-MTCNet checkpoint is missing: checkpoints/ag_mtcnet_best.pth")
+            logger.info("AG-MTCNet checkpoint absent; serving available models only.")
+            return
         self.ag_mtcnet_path = ag_ckpt
         self.models["ag_mtcnet"] = self._instantiate_and_load(
             ag_ckpt, backbone_name="densenet121", strict=True
@@ -379,6 +386,8 @@ class LungRayService:
         Dynamically detects new or updated checkpoints (e.g., best_resnet50.pth)
         and reloads them into the running inference service with zero downtime.
         """
+        if self.serving_profile == "standard":
+            return {"status": "success", "active_models": ["standard"], "reloaded": [], "triple_consensus_ready": False}
         reloaded = []
         if os.path.exists(self.resnet_path) and "resnet50" not in self.models:
             logger.info("New ResNet-50 checkpoint detected at %s. Hot-reloading...", self.resnet_path)
@@ -427,6 +436,8 @@ class LungRayService:
 
     def get_model(self, model_name: str = "standard") -> MultiTaskChestXrayNet:
         name_lower = model_name.lower()
+        if model_name not in self.model_info:
+            raise ValueError(f"Model unavailable: {model_name}. Select a model returned by /api/v1/models.")
         if "ag_mtcnet" in name_lower or "ag-mtcnet" in name_lower:
             return self.models.get("ag_mtcnet", self.models.get("standard", self.model))
         elif "wsol" in name_lower:
@@ -647,6 +658,8 @@ class LungRayService:
             "ensemble" if "ensemble" in model_name.lower() else "standard"
         )
 
+        if selected_key not in self.model_info:
+            raise ValueError(f"Model unavailable: {selected_key}")
         source_image = np.asarray(self._decode_uploaded_image(image_bytes))
         quality_reasons = self._input_quality_reasons(source_image)
         if quality_reasons:
@@ -981,7 +994,7 @@ class LungRayService:
             active_key = "resnet50"
         else:
             active_key = "standard"
-        active_model = self.models.get(active_key, self.model)
+        active_model = self.get_model(active_key)
 
         image = self._decode_uploaded_image(image_bytes)
         image_np = np.array(image)

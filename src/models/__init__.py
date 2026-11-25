@@ -7,7 +7,6 @@ FocalLoss, backbone encoders, and training loops.
 from src.models.backbones import build_backbone, interpolate_vit_pos_embed_for_512
 from src.models.multi_task_net import MultiTaskChestXrayNet
 from src.models.losses import MaskedMultiTaskLoss, FocalLoss
-from src.models.trainer import MultiTaskTrainer, multitask_collate_fn
 from src.models.dense_unet import DenseUNet, apply_dilated_soft_mask
 from src.models.asymmetric_loss import AsymmetricFocalLoss
 
@@ -23,3 +22,11 @@ __all__ = [
     "apply_dilated_soft_mask",
     "AsymmetricFocalLoss",
 ]
+
+
+def __getattr__(name):
+    """Keep serving imports independent of optional training dependencies."""
+    if name in {"MultiTaskTrainer", "multitask_collate_fn"}:
+        from src.models import trainer
+        return getattr(trainer, name)
+    raise AttributeError(name)

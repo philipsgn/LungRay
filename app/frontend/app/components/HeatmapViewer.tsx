@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import Image from "next/image";
+import { cardiothoracicRatio } from "../lib/pacsUtils";
 import { ShieldAlert, ShieldCheck, AlertTriangle, Ruler, Columns, SunMedium, RotateCcw } from "lucide-react";
 
 interface HeatmapViewerProps {
@@ -16,6 +17,7 @@ interface HeatmapViewerProps {
   inLungRatio?: number | null;
   isExplaining?: boolean;
   isRejected?: boolean;
+  isUnavailable?: boolean;
   onCtrMeasured?: (ctr: number) => void;
 }
 
@@ -47,6 +49,7 @@ export default function HeatmapViewer({
   inLungRatio,
   isExplaining = false,
   isRejected = false,
+  isUnavailable = false,
   onCtrMeasured,
 }: HeatmapViewerProps) {
   const [viewMode, setViewMode] = useState<"both" | "heatmap" | "contour" | "raw">("both");
@@ -116,7 +119,7 @@ export default function HeatmapViewer({
       const cLen = Math.abs(cardiacLine.x2 - cardiacLine.x1);
       const tLen = len;
       if (tLen > 0 && onCtrMeasured) {
-        onCtrMeasured(Number((cLen / tLen).toFixed(3)));
+        onCtrMeasured(Number(cardiothoracicRatio(cLen, tLen).toFixed(3)));
       }
     } else {
       setCardiacLine(drawingLine);
@@ -127,7 +130,7 @@ export default function HeatmapViewer({
 
   const ctrValue =
     cardiacLine && thoracicLine
-      ? Math.abs(cardiacLine.x2 - cardiacLine.x1) / Math.max(0.1, Math.abs(thoracicLine.x2 - thoracicLine.x1))
+      ? cardiothoracicRatio(cardiacLine.x2 - cardiacLine.x1, thoracicLine.x2 - thoracicLine.x1)
       : null;
 
   const imgFilter = `${inverted ? "invert(1) " : ""}brightness(${brightness}%) contrast(${contrast}%)`;
@@ -140,6 +143,7 @@ export default function HeatmapViewer({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onMouseLeave={() => setDrawingLine(null)}
         className={`relative w-full aspect-square bg-[#05080E] rounded-xl overflow-hidden border shadow-2xl transition-all duration-200 select-none ${
           ctrActive ? "cursor-crosshair" : "cursor-default"
         } ${isRejected ? "border-rose-600 ring-2 ring-rose-600/40" : "border-[#1C2937]"}`}
@@ -319,6 +323,8 @@ export default function HeatmapViewer({
         {original && (
           <div
             onMouseDown={(e) => e.stopPropagation()}
+            onMouseMove={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
             className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2 z-30 pointer-events-auto"
           >
             {/* Layer View Mode Switcher */}
@@ -423,11 +429,10 @@ export default function HeatmapViewer({
               <AlertTriangle className="w-6 h-6" />
             </div>
             <h3 className="text-base font-bold uppercase tracking-wider text-rose-200">
-              Fail-Safe OOD Lockout Triggered
+              {isUnavailable ? "Analysis unavailable" : "Fail-Safe OOD Lockout Triggered"}
             </h3>
             <p className="text-xs text-rose-300/80 max-w-md mt-1.5 leading-relaxed">
-              Extreme image degradation, inverted contrast, or non-thoracic radiograph detected.
-              Automated diagnostic prediction withheld to prevent clinical misinterpretation.
+              {isUnavailable ? "The inference server could not be reached. No diagnostic analysis was performed. Reconnect and retry." : "Input rejected by the safety policy. Automated interpretation is blocked; verify the original image and review the reported rejection reasons."}
             </p>
           </div>
         )}

@@ -6,6 +6,7 @@ import { ExternalLink, ClipboardList, ShieldCheck } from "lucide-react";
 
 interface Props {
   selectedModel: string;
+  availableModels?: string[];
   onSelectModel: (model: string) => void;
   failsafeEnabled: boolean;
   onToggleFailsafe: (enabled: boolean) => void;
@@ -29,6 +30,7 @@ const MODELS: [string, string, string][] = [
 
 export default function PacsHeader({
   selectedModel,
+  availableModels = ["standard"],
   onSelectModel,
   failsafeEnabled,
   onToggleFailsafe,
@@ -122,8 +124,8 @@ export default function PacsHeader({
               }`}
               title={
                 connected === false
-                  ? "Serverless Cloud Demo Engine active (works offline on Vercel/Static)"
-                  : "Connected to GPU Inference Server"
+                  ? "Backend unavailable; diagnostic analysis is blocked"
+                  : "Connected to inference server"
               }
             >
               <span
@@ -137,9 +139,9 @@ export default function PacsHeader({
               />
               <span>
                 {connected === true
-                  ? "Live GPU Server"
+                  ? "Live Inference Server"
                   : connected === false
-                  ? "Cloud Edge Engine"
+                  ? "Backend unavailable"
                   : "Connecting..."}
               </span>
             </div>
@@ -152,7 +154,7 @@ export default function PacsHeader({
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8C9DB0] mr-1">
               Engine:
             </span>
-            {MODELS.map(([id, label, desc]) => {
+            {MODELS.filter(([id]) => availableModels.includes(id)).map(([id, label, desc]) => {
               const isSelected = selectedModel === id;
               return (
                 <button

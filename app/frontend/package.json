@@ -7,7 +7,8 @@
     "clean": "node -e \"require('fs').rmSync('.next', { recursive: true, force: true })\"",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:pacs": "node --test scripts/test-pacs.cjs"
   },
   "dependencies": {
     "@types/canvas-confetti": "^1.9.0",

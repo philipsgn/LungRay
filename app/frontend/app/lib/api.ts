@@ -27,10 +27,18 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: nu
   }
 }
 
+class ApiError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+function shouldUseEdgeFallback(error: unknown): boolean {
+  // Preserve validation/authentication errors; only service failures use fallback.
+  return !(error instanceof ApiError) || error.status >= 500;
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const text = await response.text().catch(() => "Unknown error");
-    throw new Error(`API error ${response.status}: ${text}`);
+    throw new ApiError(response.status, `API error ${response.status}: ${text}`);
   }
   return response.json() as Promise<T>;
 }
@@ -46,10 +54,10 @@ export async function checkBackendHealth(): Promise<HealthResponse> {
 export const checkHealth = checkBackendHealth;
 
 export async function getModels(): Promise<ModelInfo[]> {
-  const response = await fetch(`${API_BASE}/api/v1/models`, {
+  const response = await fetchWithTimeout(`${API_BASE}/api/v1/models`, {
     method: "GET",
     cache: "no-store",
-  });
+  }, 10000);
   return handleResponse<ModelInfo[]>(response);
 }
 
@@ -68,10 +76,11 @@ export async function predictImage(
         method: "POST",
         body: formData,
       },
-      12000
+      120000
     );
     return await handleResponse<PredictionResponse>(response);
-  } catch {
+  } catch (error) {
+    if (!shouldUseEdgeFallback(error)) throw error;
     return edgePredictImage(file, model, failsafeEnabled, ttaEnabled);
   }
 }
@@ -97,9 +106,10 @@ export async function explainImage(
     const response = await fetchWithTimeout(`${API_BASE}/api/v1/explain`, {
       method: "POST",
       body: formData,
-    }, 12000);
+    }, 120000);
     return await handleResponse<ExplainResponse>(response);
-  } catch {
+  } catch (error) {
+    if (!shouldUseEdgeFallback(error)) throw error;
     return edgeExplainImage(file, targetHead, targetClass, targetDiseaseName);
   }
 }
@@ -122,7 +132,8 @@ export async function queryClinicalRag(payload: RagQueryRequest): Promise<RagQue
       body: JSON.stringify(payload),
     }, 6000);
     return await handleResponse<RagQueryResponse>(response);
-  } catch {
+  } catch (error) {
+    if (!shouldUseEdgeFallback(error)) throw error;
     return edgeQueryClinicalRag(payload);
   }
 }

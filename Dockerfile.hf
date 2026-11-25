@@ -1,0 +1,14 @@
+FROM python:3.11-slim
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 HOME=/home/user HF_HOME=/home/user/.cache/huggingface LUNGRAY_SERVING_PROFILE=standard OMP_NUM_THREADS=2 NO_ALBUMENTATIONS_UPDATE=1
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
+RUN useradd --create-home --uid 1000 user
+WORKDIR /app
+COPY requirements.hf.txt ./
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu && pip install --no-cache-dir -r requirements.hf.txt
+# Dockerfile.hf.dockerignore allows only serving code/configs and the optional single checkpoint.
+COPY --chown=user:user . /app
+RUN mkdir -p /app/checkpoints && chown user:user /app/checkpoints
+USER user
+EXPOSE 7860
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7860/health')"
+CMD ["python", "deploy/hf/start.py"]

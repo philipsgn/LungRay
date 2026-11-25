@@ -1,5 +1,6 @@
 "use client";
 
+import { csvRow } from "../lib/pacsUtils";
 import React from "react";
 import { X, ShieldCheck, Download, Activity } from "lucide-react";
 
@@ -25,10 +26,7 @@ export default function AuditTrailModal({ isOpen, onClose, logs }: Props) {
   const exportCsv = () => {
     const header = "ID,Timestamp,Action,StudyID,Model,LatencyMs,Detail\n";
     const rows = logs
-      .map(
-        (l) =>
-          `"${l.id}","${l.timestamp}","${l.action}","${l.studyId}","${l.model}","${l.latencyMs ?? ""}","${l.detail.replace(/"/g, '""')}"`
-      )
+      .map(log => csvRow([log.id, log.timestamp, log.action, log.studyId, log.model, log.latencyMs ?? "", log.detail]))
       .join("\n");
     const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);

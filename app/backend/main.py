@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,7 +33,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
