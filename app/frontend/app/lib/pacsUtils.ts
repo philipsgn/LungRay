@@ -1,4 +1,9 @@
-import type { StudyRecord } from "../components/StudyWorklistDrawer";
+export interface StudyRecord {
+  studyId: string;
+  patientId: string;
+  indication: string;
+  priority: string;
+}
 
 export function cardiothoracicRatio(cardiacWidth: number, thoracicWidth: number): number {
   return Math.abs(cardiacWidth) / Math.max(0.1, Math.abs(thoracicWidth));

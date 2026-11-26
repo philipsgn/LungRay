@@ -8,8 +8,7 @@ import HeatmapViewer from "./components/HeatmapViewer";
 import PacsHeader from "./components/PacsHeader";
 import UploadDropzone from "./components/UploadDropzone";
 import ClinicalRagAssistant from "./components/ClinicalRagAssistant";
-import StudyWorklistDrawer, { INITIAL_WORKLIST, StudyRecord } from "./components/StudyWorklistDrawer";
-import AuditTrailModal, { AuditLogEntry } from "./components/AuditTrailModal";
+import ScanHistoryDrawer, { ScanHistoryItem } from "./components/ScanHistoryDrawer";
 import { checkBackendHealth, explainImage, predictImage, getModels } from "./lib/api";
 import { AuditResponse, PredictionResponse } from "./types";
 import {
@@ -38,7 +37,6 @@ export default function Home() {
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
   const [heatmapUrl, setHeatmapUrl] = useState<string | null>(null);
   const [heatmapHasAlpha, setHeatmapHasAlpha] = useState(false);
@@ -65,32 +63,34 @@ export default function Home() {
   const [noActivation, setNoActivation] = useState(false);
   const [maskWarning, setMaskWarning] = useState("");
 
-  // Enterprise PACS State: Worklist, Audit Trail, Electronic Sign-Off
-  const [worklist, setWorklist] = useState<StudyRecord[]>(INITIAL_WORKLIST);
-  const [activeStudyId, setActiveStudyId] = useState<string | null>(null);
-  const [worklistOpen, setWorklistOpen] = useState(false);
-  const [auditOpen, setAuditOpen] = useState(false);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  // Session Scan History & Physician Sign-Off
+  const [scanHistory, setScanHistory] = useState<ScanHistoryItem[]>([]);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [customImpression, setCustomImpression] = useState<string>("");
   const [signedOffAt, setSignedOffAt] = useState<string | null>(null);
 
-  const appendAuditLog = (
-    action: AuditLogEntry["action"],
-    detail: string,
-    latencyMs?: number,
-    studyOverride?: string
-  ) => {
-    const entry: AuditLogEntry = {
-      id: `LOG-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      timestamp: new Date().toLocaleTimeString("en-GB", { hour12: false }),
-      action,
-      studyId: studyOverride || activeStudyId || "ADHOC-UPLOAD",
-      model: selectedModel.toUpperCase(),
-      detail,
-      latencyMs,
-    };
-    setAuditLogs((prev) => [entry, ...prev]);
-  };
+  // Keep active Scan History entry synced with latest Grad-CAM++ heatmap & target
+  useEffect(() => {
+    if (!activeHistoryId || !heatmapUrl) return;
+    setScanHistory((prev) =>
+      prev.map((item) =>
+        item.id === activeHistoryId
+          ? {
+              ...item,
+              heatmapUrl,
+              heatmapHasAlpha,
+              contourUrl,
+              contourHasAlpha,
+              inLungRatio,
+              selectedHead,
+              selectedClass,
+              selectedDiseaseName,
+            }
+          : item
+      )
+    );
+  }, [activeHistoryId, heatmapUrl, heatmapHasAlpha, contourUrl, contourHasAlpha, inLungRatio, selectedHead, selectedClass, selectedDiseaseName]);
 
   // Initial Backend Health Probe
   useEffect(() => {
@@ -174,13 +174,12 @@ export default function Home() {
     }
   };
 
-  const handleFileSelect = (selectedFile: File, studyIdOverride?: string) => {
+  const handleFileSelect = (selectedFile: File) => {
     caseVersion.current += 1;
     setLoading(false);
     setIsExplaining(false);
-    setWorklist(prev => prev.map(study => study.studyId === studyIdOverride ? { ...study, status: "Pending" } : study));
     setFile(selectedFile);
-    setActiveStudyId(studyIdOverride ?? null);
+    setActiveHistoryId(null);
     setError(null);
     setSignedOffAt(null);
     setCustomImpression("");
@@ -195,42 +194,58 @@ export default function Home() {
     setAudit(null);
     setInLungRatio(null);
     setExplanationAuditPass(null);
-    appendAuditLog("STUDY_LOADED", `Ingested radiograph: ${selectedFile.name}`, undefined, studyIdOverride);
   };
 
-  const handleSelectStudy = async (study: StudyRecord) => {
-    const version = ++caseVersion.current;
-    try {
-      const resp = await fetch(study.sampleUrl);
-      if (!resp.ok) throw new Error("Study image unavailable");
-      const blob = await resp.blob();
-      const loadedFile = new File([blob], study.filename, { type: blob.type || "image/png" });
-      if (version !== caseVersion.current) return;
-      handleFileSelect(loadedFile, study.studyId);
-      setActiveTab("viewport");
-    } catch {
-      setError(`Failed to load study ${study.studyId} from worklist.`);
-    }
+  const handleRestoreHistory = (item: ScanHistoryItem) => {
+    caseVersion.current += 1;
+    setLoading(false);
+    setIsExplaining(false);
+    setActiveHistoryId(item.id);
+    setFile(item.file);
+    setPreviewUrl(item.previewUrl);
+    setPrediction(item.prediction);
+    setHeatmapUrl(item.heatmapUrl);
+    setHeatmapHasAlpha(item.heatmapHasAlpha);
+    setContourUrl(item.contourUrl);
+    setContourHasAlpha(item.contourHasAlpha);
+    setInLungRatio(item.inLungRatio);
+    setSelectedHead(item.selectedHead);
+    setSelectedClass(item.selectedClass);
+    setSelectedDiseaseName(item.selectedDiseaseName);
+    setSignedOffAt(item.signedOffAt);
+    setCustomImpression(item.prediction.report?.impression ?? "");
+    setError(null);
+    setNoActivation(false);
+    setMaskWarning("");
+    setActiveTab("viewport");
+  };
+
+  const handleClearHistory = () => {
+    scanHistory.forEach((item) => {
+      if (item.previewUrl !== previewUrl) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+    });
+    setScanHistory([]);
+    setActiveHistoryId(null);
   };
 
   const handleSignOffReport = () => {
     if (!prediction || loading || isExplaining || prediction.safety?.is_safe !== true || prediction.report?.is_blocked || prediction.inference_source === "unavailable" || signedOffAt) return;
-    if (activeStudyId && worklist.find(study => study.studyId === activeStudyId)?.status !== "AI Screened") return;
     const timestamp = new Date().toLocaleString("en-GB", { hour12: false });
     setSignedOffAt(timestamp);
-    if (activeStudyId) {
-      setWorklist((prev) =>
-        prev.map((s) => (s.studyId === activeStudyId ? { ...s, status: "Signed Off" } : s))
+    if (activeHistoryId) {
+      setScanHistory((prev) =>
+        prev.map((item) => (item.id === activeHistoryId ? { ...item, signedOffAt: timestamp } : item))
       );
     }
-    appendAuditLog("REPORT_SIGNED_OFF", "Attending radiologist verified & electronically signed clinical report.");
   };
 
   const handleAnalyze = async () => {
-    if (!file) return;
+    if (!file || !previewUrl) return;
     const selectedFile = file;
+    const currentPreview = previewUrl;
     const currentCase = ++caseVersion.current;
-    setWorklist(prev => prev.map(study => study.studyId === activeStudyId ? { ...study, status: "Pending" } : study));
     setError(null);
     setPrediction(null);
     setHeatmapUrl(null);
@@ -263,29 +278,6 @@ export default function Home() {
         return;
       }
       setConnected(true);
-      if (activeStudyId) {
-        setWorklist((prev) =>
-          prev.map((s) =>
-            s.studyId === activeStudyId && s.status !== "Signed Off"
-              ? { ...s, status: "AI Screened" }
-              : s
-          )
-        );
-      }
-
-      if (predResult.safety?.decision === "REJECT") {
-        appendAuditLog(
-          "OOD_LOCKOUT",
-          `Blocked by 5-Tier Safety Gate (Energy: ${predResult.safety.energy_score.toFixed(2)})`,
-          predResult.inference_time_ms
-        );
-      } else {
-        appendAuditLog(
-          "AI_INFERENCE",
-          `3-Head screening completed (In-Lung Energy: ${predResult.in_lung_energy_ratio == null ? "unavailable" : `${(predResult.in_lung_energy_ratio * 100).toFixed(1)}%`})`,
-          predResult.inference_time_ms
-        );
-      }
 
       // Prioritize highest confidence pathology on the radiograph
       const nihList = [
@@ -325,6 +317,48 @@ export default function Home() {
         bestClass = 0;
         bestName = "COVID-19";
       }
+
+      // Compute concise real summary for History
+      let summaryLabel = "Clear";
+      let tone: ScanHistoryItem["tone"] = "clear";
+      if (predResult.safety?.decision === "REJECT") {
+        summaryLabel = "Rejected (Safety Gate)";
+        tone = "rejected";
+      } else if (predResult.head_b_tb_screening?.is_positive) {
+        summaryLabel = `TB Alert ${(tbProb * 100).toFixed(0)}%`;
+        tone = "critical";
+      } else if (predResult.head_c_covidx?.is_positive) {
+        summaryLabel = `COVID-19 ${(covProb * 100).toFixed(0)}%`;
+        tone = "critical";
+      } else if (maxScore >= (NIH_THRESHOLDS[bestName] ?? 0.35)) {
+        summaryLabel = `${bestName.replace(/_/g, " ")} ${(maxScore * 100).toFixed(0)}%`;
+        tone = "alert";
+      }
+
+      const historyId = `SCAN-${Date.now()}`;
+      setActiveHistoryId(historyId);
+      setScanHistory((prev) => [
+        {
+          id: historyId,
+          filename: selectedFile.name,
+          previewUrl: currentPreview,
+          analyzedAt: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+          summaryLabel,
+          tone,
+          file: selectedFile,
+          prediction: predResult,
+          heatmapUrl: null,
+          heatmapHasAlpha: false,
+          contourUrl: null,
+          contourHasAlpha: false,
+          inLungRatio: predResult.in_lung_energy_ratio ?? null,
+          selectedHead: bestHead,
+          selectedClass: bestClass,
+          selectedDiseaseName: bestName,
+          signedOffAt: null,
+        },
+        ...prev,
+      ]);
 
       if (predResult.safety?.decision !== "REJECT") {
         await fetchExplanation(selectedFile, bestHead, bestClass, bestName, clinicalGrounding);
@@ -368,7 +402,6 @@ export default function Home() {
   const handleModelChange = (newModel: string) => {
     caseVersion.current += 1;
     setLoading(false); setIsExplaining(false); setSignedOffAt(null);
-    setWorklist(prev => prev.map(study => study.studyId === activeStudyId ? { ...study, status: "Pending" } : study));
     setSelectedModel(newModel);
     setError(null);
     lastExplanation.current = null;
@@ -419,24 +452,17 @@ export default function Home() {
         }}
         connected={connected}
         disabled={loading || isExplaining}
-        worklistCount={worklist.length}
-        auditCount={auditLogs.length}
-        onOpenWorklist={() => setWorklistOpen(true)}
-        onOpenAudit={() => setAuditOpen(true)}
+        historyCount={scanHistory.length}
+        onOpenHistory={() => setHistoryOpen(true)}
       />
 
-      <StudyWorklistDrawer
-        isOpen={worklistOpen}
-        onClose={() => setWorklistOpen(false)}
-        studies={worklist}
-        activeStudyId={activeStudyId}
-        onSelectStudy={handleSelectStudy}
-      />
-
-      <AuditTrailModal
-        isOpen={auditOpen}
-        onClose={() => setAuditOpen(false)}
-        logs={auditLogs}
+      <ScanHistoryDrawer
+        isOpen={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        items={scanHistory}
+        activeId={activeHistoryId}
+        onSelect={handleRestoreHistory}
+        onClear={handleClearHistory}
       />
 
       <main className="w-full max-w-[1750px] mx-auto p-3 sm:p-5 space-y-4">
@@ -607,12 +633,6 @@ export default function Home() {
                   inLungRatio={maskWarning ? null : (inLungRatio ?? audit?.in_lung_energy_ratio ?? null)}
                   isExplaining={isExplaining || loading}
                   isRejected={prediction?.safety?.decision === "REJECT"}
-                  onCtrMeasured={(ctr) =>
-                    appendAuditLog(
-                      "CTR_MEASURED",
-                      `Radiologist measured Cardiothoracic Ratio (CTR) = ${ctr.toFixed(2)} (${ctr > 0.5 ? "Cardiomegaly" : "Normal"})`
-                    )
-                  }
                 />
 
                 {/* Heatmap Guidance Banners */}

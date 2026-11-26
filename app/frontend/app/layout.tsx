@@ -5,8 +5,8 @@ import localFont from "next/font/local";
 const workstationFont = localFont({ src: "./fonts/GeistVF.woff", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "LungRay · Intelligent Chest Diagnostics",
-  description: "Clinical Chest Radiography AI & Visual Localization Workstation",
+  title: "LungRay · CXR Diagnostics",
+  description: "Chest Radiography Diagnostics & Visual Localization",
 };
 
 export default function RootLayout({

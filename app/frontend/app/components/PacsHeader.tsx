@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ExternalLink, ClipboardList, ShieldCheck } from "lucide-react";
+import { ExternalLink, History, Settings, ShieldCheck, Sparkles } from "lucide-react";
 
 interface Props {
   selectedModel: string;
@@ -14,10 +14,8 @@ interface Props {
   onToggleTta: (enabled: boolean) => void;
   connected: boolean | null;
   disabled: boolean;
-  worklistCount?: number;
-  auditCount?: number;
-  onOpenWorklist?: () => void;
-  onOpenAudit?: () => void;
+  historyCount?: number;
+  onOpenHistory?: () => void;
 }
 
 const MODELS: [string, string, string][] = [
@@ -38,170 +36,219 @@ export default function PacsHeader({
   onToggleTta,
   connected,
   disabled,
-  worklistCount = 4,
-  auditCount = 0,
-  onOpenWorklist,
-  onOpenAudit,
+  historyCount = 0,
+  onOpenHistory,
 }: Props) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [settingsOpen]);
+
+  const visibleModels = MODELS.filter(([id]) => availableModels.includes(id));
+
   return (
-    <header className="border-b border-[#1C2937] bg-[#0D1520] px-3 sm:px-6 lg:px-8 py-3 select-none sticky top-0 z-40 shadow-xl shadow-black/40">
-      <div className="w-full max-w-[1750px] mx-auto space-y-2.5">
-        {/* Top Row: Brand, Architecture Link & System Status */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/brand-icon.png"
-              alt="LungRay"
-              width={42}
-              height={42}
-              className="h-10 w-10 object-contain drop-shadow-[0_0_10px_rgba(63,208,196,0.35)] shrink-0"
-              priority
-            />
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h1
-                  className="text-lg sm:text-xl font-bold tracking-tight leading-none"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  <span className="text-[#E6EDF4]">Lung</span>
-                  <span className="text-[#3FD0C4]">Ray</span>
-                </h1>
-                <span className="rounded-md border border-[#3FD0C4]/40 bg-[#0A7A74]/20 px-2 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-widest text-[#3FD0C4]">
-                  Enterprise PACS
-                </span>
-              </div>
-              <p className="text-[11px] text-[#8C9DB0] mt-0.5 tracking-wide">
-                Intelligent Chest Diagnostics
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-            {onOpenWorklist && (
-              <button
-                type="button"
-                onClick={onOpenWorklist}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#3FD0C4]/40 bg-[#0A7A74]/15 px-2.5 py-1 text-xs font-semibold text-[#3FD0C4] transition-colors hover:bg-[#0A7A74]/30"
-                title="Open Radiology Patient Study Worklist"
-              >
-                <ClipboardList className="h-3.5 w-3.5" />
-                <span>Worklist ({worklistCount})</span>
-              </button>
-            )}
-
-            {onOpenAudit && (
-              <button
-                type="button"
-                onClick={onOpenAudit}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#1C2937] bg-[#111C2B] px-2.5 py-1 text-xs font-medium text-[#8C9DB0] transition-colors hover:border-[#3FD0C4] hover:text-[#3FD0C4]"
-                title="View HIPAA-style Clinical Audit Log"
-              >
-                <ShieldCheck className="h-3.5 w-3.5 text-[#3FD0C4]" />
-                <span>Audit Log{auditCount > 0 ? ` (${auditCount})` : ""}</span>
-              </button>
-            )}
-
-            {/* Direct Link to Architecture 3D Atlas in a Separate Tab */}
-            <a
-              href="/pipeline-atlas.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#1C2937] bg-[#111C2B] px-2.5 py-1 text-xs font-medium text-[#8C9DB0] transition-colors hover:border-[#3FD0C4] hover:text-[#3FD0C4]"
-              title="Open interactive 3D Pipeline Atlas in a new tab"
-            >
-              <span>Architecture Atlas</span>
-              <ExternalLink className="h-3 w-3" />
-            </a>
-
-            {/* Clean System Status Pill */}
-            <div
-              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-mono font-medium ${
-                connected === true
-                  ? "border-emerald-500/40 bg-emerald-950/40 text-emerald-300"
-                  : connected === false
-                  ? "border-[#3FD0C4]/40 bg-[#0A7A74]/20 text-[#3FD0C4]"
-                  : "border-slate-700 bg-slate-900 text-slate-400"
-              }`}
-              title={
-                connected === false
-                  ? "Backend unavailable; diagnostic analysis is blocked"
-                  : "Connected to inference server"
-              }
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  connected === true
-                    ? "bg-emerald-400 animate-pulse"
-                    : connected === false
-                    ? "bg-[#3FD0C4] animate-pulse"
-                    : "bg-slate-400"
-                }`}
-              />
-              <span>
-                {connected === true
-                  ? "Live Inference Server"
-                  : connected === false
-                  ? "Backend unavailable"
-                  : "Connecting..."}
+    <header className="border-b border-[#1C2937] bg-[#0D1520]/95 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-2.5 select-none sticky top-0 z-40 shadow-lg shadow-black/30">
+      <div className="w-full max-w-[1750px] mx-auto flex flex-wrap items-center justify-between gap-3">
+        {/* Left: Flowing Artistic Brand Lockup */}
+        <div className="flex items-center gap-3">
+          <Image
+            src="/brand-icon.png"
+            alt="LungRay"
+            width={40}
+            height={40}
+            className="h-9 w-9 object-contain drop-shadow-[0_0_10px_rgba(63,208,196,0.35)] shrink-0"
+            priority
+          />
+          <div className="leading-none">
+            <h1 className="font-brand text-2xl font-semibold tracking-tight leading-none flex items-baseline">
+              <span className="text-[#F1F5F9]">Lung</span>
+              <span className="italic font-bold bg-gradient-to-r from-[#3FD0C4] via-[#5EEAD4] to-[#99F6E4] bg-clip-text text-transparent pr-1">
+                Ray
               </span>
-            </div>
+            </h1>
+            <p className="text-[10.5px] text-[#8C9DB0] mt-1 tracking-wider uppercase font-medium">
+              CXR Diagnostics
+            </p>
           </div>
         </div>
 
-        {/* Bottom Row: AI Engine Selector & Minimalist Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1 border-t border-[#1C2937]/60">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8C9DB0] mr-1">
-              Engine:
-            </span>
-            {MODELS.filter(([id]) => availableModels.includes(id)).map(([id, label, desc]) => {
-              const isSelected = selectedModel === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => onSelectModel(id)}
-                  title={desc}
-                  className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-all ${
-                    isSelected
-                      ? "border-[#3FD0C4] bg-[#0A7A74] text-white shadow-sm shadow-[#3FD0C4]/25"
-                      : "border-[#1C2937] bg-[#111C2B] text-[#8C9DB0] hover:border-slate-600 hover:text-[#E6EDF4]"
-                  } disabled:opacity-50`}
-                >
-                  {label}
-                </button>
-              );
-            })}
+        {/* Right: Purposeful Single-Row Controls */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {onOpenHistory && (
+            <button
+              type="button"
+              onClick={onOpenHistory}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#1C2937] bg-[#111C2B] px-3 py-1.5 text-xs font-medium text-[#CBD5E1] transition-colors hover:border-[#3FD0C4]/60 hover:text-[#3FD0C4]"
+              title="Switch between scans analyzed in this session"
+            >
+              <History className="h-3.5 w-3.5 text-[#3FD0C4]" />
+              <span>History{historyCount > 0 ? ` (${historyCount})` : ""}</span>
+            </button>
+          )}
+
+          <a
+            href="/pipeline-atlas.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#1C2937] bg-[#111C2B] px-3 py-1.5 text-xs font-medium text-[#8C9DB0] transition-colors hover:border-[#3FD0C4]/60 hover:text-[#3FD0C4]"
+            title="Open Architecture & 3D Atlas"
+          >
+            <span>Atlas</span>
+            <ExternalLink className="h-3 w-3" />
+          </a>
+
+          {/* Settings Popover (Safety Gate, Precision Mode & Model Selector) */}
+          <div className="relative" ref={popoverRef}>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen((v) => !v)}
+              className={`inline-flex items-center justify-center rounded-lg border p-1.5 transition-colors ${
+                settingsOpen
+                  ? "border-[#3FD0C4] bg-[#0A7A74]/25 text-[#3FD0C4]"
+                  : "border-[#1C2937] bg-[#111C2B] text-[#8C9DB0] hover:border-[#3FD0C4]/60 hover:text-[#E6EDF4]"
+              }`}
+              title="Analysis Settings"
+              aria-label="Analysis Settings"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+
+            {settingsOpen && (
+              <div className="absolute right-0 mt-2 w-72 rounded-xl border border-[#1C2937] bg-[#0D1520] p-4 shadow-2xl shadow-black/70 z-50 space-y-4">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[#8C9DB0]">
+                  Analysis Settings
+                </div>
+
+                {/* Safety Gate Toggle */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-semibold text-[#E6EDF4] flex items-center gap-1.5">
+                      <ShieldCheck className="h-3.5 w-3.5 text-[#3FD0C4]" />
+                      Safety Gate
+                    </div>
+                    <p className="text-[11px] text-[#8C9DB0] leading-snug">
+                      Auto-reject non-X-ray or corrupted scans
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={failsafeEnabled}
+                    disabled={disabled}
+                    onClick={() => onToggleFailsafe(!failsafeEnabled)}
+                    className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border transition-colors ${
+                      failsafeEnabled
+                        ? "bg-[#0A7A74] border-[#3FD0C4]"
+                        : "bg-[#162233] border-[#263547]"
+                    } disabled:opacity-50`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform mt-[1px] ${
+                        failsafeEnabled ? "translate-x-4" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Precision Mode Toggle */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-semibold text-[#E6EDF4] flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-[#3FD0C4]" />
+                      Precision Mode
+                    </div>
+                    <p className="text-[11px] text-[#8C9DB0] leading-snug">
+                      3-pass multi-view analysis for higher accuracy
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={ttaEnabled}
+                    disabled={disabled}
+                    onClick={() => onToggleTta(!ttaEnabled)}
+                    className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border transition-colors ${
+                      ttaEnabled
+                        ? "bg-[#0A7A74] border-[#3FD0C4]"
+                        : "bg-[#162233] border-[#263547]"
+                    } disabled:opacity-50`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform mt-[1px] ${
+                        ttaEnabled ? "translate-x-4" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Model Selector (only when >1 model is exposed) */}
+                {visibleModels.length > 1 && (
+                  <div className="pt-3 border-t border-[#1C2937] space-y-2">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-[#8C9DB0]">
+                      Active Model
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {visibleModels.map(([id, label, desc]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => onSelectModel(id)}
+                          title={desc}
+                          className={`rounded-md border px-2.5 py-1 text-[11px] font-medium transition-all ${
+                            selectedModel === id
+                              ? "border-[#3FD0C4] bg-[#0A7A74] text-white"
+                              : "border-[#1C2937] bg-[#111C2B] text-[#8C9DB0] hover:text-[#E6EDF4]"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Minimalist Clinical Safety & Precision Toggles */}
-          <div className="flex items-center gap-3.5 text-xs font-medium text-[#E6EDF4]">
-            <label className="inline-flex items-center gap-1.5 cursor-pointer" title="Automatic safety gate for out-of-distribution or corrupt radiographs">
-              <input
-                type="checkbox"
-                checked={failsafeEnabled}
-                disabled={disabled}
-                onChange={(e) => onToggleFailsafe(e.target.checked)}
-                className="rounded border-[#1C2937] bg-[#111C2B] text-[#3FD0C4] focus:ring-0 focus:ring-offset-0 cursor-pointer"
-              />
-              <span className={failsafeEnabled ? "text-[#3FD0C4]" : "text-[#8C9DB0]"}>
-                Safety Gate
-              </span>
-            </label>
-
-            <label className="inline-flex items-center gap-1.5 cursor-pointer" title="Multi-scale test-time augmentation for higher localization precision">
-              <input
-                type="checkbox"
-                checked={ttaEnabled}
-                disabled={disabled}
-                onChange={(e) => onToggleTta(e.target.checked)}
-                className="rounded border-[#1C2937] bg-[#111C2B] text-[#3FD0C4] focus:ring-0 focus:ring-offset-0 cursor-pointer"
-              />
-              <span className={ttaEnabled ? "text-[#3FD0C4]" : "text-[#8C9DB0]"}>
-                Precision Mode
-              </span>
-            </label>
+          {/* Concise Status Indicator */}
+          <div
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
+              connected === true
+                ? "border-emerald-500/40 bg-emerald-950/40 text-emerald-300"
+                : connected === false
+                ? "border-rose-500/40 bg-rose-950/40 text-rose-300"
+                : "border-slate-700 bg-slate-900 text-slate-400"
+            }`}
+            title={
+              connected === true
+                ? "Connected to live inference server"
+                : connected === false
+                ? "Inference server unavailable"
+                : "Checking server status"
+            }
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                connected === true
+                  ? "bg-emerald-400 animate-pulse"
+                  : connected === false
+                  ? "bg-rose-400"
+                  : "bg-slate-400"
+              }`}
+            />
+            <span>
+              {connected === true ? "Online" : connected === false ? "Offline" : "Connecting"}
+            </span>
           </div>
         </div>
       </div>
