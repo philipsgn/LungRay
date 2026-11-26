@@ -14,7 +14,7 @@ os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
 os.environ.setdefault("OMP_NUM_THREADS", "2")
 os.environ.setdefault("NO_ALBUMENTATIONS_UPDATE", "1")
 
-from deploy.hf.start import FILENAME, ensure_checkpoint
+from deploy.hf.start import ensure_checkpoint
 
 checkpoint_path = ensure_checkpoint(ROOT)
 os.environ["CHECKPOINT_PATH"] = str(checkpoint_path)
