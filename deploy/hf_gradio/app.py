@@ -10,6 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 os.environ.setdefault("LUNGRAY_SERVING_PROFILE", "standard")
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
 os.environ.setdefault("OMP_NUM_THREADS", "2")
 os.environ.setdefault("NO_ALBUMENTATIONS_UPDATE", "1")
 
