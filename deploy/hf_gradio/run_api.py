@@ -20,7 +20,6 @@ checkpoint_path = ensure_checkpoint(ROOT)
 os.environ["CHECKPOINT_PATH"] = str(checkpoint_path)
 
 import gradio as gr
-from fastapi.middleware.cors import CORSMiddleware
 from app.backend.main import app as fastapi_app
 
 try:
@@ -56,21 +55,13 @@ with gr.Blocks(title="LungRay Standard API") as status_ui:
 
 
 if __name__ == "__main__":
-    # Let Gradio + ZeroGPU supervisor manage port binding (avoids Errno 98 on 7860)
-    status_ui.launch(server_name="0.0.0.0", prevent_thread_lock=True)
+    # Let Gradio + ZeroGPU supervisor manage port binding & default CORS
+    status_ui.launch(server_name="0.0.0.0", ssr_mode=False, prevent_thread_lock=True)
 
     # Inject all FastAPI endpoints ahead of Gradio's catch-all routes
     gradio_app = getattr(status_ui, "app", None) or getattr(getattr(status_ui, "server", None), "app", None)
     if gradio_app is not None:
         for route in reversed(fastapi_app.routes):
             gradio_app.router.routes.insert(0, route)
-        gradio_app.add_middleware(
-            CORSMiddleware,
-            allow_origins=["*"],
-            allow_credentials=False,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
-        gradio_app.middleware_stack = gradio_app.build_middleware_stack()
 
     status_ui.block_thread()
