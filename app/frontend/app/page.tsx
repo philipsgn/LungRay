@@ -10,6 +10,12 @@ import UploadDropzone from "./components/UploadDropzone";
 import ClinicalRagAssistant from "./components/ClinicalRagAssistant";
 import ScanHistoryDrawer, { ScanHistoryItem } from "./components/ScanHistoryDrawer";
 import { checkBackendHealth, explainImage, predictImage, getModels } from "./lib/api";
+import {
+  clearHistoryDb,
+  deleteHistoryItemFromDb,
+  loadHistoryFromDb,
+  saveHistoryItemToDb,
+} from "./lib/scanHistoryDb";
 import { AuditResponse, PredictionResponse } from "./types";
 import {
   Monitor,
@@ -70,25 +76,39 @@ export default function Home() {
   const [customImpression, setCustomImpression] = useState<string>("");
   const [signedOffAt, setSignedOffAt] = useState<string | null>(null);
 
+  // Hydrate persistent 0-cost local history from browser IndexedDB on mount
+  useEffect(() => {
+    let active = true;
+    loadHistoryFromDb().then((items) => {
+      if (active && items.length > 0) {
+        setScanHistory(items);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Keep active Scan History entry synced with latest Grad-CAM++ heatmap & target
   useEffect(() => {
     if (!activeHistoryId || !heatmapUrl) return;
     setScanHistory((prev) =>
-      prev.map((item) =>
-        item.id === activeHistoryId
-          ? {
-              ...item,
-              heatmapUrl,
-              heatmapHasAlpha,
-              contourUrl,
-              contourHasAlpha,
-              inLungRatio,
-              selectedHead,
-              selectedClass,
-              selectedDiseaseName,
-            }
-          : item
-      )
+      prev.map((item) => {
+        if (item.id !== activeHistoryId) return item;
+        const updated: ScanHistoryItem = {
+          ...item,
+          heatmapUrl,
+          heatmapHasAlpha,
+          contourUrl,
+          contourHasAlpha,
+          inLungRatio,
+          selectedHead,
+          selectedClass,
+          selectedDiseaseName,
+        };
+        void saveHistoryItemToDb(updated);
+        return updated;
+      })
     );
   }, [activeHistoryId, heatmapUrl, heatmapHasAlpha, contourUrl, contourHasAlpha, inLungRatio, selectedHead, selectedClass, selectedDiseaseName]);
 
@@ -220,6 +240,20 @@ export default function Home() {
     setActiveTab("viewport");
   };
 
+  const handleDeleteHistoryItem = (id: string) => {
+    setScanHistory((prev) => {
+      const target = prev.find((item) => item.id === id);
+      if (target && target.previewUrl !== previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((item) => item.id !== id);
+    });
+    if (activeHistoryId === id) {
+      setActiveHistoryId(null);
+    }
+    void deleteHistoryItemFromDb(id);
+  };
+
   const handleClearHistory = () => {
     scanHistory.forEach((item) => {
       if (item.previewUrl !== previewUrl) {
@@ -228,6 +262,7 @@ export default function Home() {
     });
     setScanHistory([]);
     setActiveHistoryId(null);
+    void clearHistoryDb();
   };
 
   const handleSignOffReport = () => {
@@ -236,7 +271,12 @@ export default function Home() {
     setSignedOffAt(timestamp);
     if (activeHistoryId) {
       setScanHistory((prev) =>
-        prev.map((item) => (item.id === activeHistoryId ? { ...item, signedOffAt: timestamp } : item))
+        prev.map((item) => {
+          if (item.id !== activeHistoryId) return item;
+          const updated = { ...item, signedOffAt: timestamp };
+          void saveHistoryItemToDb(updated);
+          return updated;
+        })
       );
     }
   };
@@ -336,29 +376,28 @@ export default function Home() {
       }
 
       const historyId = `SCAN-${Date.now()}`;
+      const newEntry: ScanHistoryItem = {
+        id: historyId,
+        filename: selectedFile.name,
+        previewUrl: currentPreview,
+        analyzedAt: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+        summaryLabel,
+        tone,
+        file: selectedFile,
+        prediction: predResult,
+        heatmapUrl: null,
+        heatmapHasAlpha: false,
+        contourUrl: null,
+        contourHasAlpha: false,
+        inLungRatio: predResult.in_lung_energy_ratio ?? null,
+        selectedHead: bestHead,
+        selectedClass: bestClass,
+        selectedDiseaseName: bestName,
+        signedOffAt: null,
+      };
       setActiveHistoryId(historyId);
-      setScanHistory((prev) => [
-        {
-          id: historyId,
-          filename: selectedFile.name,
-          previewUrl: currentPreview,
-          analyzedAt: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
-          summaryLabel,
-          tone,
-          file: selectedFile,
-          prediction: predResult,
-          heatmapUrl: null,
-          heatmapHasAlpha: false,
-          contourUrl: null,
-          contourHasAlpha: false,
-          inLungRatio: predResult.in_lung_energy_ratio ?? null,
-          selectedHead: bestHead,
-          selectedClass: bestClass,
-          selectedDiseaseName: bestName,
-          signedOffAt: null,
-        },
-        ...prev,
-      ]);
+      setScanHistory((prev) => [newEntry, ...prev].slice(0, 20));
+      void saveHistoryItemToDb(newEntry);
 
       if (predResult.safety?.decision !== "REJECT") {
         await fetchExplanation(selectedFile, bestHead, bestClass, bestName, clinicalGrounding);
@@ -462,6 +501,7 @@ export default function Home() {
         items={scanHistory}
         activeId={activeHistoryId}
         onSelect={handleRestoreHistory}
+        onDeleteItem={handleDeleteHistoryItem}
         onClear={handleClearHistory}
       />
 

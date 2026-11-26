@@ -30,6 +30,7 @@ interface Props {
   items: ScanHistoryItem[];
   activeId: string | null;
   onSelect: (item: ScanHistoryItem) => void;
+  onDeleteItem?: (id: string) => void;
   onClear: () => void;
 }
 
@@ -39,6 +40,7 @@ export default function ScanHistoryDrawer({
   items,
   activeId,
   onSelect,
+  onDeleteItem,
   onClear,
 }: Props) {
   const [query, setQuery] = useState("");
@@ -82,9 +84,7 @@ export default function ScanHistoryDrawer({
               Scan History
             </h2>
             <p className="text-[11px] text-[#8C9DB0] mt-0.5">
-              {items.length === 0
-                ? "Analyzed scans from this session appear here"
-                : `${items.length} analyzed ${items.length === 1 ? "scan" : "scans"} in this session`}
+              Stored locally on your device · Zero server retention
             </p>
           </div>
           <div className="flex items-center gap-1.5">
@@ -177,7 +177,30 @@ export default function ScanHistoryDrawer({
                   </div>
                 </div>
 
-                <ArrowRight className="h-3.5 w-3.5 text-[#3FD0C4] opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
+                <div className="flex items-center gap-1 shrink-0">
+                  {onDeleteItem && (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteItem(item.id);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onDeleteItem(item.id);
+                        }
+                      }}
+                      className="p-1 rounded-md text-[#566475] hover:text-rose-300 hover:bg-rose-950/50 transition-colors"
+                      title="Remove from local history"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </span>
+                  )}
+                  <ArrowRight className="h-3.5 w-3.5 text-[#3FD0C4] opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                </div>
               </button>
             );
           })}
