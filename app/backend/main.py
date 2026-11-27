@@ -18,6 +18,7 @@ from app.backend.schemas import (
 )
 from src.safety.rag_knowledge import query_clinical_rag
 from app.backend.services import LungRayService
+from app.backend.gradio_mount import execute_model
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ async def list_models() -> list[ModelInfo]:
 @app.post("/api/v1/models/reload")
 async def reload_models() -> dict[str, Any]:
     try:
-        return service.check_and_reload_checkpoints()
+        return execute_model(service.check_and_reload_checkpoints)
     except Exception as exc:
         logger.exception("Model hot-reloading failed")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
@@ -72,7 +73,7 @@ async def predict(
 ) -> PredictionResponse:
     try:
         image_bytes = await file.read()
-        result = service.predict(image_bytes, model_name=model, failsafe_enabled=failsafe_enabled, tta_enabled=tta_enabled)
+        result = execute_model(service.predict, image_bytes, model_name=model, failsafe_enabled=failsafe_enabled, tta_enabled=tta_enabled)
         return PredictionResponse(**result)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
@@ -92,7 +93,7 @@ async def explain(
 ) -> ExplainResponse:
     try:
         image_bytes = await file.read()
-        result = service.explain(
+        result = execute_model(service.explain,
             image_bytes,
             target_head=target_head,
             target_class=target_class,
@@ -112,7 +113,7 @@ async def explain(
 async def audit(file: UploadFile = File(...)) -> AuditResponse:
     try:
         image_bytes = await file.read()
-        result = service.audit(image_bytes)
+        result = execute_model(service.audit, image_bytes)
         return AuditResponse(**result)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))

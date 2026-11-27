@@ -1,188 +1,118 @@
 "use client";
 
 import type { ScanHistoryItem } from "../components/ScanHistoryDrawer";
-import type { PredictionResponse } from "../types";
 
 const DB_NAME = "lungray_local_history";
-const DB_VERSION = 1;
 const STORE_NAME = "scans";
-const MAX_HISTORY_ITEMS = 20;
+export const MAX_HISTORY_ITEMS = 20;
+type StoredScanRecord = Omit<ScanHistoryItem, "previewUrl" | "file"> & {
+  createdAt: number; mimeType: string; fileBlob: Blob;
+};
 
-interface StoredScanRecord {
-  id: string;
-  createdAt: number;
-  filename: string;
-  mimeType: string;
-  fileBlob: Blob;
-  analyzedAt: string;
-  summaryLabel: string;
-  tone: ScanHistoryItem["tone"];
-  prediction: PredictionResponse;
-  heatmapUrl: string | null;
-  heatmapHasAlpha: boolean;
-  contourUrl: string | null;
-  contourHasAlpha: boolean;
-  inLungRatio: number | null;
-  selectedHead: string;
-  selectedClass: number;
-  selectedDiseaseName: string;
-  signedOffAt: string | null;
+export function createScanPreview(file: Blob): string { return URL.createObjectURL(file); }
+
+export function patchScanHistory(items: ScanHistoryItem[], id: string, patch: Partial<ScanHistoryItem>): ScanHistoryItem[] {
+  return items.map(item => item.id === id ? { ...item, ...patch } : item);
+}
+
+export function releaseHistoryPreviews(items: ScanHistoryItem[]): void {
+  items.forEach(item => URL.revokeObjectURL(item.previewUrl));
 }
 
 function openHistoryDb(): Promise<IDBDatabase | null> {
-  if (typeof window === "undefined" || !("indexedDB" in window)) {
-    return Promise.resolve(null);
-  }
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = (db: IDBDatabase | null) => {
+      if (settled) { db?.close(); return; }
+      settled = true; clearTimeout(timer); resolve(db);
+    };
+    const timer = setTimeout(() => finish(null), 2500);
     try {
-      const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+      if (typeof window === "undefined" || !window.indexedDB) { finish(null); return; }
+      const request = window.indexedDB.open(DB_NAME, 1);
       request.onupgradeneeded = () => {
         const db = request.result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
-          const store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
-          store.createIndex("createdAt", "createdAt", { unique: false });
+          db.createObjectStore(STORE_NAME, { keyPath: "id" }).createIndex("createdAt", "createdAt");
         }
       };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => resolve(null);
-    } catch {
-      resolve(null);
-    }
+      request.onsuccess = () => {
+        request.result.onversionchange = () => request.result.close();
+        finish(request.result);
+      };
+      request.onerror = request.onblocked = () => finish(null);
+    } catch { finish(null); } // Includes private-mode getters and open() exceptions.
   });
+}
+
+async function transact<T>(mode: IDBTransactionMode, fallback: T,
+  work: (store: IDBObjectStore, result: (value: T) => void) => void): Promise<T> {
+  const db = await openHistoryDb();
+  if (!db) return fallback;
+  return new Promise(resolve => {
+    let value = fallback;
+    try {
+      const tx = db.transaction(STORE_NAME, mode);
+      tx.oncomplete = () => { db.close(); resolve(value); };
+      tx.onabort = () => { db.close(); resolve(fallback); };
+      tx.onerror = () => { /* Default IndexedDB behavior aborts the transaction. */ };
+      try { work(tx.objectStore(STORE_NAME), next => { value = next; }); }
+      catch { tx.abort(); }
+    } catch { db.close(); resolve(fallback); }
+  });
+}
+
+function newestFirst(a: StoredScanRecord, b: StoredScanRecord): number {
+  return (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0) || a.id.localeCompare(b.id);
 }
 
 export async function loadHistoryFromDb(): Promise<ScanHistoryItem[]> {
-  const db = await openHistoryDb();
-  if (!db) return [];
-  return new Promise((resolve) => {
-    try {
-      const tx = db.transaction(STORE_NAME, "readonly");
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.getAll();
-      req.onsuccess = () => {
-        const records = (req.result as StoredScanRecord[]) || [];
-        records.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
-        const hydrated: ScanHistoryItem[] = records.slice(0, MAX_HISTORY_ITEMS).map((rec) => {
-          const file = new File([rec.fileBlob], rec.filename, {
-            type: rec.mimeType || rec.fileBlob.type || "image/png",
-          });
-          return {
-            id: rec.id,
-            filename: rec.filename,
-            previewUrl: URL.createObjectURL(rec.fileBlob),
-            analyzedAt: rec.analyzedAt,
-            summaryLabel: rec.summaryLabel,
-            tone: rec.tone,
-            file,
-            prediction: rec.prediction,
-            heatmapUrl: rec.heatmapUrl,
-            heatmapHasAlpha: rec.heatmapHasAlpha,
-            contourUrl: rec.contourUrl,
-            contourHasAlpha: rec.contourHasAlpha,
-            inLungRatio: rec.inLungRatio,
-            selectedHead: rec.selectedHead,
-            selectedClass: rec.selectedClass,
-            selectedDiseaseName: rec.selectedDiseaseName,
-            signedOffAt: rec.signedOffAt,
-          };
-        });
-        resolve(hydrated);
-      };
-      req.onerror = () => resolve([]);
-    } catch {
-      resolve([]);
-    } finally {
-      db.close();
-    }
+  const records = await transact<StoredScanRecord[]>("readonly", [], (store, result) => {
+    const req = store.getAll();
+    req.onsuccess = () => result(req.result);
   });
+  const hydrated: ScanHistoryItem[] = [];
+  for (const record of records.sort(newestFirst).slice(0, MAX_HISTORY_ITEMS)) {
+    try {
+      const { fileBlob, mimeType, ...metadata } = record;
+      const file = new File([fileBlob], record.filename, { type: mimeType || "image/png" });
+      hydrated.push({ ...metadata, file, previewUrl: createScanPreview(fileBlob) });
+    } catch { /* A malformed legacy record must not break the drawer. */ }
+  }
+  return hydrated;
 }
 
-export async function saveHistoryItemToDb(item: ScanHistoryItem): Promise<void> {
-  const db = await openHistoryDb();
-  if (!db) return;
-
-  const createdAtMatch = /^SCAN-(\d+)$/.exec(item.id);
-  const createdAt = createdAtMatch ? Number(createdAtMatch[1]) : Date.now();
-
-  const record: StoredScanRecord = {
-    id: item.id,
-    createdAt,
-    filename: item.filename,
-    mimeType: item.file.type || "image/png",
-    fileBlob: item.file,
-    analyzedAt: item.analyzedAt,
-    summaryLabel: item.summaryLabel,
-    tone: item.tone,
-    prediction: item.prediction,
-    heatmapUrl: item.heatmapUrl,
-    heatmapHasAlpha: item.heatmapHasAlpha,
-    contourUrl: item.contourUrl,
-    contourHasAlpha: item.contourHasAlpha,
-    inLungRatio: item.inLungRatio,
-    selectedHead: item.selectedHead,
-    selectedClass: item.selectedClass,
-    selectedDiseaseName: item.selectedDiseaseName,
-    signedOffAt: item.signedOffAt,
-  };
-
-  return new Promise((resolve) => {
-    try {
-      const tx = db.transaction(STORE_NAME, "readwrite");
-      const store = tx.objectStore(STORE_NAME);
-      store.put(record);
-
-      // Prune oldest records if exceeding MAX_HISTORY_ITEMS
-      const allReq = store.getAll();
-      allReq.onsuccess = () => {
-        const records = (allReq.result as StoredScanRecord[]) || [];
-        if (records.length > MAX_HISTORY_ITEMS) {
-          records.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
-          for (const stale of records.slice(MAX_HISTORY_ITEMS)) {
-            store.delete(stale.id);
-          }
-        }
-      };
-
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => resolve();
-    } catch {
-      resolve();
-    } finally {
-      db.close();
-    }
-  });
+// Keep writes/deletes/clear in invocation order, even when opening the DB is slow.
+let pendingWrite: Promise<unknown> = Promise.resolve();
+function enqueueWrite(work: () => Promise<boolean>): Promise<boolean> {
+  const next = pendingWrite.then(work, work);
+  pendingWrite = next.catch(() => false);
+  return next;
 }
 
-export async function deleteHistoryItemFromDb(id: string): Promise<void> {
-  const db = await openHistoryDb();
-  if (!db) return;
-  return new Promise((resolve) => {
-    try {
-      const tx = db.transaction(STORE_NAME, "readwrite");
-      tx.objectStore(STORE_NAME).delete(id);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => resolve();
-    } catch {
-      resolve();
-    } finally {
-      db.close();
-    }
-  });
+export function saveHistoryItemToDb(item: ScanHistoryItem): Promise<boolean> {
+  return enqueueWrite(() => transact("readwrite", false, (store, result) => {
+    const { file, previewUrl, ...metadata } = item;
+    void previewUrl;
+    const match = /^SCAN-(\d+)(?:-|$)/.exec(item.id);
+    const record: StoredScanRecord = { ...metadata, fileBlob: file,
+      mimeType: file.type, createdAt: item.createdAt ?? (match ? Number(match[1]) : Date.now()) };
+    store.put(record);
+    const request = store.getAll();
+    request.onsuccess = () => {
+      for (const old of (request.result as StoredScanRecord[]).sort(newestFirst).slice(MAX_HISTORY_ITEMS)) store.delete(old.id);
+      result(true);
+    };
+  }));
 }
 
-export async function clearHistoryDb(): Promise<void> {
-  const db = await openHistoryDb();
-  if (!db) return;
-  return new Promise((resolve) => {
-    try {
-      const tx = db.transaction(STORE_NAME, "readwrite");
-      tx.objectStore(STORE_NAME).clear();
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => resolve();
-    } catch {
-      resolve();
-    } finally {
-      db.close();
-    }
-  });
+export function deleteHistoryItemFromDb(id: string): Promise<boolean> {
+  return enqueueWrite(() => transact("readwrite", false, (store, result) => {
+    store.delete(id); result(true);
+  }));
+}
+export function clearHistoryDb(): Promise<boolean> {
+  return enqueueWrite(() => transact("readwrite", false, (store, result) => {
+    store.clear(); result(true);
+  }));
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import AlphaSlider from "./components/AlphaSlider";
 import DiagnosisDashboard, { NIH_14_DISEASES, NIH_THRESHOLDS } from "./components/DiagnosisDashboard";
@@ -15,6 +15,9 @@ import {
   deleteHistoryItemFromDb,
   loadHistoryFromDb,
   saveHistoryItemToDb,
+  releaseHistoryPreviews,
+  createScanPreview,
+  patchScanHistory,
 } from "./lib/scanHistoryDb";
 import { AuditResponse, PredictionResponse } from "./types";
 import {
@@ -72,45 +75,54 @@ export default function Home() {
   // Session Scan History & Physician Sign-Off
   const [scanHistory, setScanHistory] = useState<ScanHistoryItem[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+  const [historyStorageIssue, setHistoryStorageIssue] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [customImpression, setCustomImpression] = useState<string>("");
   const [signedOffAt, setSignedOffAt] = useState<string | null>(null);
 
-  // Hydrate persistent 0-cost local history from browser IndexedDB on mount
+  const historyRef = useRef<ScanHistoryItem[]>([]);
+  const historyRevision = useRef(0);
+  const activeHistoryRef = useRef<string | null>(null);
+  const selectHistory = (id: string | null) => { activeHistoryRef.current = id; setActiveHistoryId(id); };
+  const replaceHistory = useCallback((items: ScanHistoryItem[]) => {
+    const keep = new Set(items.map(item => item.previewUrl));
+    releaseHistoryPreviews(historyRef.current.filter(item => !keep.has(item.previewUrl)));
+    historyRef.current = items;
+    historyRevision.current += 1;
+    setScanHistory(items);
+  }, []);
+  const persistHistory = (item: ScanHistoryItem) => {
+    void saveHistoryItemToDb(item).then(saved => { if (!saved) setHistoryStorageIssue(true); });
+  };
+  const updateHistory = (id: string, patch: Partial<ScanHistoryItem>) => {
+    const existing = historyRef.current.find(item => item.id === id);
+    if (!existing) return; // A deleted/evicted case must never be resurrected by a late CAM.
+    const updated = { ...existing, ...patch };
+    replaceHistory(patchScanHistory(historyRef.current, id, patch));
+    persistHistory(updated);
+  };
+
   useEffect(() => {
     let active = true;
-    loadHistoryFromDb().then((items) => {
-      if (active && items.length > 0) {
-        setScanHistory(items);
-      }
+    const revision = historyRevision.current;
+    void loadHistoryFromDb().then(items => {
+      if (!active || historyRevision.current !== revision) releaseHistoryPreviews(items);
+      else replaceHistory(items);
     });
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
+  }, [replaceHistory]);
+  useEffect(() => () => {
+    caseVersion.current += 1;
+    explanationVersion.current += 1;
+    releaseHistoryPreviews(historyRef.current);
   }, []);
-
-  // Keep active Scan History entry synced with latest Grad-CAM++ heatmap & target
+  // Active image owns its own URL, independent of history thumbnails.
   useEffect(() => {
-    if (!activeHistoryId || !heatmapUrl) return;
-    setScanHistory((prev) =>
-      prev.map((item) => {
-        if (item.id !== activeHistoryId) return item;
-        const updated: ScanHistoryItem = {
-          ...item,
-          heatmapUrl,
-          heatmapHasAlpha,
-          contourUrl,
-          contourHasAlpha,
-          inLungRatio,
-          selectedHead,
-          selectedClass,
-          selectedDiseaseName,
-        };
-        void saveHistoryItemToDb(updated);
-        return updated;
-      })
-    );
-  }, [activeHistoryId, heatmapUrl, heatmapHasAlpha, contourUrl, contourHasAlpha, inLungRatio, selectedHead, selectedClass, selectedDiseaseName]);
+    if (!file) { setPreviewUrl(null); return; }
+    const url = createScanPreview(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   // Initial Backend Health Probe
   useEffect(() => {
@@ -142,6 +154,7 @@ export default function Home() {
     modelName: string = selectedModel
   ) => {
     const currentCase = caseVersion.current;
+    const historyId = activeHistoryRef.current;
     const currentExplanation = ++explanationVersion.current;
     lastExplanation.current = { file: currentFile, head, classIdx, diseaseName, grounding, modelName };
     setIsExplaining(true);
@@ -179,6 +192,16 @@ export default function Home() {
       setSelectedClass(classIdx);
       setSelectedDiseaseName(diseaseName);
       setClinicalGrounding(grounding);
+      if (historyId) updateHistory(historyId, {
+        heatmapUrl: `data:image/png;base64,${explainResult.heatmap_rgba_base64 || explainResult.heatmap_base64}`,
+        heatmapHasAlpha: Boolean(explainResult.heatmap_rgba_base64),
+        contourUrl: explainResult.contour_base64 ? `data:image/png;base64,${explainResult.contour_rgba_base64 || explainResult.contour_base64}` : null,
+        contourHasAlpha: Boolean(explainResult.contour_rgba_base64),
+        inLungRatio: explainResult.in_lung_energy_ratio ?? null,
+        selectedHead: head, selectedClass: classIdx, selectedDiseaseName: diseaseName,
+        clinicalGrounding: grounding, maskWarning: explainResult.mask_warning ?? "",
+        auditPass: explainResult.audit_pass ?? null, noActivation: explainResult.heatmap_has_activation === false,
+      });
     } catch (err) {
       if (currentCase !== caseVersion.current || currentExplanation !== explanationVersion.current) return;
       if (err instanceof Error && err.name === "AbortError") {
@@ -199,13 +222,11 @@ export default function Home() {
     setLoading(false);
     setIsExplaining(false);
     setFile(selectedFile);
-    setActiveHistoryId(null);
+    selectHistory(null);
     setError(null);
     setSignedOffAt(null);
     setCustomImpression("");
     lastExplanation.current = null;
-    const objectUrl = URL.createObjectURL(selectedFile);
-    setPreviewUrl(objectUrl);
     setHeatmapUrl(null);
     setNoActivation(false);
     setMaskWarning("");
@@ -220,9 +241,13 @@ export default function Home() {
     caseVersion.current += 1;
     setLoading(false);
     setIsExplaining(false);
-    setActiveHistoryId(item.id);
+    selectHistory(item.id);
     setFile(item.file);
-    setPreviewUrl(item.previewUrl);
+    lastExplanation.current = null;
+    setAudit(null);
+    setSelectedModel(item.modelName ?? item.prediction.active_model ?? "standard");
+    setClinicalGrounding(item.clinicalGrounding ?? true);
+    setExplanationAuditPass(item.auditPass ?? null);
     setPrediction(item.prediction);
     setHeatmapUrl(item.heatmapUrl);
     setHeatmapHasAlpha(item.heatmapHasAlpha);
@@ -233,59 +258,37 @@ export default function Home() {
     setSelectedClass(item.selectedClass);
     setSelectedDiseaseName(item.selectedDiseaseName);
     setSignedOffAt(item.signedOffAt);
-    setCustomImpression(item.prediction.report?.impression ?? "");
+    setCustomImpression(item.customImpression ?? item.prediction.report?.impression ?? "");
     setError(null);
-    setNoActivation(false);
-    setMaskWarning("");
+    setNoActivation(item.noActivation ?? false);
+    setMaskWarning(item.maskWarning ?? "Historical mask provenance unavailable; audit is unverified.");
     setActiveTab("viewport");
   };
 
   const handleDeleteHistoryItem = (id: string) => {
-    setScanHistory((prev) => {
-      const target = prev.find((item) => item.id === id);
-      if (target && target.previewUrl !== previewUrl) {
-        URL.revokeObjectURL(target.previewUrl);
-      }
-      return prev.filter((item) => item.id !== id);
-    });
-    if (activeHistoryId === id) {
-      setActiveHistoryId(null);
-    }
-    void deleteHistoryItemFromDb(id);
+    replaceHistory(historyRef.current.filter(item => item.id !== id));
+    if (activeHistoryRef.current === id) selectHistory(null);
+    void deleteHistoryItemFromDb(id).then(deleted => { if (!deleted) setHistoryStorageIssue(true); });
   };
 
   const handleClearHistory = () => {
-    scanHistory.forEach((item) => {
-      if (item.previewUrl !== previewUrl) {
-        URL.revokeObjectURL(item.previewUrl);
-      }
-    });
-    setScanHistory([]);
-    setActiveHistoryId(null);
-    void clearHistoryDb();
+    replaceHistory([]);
+    selectHistory(null);
+    void clearHistoryDb().then(cleared => { if (!cleared) setHistoryStorageIssue(true); });
   };
 
   const handleSignOffReport = () => {
     if (!prediction || loading || isExplaining || prediction.safety?.is_safe !== true || prediction.report?.is_blocked || prediction.inference_source === "unavailable" || signedOffAt) return;
     const timestamp = new Date().toLocaleString("en-GB", { hour12: false });
     setSignedOffAt(timestamp);
-    if (activeHistoryId) {
-      setScanHistory((prev) =>
-        prev.map((item) => {
-          if (item.id !== activeHistoryId) return item;
-          const updated = { ...item, signedOffAt: timestamp };
-          void saveHistoryItemToDb(updated);
-          return updated;
-        })
-      );
-    }
+    if (activeHistoryRef.current) updateHistory(activeHistoryRef.current, { signedOffAt: timestamp, customImpression });
   };
 
   const handleAnalyze = async () => {
     if (!file || !previewUrl) return;
     const selectedFile = file;
-    const currentPreview = previewUrl;
     const currentCase = ++caseVersion.current;
+    selectHistory(null);
     setError(null);
     setPrediction(null);
     setHeatmapUrl(null);
@@ -375,11 +378,15 @@ export default function Home() {
         tone = "alert";
       }
 
-      const historyId = `SCAN-${Date.now()}`;
+      const createdAt = Date.now();
+      const historyId = `SCAN-${createdAt}-${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
       const newEntry: ScanHistoryItem = {
         id: historyId,
+        createdAt, modelName: selectedModel, clinicalGrounding,
+        customImpression: predResult.report?.impression ?? "",
+        maskWarning: "", auditPass: null, noActivation: false,
         filename: selectedFile.name,
-        previewUrl: currentPreview,
+        previewUrl: createScanPreview(selectedFile),
         analyzedAt: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         summaryLabel,
         tone,
@@ -395,9 +402,9 @@ export default function Home() {
         selectedDiseaseName: bestName,
         signedOffAt: null,
       };
-      setActiveHistoryId(historyId);
-      setScanHistory((prev) => [newEntry, ...prev].slice(0, 20));
-      void saveHistoryItemToDb(newEntry);
+      selectHistory(historyId);
+      replaceHistory([newEntry, ...historyRef.current].slice(0, 20));
+      persistHistory(newEntry);
 
       if (predResult.safety?.decision !== "REJECT") {
         await fetchExplanation(selectedFile, bestHead, bestClass, bestName, clinicalGrounding);
@@ -440,6 +447,7 @@ export default function Home() {
 
   const handleModelChange = (newModel: string) => {
     caseVersion.current += 1;
+    selectHistory(null);
     setLoading(false); setIsExplaining(false); setSignedOffAt(null);
     setSelectedModel(newModel);
     setError(null);
@@ -455,6 +463,8 @@ export default function Home() {
   };
 
   const handleToggleFailsafe = (enabled: boolean) => {
+    caseVersion.current += 1;
+    selectHistory(null); setSignedOffAt(null);
     setError(null);
     lastExplanation.current = null;
     setFailsafeEnabled(enabled);
@@ -478,6 +488,8 @@ export default function Home() {
         onToggleFailsafe={handleToggleFailsafe}
         ttaEnabled={ttaEnabled}
         onToggleTta={(value) => {
+          caseVersion.current += 1;
+          selectHistory(null); setSignedOffAt(null);
           setTtaEnabled(value);
           setError(null);
           lastExplanation.current = null;
@@ -495,6 +507,7 @@ export default function Home() {
         onOpenHistory={() => setHistoryOpen(true)}
       />
 
+      {historyStorageIssue && <p role="status" className="px-4 py-2 text-xs text-amber-300">Local history could not be updated. This session remains usable; reload to verify changes or clear site storage in browser settings.</p>}
       <ScanHistoryDrawer
         isOpen={historyOpen}
         onClose={() => setHistoryOpen(false)}

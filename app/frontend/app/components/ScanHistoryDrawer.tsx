@@ -6,6 +6,13 @@ import { PredictionResponse } from "../types";
 
 export interface ScanHistoryItem {
   id: string;
+  createdAt?: number;
+  customImpression?: string;
+  modelName?: string;
+  clinicalGrounding?: boolean;
+  maskWarning?: string;
+  auditPass?: boolean | null;
+  noActivation?: boolean;
   filename: string;
   previewUrl: string;
   analyzedAt: string;

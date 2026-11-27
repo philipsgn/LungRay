@@ -1,0 +1,29 @@
+# Independent review: Scan History, Settings and Gradio deployment
+
+Review date: 27 November 2026. Targets: 56b1245, 78e8563 and 92d68ef. Scope: independent source audit, direct fixes and regression testing. No clinical metrics or weights were changed.
+
+The close-in-finally hypothesis is not itself proof of premature transaction termination: IndexedDB close marks a connection as closing and waits for existing transactions. The confirmed gaps were missing abort/blocked handling, early request-level resolution, ambiguous URL ownership, hydration races and persistence side effects within React state updaters. The revised code closes and resolves after transaction completion/abort, handles denied storage and late open success, and orders mutations. Reference: [MDN IDBDatabase.close](https://developer.mozilla.org/en-US/docs/Web/API/IDBDatabase/close).
+
+<table style="font-family:'Times New Roman',serif;border-collapse:collapse;color:#000;border-top:2px solid #000;border-bottom:2px solid #000;width:100%">
+<thead style="border-bottom:1px solid #000"><tr><th>Item</th><th>Result</th><th>Finding and remediation</th><th>Evidence</th></tr></thead>
+<tbody>
+<tr><td>IndexedDB lifecycle</td><td>FIXED</td><td>Resolve after commit/abort; blocked/denied/private storage degrades to session use. Pending writes, delete and clear are serialized.</td><td>Async request/commit/abort/open-error tests; close timing recorded.</td></tr>
+<tr><td>History cap and approval</td><td>FIXED</td><td>Newest 20 by createdAt with stable tie ordering. Preserve approval, edited impression, model and mask provenance; legacy audit is unverified.</td><td>25 out-of-order records prune to 20; rehydrate persisted approval and edited text.</td></tr>
+<tr><td>URLs and case association</td><td>FIXED</td><td>Restore allocates an independent active URL. Cleanup covers selection, eviction, unmount and discarded hydration. Explicit CAM writes retain captured IDs; existing request-generation guards remain.</td><td>Native Blob URL still loads after thumbnail deletion; a late patch cannot create a deleted record or update a different ID.</td></tr>
+<tr><td>Settings and removed UI</td><td>FIXED</td><td>Outside click already worked; Escape and listener cleanup added. Removed obsolete Worklist/CSV helper exports and tests. No dummy patient IDs or removed audit imports remain in app/public/scripts. Precision copy no longer claims an unmeasured accuracy gain.</td><td>Dismissal/focus cleanup and all four Safety/TTA flag combinations tested.</td></tr>
+<tr><td>API and Gradio routing</td><td>FIXED</td><td>Root Gradio UI mounted after API routes before accepting traffic; no post-launch route injection. Preserve API middleware and CORS. Guard model calls with a shared RLock.</td><td>ASGI route/CORS test covers all five specified endpoints; threaded execution test confirms no overlap.</td></tr>
+<tr><td>ZeroGPU execution</td><td>RISK</td><td>CUDA is hidden and CPU wheels are configured; only the probe is decorated. REST calls do not allocate GPU. Probe now reports measured availability instead of a fixed ready claim. CPU calls can block the event loop and are not governed by Gradio event concurrency limits.</td><td>No installed Gradio/spaces SDK or remote supervisor verification. Genuine decorated GPU inference and cloud load testing remain open.</td></tr>
+<tr><td>Typography</td><td>RISK</td><td>Fraunces is loaded from Google Fonts with Georgia fallback; brand remains readable if the CDN is unavailable. Header can wrap on narrow screens.</td><td>Source inspection; no screenshot/browser visual acceptance claimed.</td></tr>
+</tbody></table>
+
+## Verification limits
+
+The IndexedDB tests use a controlled asynchronous double and native Node Blob URLs; they do not emulate every browser quota, process-kill or incognito implementation. The ASGI composition test uses a lightweight Gradio mount adapter with real FastAPI/Starlette routing and CORS; it does not validate the Gradio 5 SDK startup or ZeroGPU supervisor. Local sign-off is a persisted demo timestamp, not an authenticated digital signature. Reference: [Gradio mounting](https://gradio.app/docs/gradio/mount_gradio_app), [Hugging Face ZeroGPU execution](https://huggingface.co/docs/hub/spaces-zerogpu).
+
+## Final acceptance evidence
+
+Verification on 27 November 2026: 198 automated Python tests succeeded in 376.22 seconds; compileall, Ruff and Rule 10 integrity checks succeeded. Fourteen frontend behavior tests succeeded. The final production npm build exited 0 with no TypeScript/ESLint errors; Windows sandbox builds encountered EPERM even after cache cleanup, and the successful final build ran with approved execution outside that sandbox. One existing PyTorch deprecation warning remains. The temporary verification directory was removed. Real-browser incognito/process-exit behavior and the Gradio/ZeroGPU cloud runtime remain unverified.
+
+Commands executed: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1`; `node --test scripts/test-pacs.cjs`; `npm run build`. The project runner, frontend behavior suite and final production build all returned exit code 0. The original seven frontend tests were reviewed: two obsolete Worklist/CSV tests were removed with their unused helper exports; nine relevant history/settings/control tests were added, giving fourteen in total. Two ASGI/concurrency Python checks increased the project suite from 196 to 198.
+
+The active preview is acquired inside a file-dependent React effect and released by its cleanup, so batched selections do not allocate orphan intermediate URLs. History thumbnails have separate ownership. Storage failures for saves, deletion and clear trigger a visible session warning. No temporary runner scripts or debug dumps remain. Official commit/push remains with Antigravity.

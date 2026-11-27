@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { installPopoverDismissal } from "../lib/pacsUtils";
 import { ExternalLink, History, Settings, ShieldCheck, Sparkles } from "lucide-react";
 
 interface Props {
@@ -44,13 +45,8 @@ export default function PacsHeader({
 
   useEffect(() => {
     if (!settingsOpen) return;
-    const onDocClick = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setSettingsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
+    if (!popoverRef.current) return;
+    return installPopoverDismissal(popoverRef.current, () => setSettingsOpen(false));
   }, [settingsOpen]);
 
   const visibleModels = MODELS.filter(([id]) => availableModels.includes(id));
@@ -118,6 +114,7 @@ export default function PacsHeader({
               }`}
               title="Analysis Settings"
               aria-label="Analysis Settings"
+              aria-expanded={settingsOpen}
             >
               <Settings className="h-4 w-4" />
             </button>
@@ -167,7 +164,7 @@ export default function PacsHeader({
                       Precision Mode
                     </div>
                     <p className="text-[11px] text-[#8C9DB0] leading-snug">
-                      3-pass multi-view analysis for higher accuracy
+                      Original, horizontal-flip and contrast-adjusted views
                     </p>
                   </div>
                   <button
