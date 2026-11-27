@@ -70,48 +70,51 @@
 ---
 
 ## 1. MÔ HÌNH HỢP TÁC SONG SONG (DUAL-AGENT SYNERGY MODEL)
-### Antigravity (Chief AI Architect & Quality Gatekeeper) & CommandCode Go (Tactical Coding & Execution Engine)
+### Antigravity (Lead Architect & Execution Engineer) ⟷ Codex Agent (Independent Code Reviewer & QA Tester)
 
-Nền tảng **LungRay** vận hành theo mô hình phân tầng chuyên trách (Two-Tier Agent Architecture) giữa 2 trợ lý AI:
+Nền tảng **LungRay** vận hành theo mô hình **Builder ⟷ Independent Reviewer** khép kín giữa 2 trợ lý AI nhằm triệt tiêu điểm mù (blind spots) khi tự viết và tự kiểm tra:
 
-1. **Antigravity (IDE Agent - Chief Architect & Quality Gatekeeper)**:
-   - **Vai trò**: Lãnh đạo kỹ thuật & Cố vấn quy trình (Senior AI Lead 10+ YOE).
-   - **Trách nhiệm**: Cùng Kỹ sư Trưởng (User) lên kế hoạch triển khai tổng thể (`/plan`, `/grill-me`), thiết kế kiến trúc hệ thống, xây dựng workflow, biên soạn Handoff Specification cho CommandCode, yêu cầu CommandCode hiện thực hóa chặt chẽ logic, kiểm toán chất lượng code qua `git diff`, và độc quyền phụ trách `git commit` / `git push`.
-2. **CommandCode CLI (Terminal Agent - Tactical Coding & Execution Engine)**:
-   - **Vai trò**: Kỹ sư lập trình & tối ưu chiến thuật (Gói Go $1 / Terminal CLI Engine).
-   - **Trách nhiệm tối cao**: **Chịu trách nhiệm 100% về tính chính xác của mã nguồn, logic kỹ thuật, thuật toán và toàn bộ Unit Tests cho Team.**
-   - **Quy tắc nghiệm thu bất di bất dịch**: Trước khi nghiệm thu bất kỳ task nào, cả hai Agent **BẮT BUỘC** phải xác nhận MỘT lệnh duy nhất chạy đạt 100% PASS:
+1. **Antigravity (IDE Agent — Lead Architect & Execution Engineer)**:
+   - **Vai trò**: Kiến trúc sư trưởng & Kỹ sư thực thi trực tiếp (Senior AI & Fullstack Lead).
+   - **Trách nhiệm**: Cùng Kỹ sư Trưởng (User) chốt thiết kế (`/grill-me`, `/plan`), trực tiếp lập trình tính năng (Backend FastAPI, Frontend Next.js PACS, AI Pipeline, Deployment), tự kiểm tra biên dịch ban đầu, thực hiện `git commit` / `git push`, và biên soạn **Master Review & Testing Prompt** bàn giao cho Codex Agent kiểm toán độc lập.
+2. **Codex Agent (CLI Agent — Independent Code Reviewer, QA Auditor & Test Engineer)**:
+   - **Vai trò**: Kỹ sư kiểm toán mã nguồn độc lập & Chuyên gia QA/Testing.
+   - **Trách nhiệm tối cao**: **Phản biện độc lập toàn bộ mã nguồn Antigravity vừa thực thi, rà soát logic, race conditions, memory leaks, edge-cases, viết bổ sung Unit Tests còn thiếu và xác nhận tính trung thực kỹ thuật.**
+   - **Quy tắc nghiệm thu bất di bất dịch**: Trước khi đóng bất kỳ đợt review nào, Codex Agent **BẮT BUỘC** xác nhận cả bộ kiểm thử Python lẫn Frontend đạt 100%:
      ```powershell
      powershell -File scripts/verify.ps1
+     cd app/frontend; node --test scripts/test-pacs.cjs; npm run build
      ```
 
 ```mermaid
 graph TD
     User(["Kỹ sư Trưởng (User)"])
     
-    subgraph GovernanceTier ["TIER 1: KIẾN TRÚC & KIỂM SOÁT CHẤT LƯỢNG (ANTIGRAVITY)"]
-        AG["Antigravity IDE Agent\n(Chief AI Architect & Quality Gatekeeper)"]
-        Plan["Kế hoạch, Thiết kế & Master Prompt"]
-        Gate["Kiểm duyệt Git Diff & 9 Ràng Buộc Sống Còn"]
+    subgraph BuilderTier ["TIER 1: KIẾN TRÚC & THỰC THI TRỰC TIẾP (ANTIGRAVITY)"]
+        AG["Antigravity IDE Agent\n(Lead Architect & Execution Engineer)"]
+        Plan["Chốt yêu cầu (/grill-me, /plan)"]
+        Build["Lập trình tính năng, UI/UX, Backend, Deploy"]
+        Prompt["Sinh Master Review & Testing Prompt"]
     end
 
-    subgraph TacticalTier ["TIER 2: THỰC THI CHIẾN THUẬT (COMMANDCODE CLI GO)"]
-        CC["CommandCode CLI Go\n(Tactical Coding & Execution Engine)"]
-        Code["Code Logic, Bug Fixes, Hyperparameters"]
-        Test["Self-Testing: scripts/verify.ps1 & pytest"]
+    subgraph ReviewerTier ["TIER 2: KIỂM TOÁN ĐỘC LẬP & QA TESTING (CODEX AGENT)"]
+        CX["Codex CLI Agent\n(Independent Reviewer & QA Tester)"]
+        Audit["Rà soát Git Diff, Edge-Cases, Race Conditions"]
+        QA["Viết Unit Tests & Chạy verify.ps1 + npm run build"]
     end
 
     Git[("GitHub Repo: origin/main")]
 
     User -->|Yêu cầu bài toán| AG
     AG --> Plan
-    Plan -->|Master Prompt & Phase Task| CC
-    CC --> Code
-    Code --> Test
-    Test -->|Báo cáo hoàn thành & Result log| AG
-    AG --> Gate
-    Gate -->|Official Git Commit & Push| Git
-    Git -->|Phản hồi hoàn tất| User
+    Plan --> Build
+    Build --> Prompt
+    Prompt -->|Chuyển giao Review Prompt| CX
+    CX --> Audit
+    Audit --> QA
+    QA -->|Báo cáo Kiểm toán & Vá lỗi nếu có| AG
+    AG -->|Official Git Commit & Push| Git
+    Git -->|Bàn giao Production| User
 ```
 
 ---
