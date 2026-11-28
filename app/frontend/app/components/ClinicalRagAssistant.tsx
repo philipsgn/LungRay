@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, Search, Sparkles, ExternalLink, ShieldAlert } from "lucide-react";
+import { BookOpen, Search, Sparkles, ExternalLink, ShieldAlert, CheckCircle2, GitBranch } from "lucide-react";
 import { PredictionResponse, RagQueryResponse } from "../types";
 import { queryClinicalRag } from "../lib/api";
 
@@ -73,14 +73,27 @@ export default function ClinicalRagAssistant({ prediction, ratio }: Props) {
               Grounded Clinical Knowledge Assistant (RAG)
             </h3>
             <p className="text-xs text-[#8C9DB0]">
-              Offline deterministic evidence retrieval · WHO ICD-10 &amp; Fleischner Society (2024)
+              LangGraph Corrective RAG (BM25 + TF-IDF RRF) · WHO ICD-10 &amp; Fleischner Society (2024)
             </p>
           </div>
         </div>
 
-        <span className="rounded-md bg-[#111C2B] border border-[#1C2937] px-2.5 py-1 text-[10px] font-mono font-medium text-[#3FD0C4]">
-          Zero-Hallucination Verified
-        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {result?.synthesis_mode && (
+            <span className="rounded-md bg-[#111C2B] border border-[#1C2937] px-2 py-1 text-[10px] font-mono text-[#8C9DB0]">
+              {result.synthesis_mode === "gemini_grounded" ? "Gemini Grounded" : "Offline Grounded"}
+            </span>
+          )}
+          {typeof result?.latency_ms === "number" && (
+            <span className="rounded-md bg-[#111C2B] border border-[#1C2937] px-2 py-1 text-[10px] font-mono text-[#8C9DB0]">
+              {result.latency_ms.toFixed(1)} ms
+            </span>
+          )}
+          <span className="rounded-md bg-[#111C2B] border border-[#1C2937] px-2.5 py-1 text-[10px] font-mono font-medium text-[#3FD0C4] inline-flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" />
+            {result?.faithfulness_verified === false ? "Guardrail Fallback" : "Citation Verified"}
+          </span>
+        </div>
       </div>
 
       {!safe ? (
@@ -135,18 +148,38 @@ export default function ClinicalRagAssistant({ prediction, ratio }: Props) {
           </form>
 
           {/* Retrieval Status or Structured Answer */}
-          <div aria-live="polite" className="text-xs text-[#E6EDF4] leading-relaxed">
+          <div aria-live="polite" className="text-xs text-[#E6EDF4] leading-relaxed space-y-2">
             {busy ? (
               <div className="flex items-center gap-2 text-[#3FD0C4] animate-pulse">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Retrieving evidence-based knowledge cards...</span>
+                <span>Executing LangGraph CRAG (Safety Gate → Hybrid RRF → Citation Verifier)...</span>
               </div>
             ) : error ? (
               <span className="text-rose-400">{error}</span>
             ) : (
-              <div className="p-3 rounded-lg bg-[#111C2B]/80 border border-[#1C2937] text-xs text-[#E6EDF4] leading-relaxed">
-                {result?.answer}
-              </div>
+              <>
+                {result?.graph_trace && result.graph_trace.length > 0 && (
+                  <div
+                    className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono text-[#8C9DB0]"
+                    aria-label="LangGraph execution trace"
+                  >
+                    <GitBranch className="w-3 h-3 text-[#3FD0C4] shrink-0" />
+                    {result.graph_trace.map((step, idx) => (
+                      <span key={`${step}-${idx}`} className="inline-flex items-center gap-1">
+                        <span className="rounded bg-[#111C2B] border border-[#1C2937] px-1.5 py-0.5 text-[#C8D4E2]">
+                          {step}
+                        </span>
+                        {idx < (result.graph_trace?.length ?? 0) - 1 && (
+                          <span className="text-[#566475]">→</span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="p-3 rounded-lg bg-[#111C2B]/80 border border-[#1C2937] text-xs text-[#E6EDF4] leading-relaxed">
+                  {result?.answer}
+                </div>
+              </>
             )}
           </div>
 
@@ -157,16 +190,31 @@ export default function ClinicalRagAssistant({ prediction, ratio }: Props) {
                 Curated Reference Cards ({result.retrieved_cards.length}):
               </span>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {result.retrieved_cards.map((card) => (
+                {result.retrieved_cards.map((card) => {
+                  const cardChunks = (result.retrieval_chunks ?? []).filter(
+                    (ch) => ch.disease === card.disease
+                  );
+                  const topRel = cardChunks.reduce(
+                    (best, ch) => Math.max(best, ch.relevance_score),
+                    0
+                  );
+                  return (
                   <details
                     key={card.disease}
                     open
                     className="rounded-xl border border-[#1C2937] bg-[#111C2B]/60 p-3.5 space-y-2"
                   >
-                    <summary className="cursor-pointer text-xs font-bold text-[#E6EDF4] flex items-center justify-between">
+                    <summary className="cursor-pointer text-xs font-bold text-[#E6EDF4] flex items-center justify-between gap-2">
                       <span className="text-[#3FD0C4]">{card.disease}</span>
-                      <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#070B12] text-[#F2A93B] border border-[#1C2937]">
-                        ICD-10: {card.icd10}
+                      <span className="flex items-center gap-1.5">
+                        {topRel > 0 && (
+                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#0A7A74]/25 text-[#3FD0C4] border border-[#3FD0C4]/30">
+                            Rel {(topRel * 100).toFixed(0)}%
+                          </span>
+                        )}
+                        <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#070B12] text-[#F2A93B] border border-[#1C2937]">
+                          ICD-10: {card.icd10}
+                        </span>
                       </span>
                     </summary>
 
@@ -195,7 +243,8 @@ export default function ClinicalRagAssistant({ prediction, ratio }: Props) {
                       {card.coding_note}
                     </p>
                   </details>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

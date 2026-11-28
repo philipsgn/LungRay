@@ -136,9 +136,28 @@ export interface RagQueryRequest {
   is_safe: boolean;
   in_lung_ratio?: number | null;
 }
+export interface RagEvidenceChunk {
+  chunk_id: string;
+  disease: string;
+  facet: string;
+  icd10: string;
+  text: string;
+  bm25_score: number;
+  tfidf_cosine: number;
+  rrf_score: number;
+  relevance_score: number;
+  citations: string[];
+}
 export interface RagQueryResponse {
   status: string;
   answer: string;
   citations: string[];
   retrieved_cards: RagKnowledgeCard[];
+  retrieval_chunks?: RagEvidenceChunk[];
+  graph_trace?: string[];
+  graph_engine?: string;
+  synthesis_mode?: string;
+  faithfulness_verified?: boolean;
+  hallucination_guard_triggered?: boolean;
+  latency_ms?: number | null;
 }

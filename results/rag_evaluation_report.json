@@ -1,0 +1,688 @@
+{
+  "benchmark_name": "LungRay-Clinical-RAG-Golden-40",
+  "version": "1.0.0",
+  "total_cases": 40,
+  "retrieval_cases": 36,
+  "ood_and_abstention_cases": 4,
+  "graph_engine": "deterministic_state_machine",
+  "synthesis_mode": "offline_extractive",
+  "metrics": {
+    "status_accuracy": 1.0,
+    "recall_at_3": 1.0,
+    "mrr": 1.0,
+    "context_precision": 0.963,
+    "facet_routing_accuracy": 1.0,
+    "citation_accuracy": 1.0,
+    "faithfulness_rate": 1.0,
+    "ood_and_abstention_accuracy": 1.0,
+    "guardrail_compliance": 1.0,
+    "mean_latency_ms": 1.964,
+    "p95_latency_ms": 1.356
+  },
+  "cases": [
+    {
+      "id": "SH-01",
+      "category": "single_hallmarks",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 47.21,
+      "top_chunks": [
+        "tuberculosis_hallmarks",
+        "tuberculosis_differential",
+        "tuberculosis_workup"
+      ]
+    },
+    {
+      "id": "SH-02",
+      "category": "single_hallmarks",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.65,
+      "top_chunks": [
+        "effusion_hallmarks",
+        "effusion_differential",
+        "effusion_workup"
+      ]
+    },
+    {
+      "id": "SH-03",
+      "category": "single_hallmarks",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 1.21,
+      "top_chunks": [
+        "pneumothorax_hallmarks",
+        "pneumothorax_differential",
+        "pneumothorax_workup"
+      ]
+    },
+    {
+      "id": "SH-04",
+      "category": "single_hallmarks",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.79,
+      "top_chunks": [
+        "edema_hallmarks",
+        "edema_differential",
+        "edema_workup"
+      ]
+    },
+    {
+      "id": "SH-05",
+      "category": "single_hallmarks",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 0.5,
+      "faithfulness_verified": true,
+      "latency_ms": 1.23,
+      "top_chunks": [
+        "hernia_hallmarks",
+        "pneumonia_hallmarks",
+        "hernia_differential"
+      ]
+    },
+    {
+      "id": "SH-06",
+      "category": "single_hallmarks",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.95,
+      "top_chunks": [
+        "cardiomegaly_hallmarks",
+        "cardiomegaly_differential",
+        "cardiomegaly_workup"
+      ]
+    },
+    {
+      "id": "SH-07",
+      "category": "single_hallmarks",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.81,
+      "top_chunks": [
+        "emphysema_hallmarks",
+        "emphysema_differential",
+        "emphysema_workup"
+      ]
+    },
+    {
+      "id": "SH-08",
+      "category": "single_hallmarks",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.84,
+      "top_chunks": [
+        "fibrosis_hallmarks",
+        "fibrosis_differential",
+        "fibrosis_workup"
+      ]
+    },
+    {
+      "id": "SH-09",
+      "category": "single_hallmarks",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.84,
+      "top_chunks": [
+        "mass_hallmarks",
+        "mass_differential",
+        "mass_workup"
+      ]
+    },
+    {
+      "id": "SH-10",
+      "category": "single_hallmarks",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.66,
+      "top_chunks": [
+        "covid_19_hallmarks",
+        "covid_19_differential",
+        "covid_19_workup"
+      ]
+    },
+    {
+      "id": "DD-01",
+      "category": "differential",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.77,
+      "top_chunks": [
+        "pneumonia_differential",
+        "pneumonia_hallmarks",
+        "pneumonia_workup"
+      ]
+    },
+    {
+      "id": "DD-02",
+      "category": "differential",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 0.16666666666666666,
+      "faithfulness_verified": true,
+      "latency_ms": 0.79,
+      "top_chunks": [
+        "atelectasis_differential",
+        "effusion_differential",
+        "consolidation_differential"
+      ]
+    },
+    {
+      "id": "DD-03",
+      "category": "differential",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 1.33,
+      "top_chunks": [
+        "nodule_differential",
+        "nodule_workup",
+        "nodule_hallmarks"
+      ]
+    },
+    {
+      "id": "DD-04",
+      "category": "differential",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 1.16,
+      "top_chunks": [
+        "pleural_thickening_differential",
+        "pleural_thickening_hallmarks",
+        "pleural_thickening_workup"
+      ]
+    },
+    {
+      "id": "DD-05",
+      "category": "differential",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.58,
+      "top_chunks": [
+        "consolidation_differential",
+        "consolidation_hallmarks",
+        "consolidation_workup"
+      ]
+    },
+    {
+      "id": "DD-06",
+      "category": "differential",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.64,
+      "top_chunks": [
+        "infiltration_differential",
+        "infiltration_hallmarks",
+        "infiltration_workup"
+      ]
+    },
+    {
+      "id": "DD-07",
+      "category": "differential",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 1.07,
+      "top_chunks": [
+        "tuberculosis_differential",
+        "tuberculosis_workup",
+        "tuberculosis_hallmarks"
+      ]
+    },
+    {
+      "id": "DD-08",
+      "category": "differential",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.67,
+      "top_chunks": [
+        "pneumothorax_differential",
+        "pneumothorax_hallmarks",
+        "pneumothorax_workup"
+      ]
+    },
+    {
+      "id": "WU-01",
+      "category": "workup_coding",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.69,
+      "top_chunks": [
+        "tuberculosis_workup",
+        "tuberculosis_differential",
+        "tuberculosis_hallmarks"
+      ]
+    },
+    {
+      "id": "WU-02",
+      "category": "workup_coding",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.86,
+      "top_chunks": [
+        "effusion_workup",
+        "effusion_differential",
+        "effusion_hallmarks"
+      ]
+    },
+    {
+      "id": "WU-03",
+      "category": "workup_coding",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.97,
+      "top_chunks": [
+        "mass_workup",
+        "mass_hallmarks",
+        "mass_differential"
+      ]
+    },
+    {
+      "id": "WU-04",
+      "category": "workup_coding",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.87,
+      "top_chunks": [
+        "covid_19_workup",
+        "covid_19_differential",
+        "covid_19_hallmarks"
+      ]
+    },
+    {
+      "id": "WU-05",
+      "category": "workup_coding",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.92,
+      "top_chunks": [
+        "pneumothorax_workup",
+        "pneumothorax_hallmarks",
+        "pneumothorax_differential"
+      ]
+    },
+    {
+      "id": "WU-06",
+      "category": "workup_coding",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.86,
+      "top_chunks": [
+        "fibrosis_workup",
+        "fibrosis_differential",
+        "fibrosis_hallmarks"
+      ]
+    },
+    {
+      "id": "WU-07",
+      "category": "workup_coding",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.9,
+      "top_chunks": [
+        "emphysema_workup",
+        "emphysema_differential",
+        "emphysema_hallmarks"
+      ]
+    },
+    {
+      "id": "WU-08",
+      "category": "workup_coding",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.81,
+      "top_chunks": [
+        "cardiomegaly_workup",
+        "cardiomegaly_hallmarks",
+        "cardiomegaly_differential"
+      ]
+    },
+    {
+      "id": "MP-01",
+      "category": "multi_pathology",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.93,
+      "top_chunks": [
+        "cardiomegaly_hallmarks",
+        "effusion_hallmarks",
+        "edema_hallmarks"
+      ]
+    },
+    {
+      "id": "MP-02",
+      "category": "multi_pathology",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 1.04,
+      "top_chunks": [
+        "effusion_workup",
+        "pneumonia_workup",
+        "effusion_differential"
+      ]
+    },
+    {
+      "id": "MP-03",
+      "category": "multi_pathology",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.7,
+      "top_chunks": [
+        "mass_differential",
+        "nodule_differential",
+        "nodule_workup"
+      ]
+    },
+    {
+      "id": "MP-04",
+      "category": "multi_pathology",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.47,
+      "top_chunks": [
+        "atelectasis_hallmarks",
+        "consolidation_hallmarks",
+        "atelectasis_differential"
+      ]
+    },
+    {
+      "id": "MP-05",
+      "category": "multi_pathology",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.71,
+      "top_chunks": [
+        "fibrosis_workup",
+        "tuberculosis_workup",
+        "fibrosis_differential"
+      ]
+    },
+    {
+      "id": "MP-06",
+      "category": "multi_pathology",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.53,
+      "top_chunks": [
+        "pneumothorax_hallmarks",
+        "pneumothorax_differential",
+        "pneumothorax_workup"
+      ]
+    },
+    {
+      "id": "SG-01",
+      "category": "guardrail_crosslingual",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 1.85,
+      "top_chunks": [
+        "covid_19_workup",
+        "covid_19_hallmarks",
+        "covid_19_differential"
+      ]
+    },
+    {
+      "id": "SG-02",
+      "category": "guardrail_crosslingual",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.66,
+      "top_chunks": [
+        "pneumothorax_hallmarks",
+        "pneumothorax_differential",
+        "pneumothorax_workup"
+      ]
+    },
+    {
+      "id": "SG-03",
+      "category": "guardrail_crosslingual",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.52,
+      "top_chunks": [
+        "tuberculosis_workup",
+        "tuberculosis_differential",
+        "tuberculosis_hallmarks"
+      ]
+    },
+    {
+      "id": "SG-04",
+      "category": "guardrail_crosslingual",
+      "expected_status": "GROUNDED_REFERENCE",
+      "actual_status": "GROUNDED_REFERENCE",
+      "status_ok": true,
+      "recall_at_3": 1.0,
+      "reciprocal_rank": 1.0,
+      "context_precision": 1.0,
+      "faithfulness_verified": true,
+      "latency_ms": 0.44,
+      "top_chunks": [
+        "effusion_hallmarks",
+        "effusion_differential",
+        "effusion_workup"
+      ]
+    },
+    {
+      "id": "OOD-01",
+      "category": "ood_abstention",
+      "expected_status": "BLOCKED_OOD",
+      "actual_status": "BLOCKED_OOD",
+      "status_ok": true,
+      "recall_at_3": null,
+      "reciprocal_rank": null,
+      "context_precision": null,
+      "faithfulness_verified": true,
+      "latency_ms": 0.01,
+      "top_chunks": []
+    },
+    {
+      "id": "OOD-02",
+      "category": "ood_abstention",
+      "expected_status": "BLOCKED_OOD",
+      "actual_status": "BLOCKED_OOD",
+      "status_ok": true,
+      "recall_at_3": null,
+      "reciprocal_rank": null,
+      "context_precision": null,
+      "faithfulness_verified": true,
+      "latency_ms": 0.0,
+      "top_chunks": []
+    },
+    {
+      "id": "OOD-03",
+      "category": "ood_abstention",
+      "expected_status": "NO_MATCH",
+      "actual_status": "NO_MATCH",
+      "status_ok": true,
+      "recall_at_3": null,
+      "reciprocal_rank": null,
+      "context_precision": null,
+      "faithfulness_verified": true,
+      "latency_ms": 0.72,
+      "top_chunks": []
+    },
+    {
+      "id": "OOD-04",
+      "category": "ood_abstention",
+      "expected_status": "NO_MATCH",
+      "actual_status": "NO_MATCH",
+      "status_ok": true,
+      "recall_at_3": null,
+      "reciprocal_rank": null,
+      "context_precision": null,
+      "faithfulness_verified": true,
+      "latency_ms": 0.88,
+      "top_chunks": []
+    }
+  ]
+}

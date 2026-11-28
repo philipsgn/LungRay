@@ -126,8 +126,28 @@ class RagQueryRequest(BaseModel):
     in_lung_ratio: Optional[float] = Field(default=None, ge=0.0, le=1.0)
 
 
+class RagEvidenceChunk(BaseModel):
+    chunk_id: str
+    disease: str
+    facet: str
+    icd10: str
+    text: str
+    bm25_score: float = 0.0
+    tfidf_cosine: float = 0.0
+    rrf_score: float = 0.0
+    relevance_score: float = 0.0
+    citations: list[str] = Field(default_factory=list)
+
+
 class RagQueryResponse(BaseModel):
     status: str
     answer: str
     citations: list[str]
     retrieved_cards: list[RagKnowledgeCard]
+    retrieval_chunks: list[RagEvidenceChunk] = Field(default_factory=list)
+    graph_trace: list[str] = Field(default_factory=list)
+    graph_engine: str = Field(default="langgraph_state_graph")
+    synthesis_mode: str = Field(default="offline_extractive")
+    faithfulness_verified: bool = Field(default=True)
+    hallucination_guard_triggered: bool = Field(default=False)
+    latency_ms: Optional[float] = Field(default=None)

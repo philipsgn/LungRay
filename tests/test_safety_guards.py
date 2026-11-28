@@ -128,8 +128,8 @@ def test_rag_no_match_and_low_energy_context() -> None:
     from src.safety.rag_knowledge import query_clinical_rag
     assert query_clinical_rag("unrelated topic", [], [])["status"] == "NO_MATCH"
     result = query_clinical_rag("Giải thích độ tin cậy & vùng giải phẫu?", ["Effusion"], [], in_lung_ratio=0.65)
-    assert "65.0%" in result["answer"] and "Dưới 80%" in result["answer"]
-    assert "chưa có định vị xác thực" in result["answer"]
+    assert "65.0%" in result["answer"] and "< 80%" in result["answer"]
+    assert "unverified localization" in result["answer"]
     # A named question is reference knowledge, not an additional positive finding.
     result = query_clinical_rag("tràn khí màng phổi", ["Effusion"], [])
     assert [card["disease"] for card in result["retrieved_cards"]] == ["Pneumothorax"]

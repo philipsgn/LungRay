@@ -1,0 +1,175 @@
+{
+  "schema_version": "2.0.0",
+  "language": "en",
+  "description": "Curated thoracic radiology evidence corpus for LungRay LangGraph Corrective RAG (CRAG). All 16 pathologies decomposed into 48 atomic chunks (3 facets per pathology) with authoritative guideline citations.",
+  "guidelines": {
+    "ICD": "WHO ICD-10 classification (reference categories): https://icd.who.int/browse10/2019/en",
+    "FLEISCHNER": "Fleischner Society Glossary of Terms for Thoracic Imaging (2024), terminology: https://doi.org/10.1148/radiol.232558",
+    "TB_WHO": "WHO consolidated guidelines on tuberculosis, Module 3: diagnosis (2025): https://tbksp.who.int/sites/default/files/2025-08/9789240110991-eng.pdf",
+    "COVID_WHO": "WHO guidelines on the use of chest imaging in COVID-19 (2022): https://www.who.int/publications/i/item/9789240055704",
+    "BTS_PLEURAL": "British Thoracic Society Guideline for Pleural Disease (2023): https://doi.org/10.1136/thorax-2022-219784"
+  },
+  "coding_note_default": "Candidate ICD-10 reference category only; requires physician confirmation. A16.2 applies to bacteriologically unconfirmed pulmonary TB; U07.1 requires viral confirmation; Hernia requires anatomical subtype confirmation.",
+  "diseases": [
+    {
+      "disease": "Atelectasis",
+      "slug": "atelectasis",
+      "icd10": "J98.1",
+      "aliases": ["Atelectasis", "lung collapse", "volume loss", "lobar collapse", "xep phoi", "Xẹp phổi"],
+      "hallmarks": "Increased parenchymal opacity accompanied by regional volume loss, interlobar fissure displacement, ipsilateral hemidiaphragm elevation, or mediastinal shift toward the affected side.",
+      "differential": "Lobar consolidation without volume loss, pleural effusion (causes contralateral mediastinal shift), and subpulmonic fluid collection.",
+      "followup": "Correlate with prior radiographs and clinical airway status; consider contrast-enhanced chest CT if lobar collapse persists or endobronchial obstruction is suspected.",
+      "citations": ["ICD", "FLEISCHNER"]
+    },
+    {
+      "disease": "Cardiomegaly",
+      "slug": "cardiomegaly",
+      "icd10": "I51.7",
+      "aliases": ["Cardiomegaly", "enlarged heart", "cardiothoracic ratio", "bong tim to", "Bóng tim to"],
+      "hallmarks": "Enlarged cardiac silhouette with cardiothoracic ratio > 0.50 on an upright posteroanterior (PA) chest radiograph; anteroposterior (AP) projection and poor inspiration can cause geometric pseudo-cardiomegaly.",
+      "differential": "AP projection magnification, pericardial effusion (water-bottle configuration), anterior mediastinal mass, and pectus excavatum.",
+      "followup": "Verify radiographic projection (PA vs AP) and inspiratory effort; clinician may consider transthoracic echocardiography and BNP correlation when heart failure or pericardial disease is suspected.",
+      "citations": ["ICD", "FLEISCHNER"]
+    },
+    {
+      "disease": "Effusion",
+      "slug": "effusion",
+      "icd10": "J90",
+      "aliases": ["Effusion", "pleural effusion", "pleural fluid", "meniscus sign", "costophrenic blunting", "tran dich mang phoi", "Tràn dịch màng phổi"],
+      "hallmarks": "Blunting of the costophrenic sulcus with a homogeneous dependent opacity forming a concave upward meniscus along the lateral chest wall on upright views.",
+      "differential": "Pleural thickening, basilar atelectasis, elevated hemidiaphragm, and loculated empyema or hemothorax.",
+      "followup": "Point-of-care thoracic ultrasound is recommended to confirm free versus loculated fluid and guide diagnostic thoracentesis when clinically indicated per BTS Pleural Disease guidance.",
+      "citations": ["ICD", "FLEISCHNER", "BTS_PLEURAL"]
+    },
+    {
+      "disease": "Infiltration",
+      "slug": "infiltration",
+      "icd10": "R91",
+      "aliases": ["Infiltration", "pulmonary infiltrate", "airspace opacity", "tham nhiem", "Thâm nhiễm"],
+      "hallmarks": "Non-specific parenchymal opacity (deprecated as a standalone descriptor by Fleischner Society in favor of specific morphology such as ground-glass opacity or consolidation).",
+      "differential": "Community-acquired pneumonia, cardiogenic or non-cardiogenic pulmonary edema, pulmonary hemorrhage, aspiration, and focal atelectasis.",
+      "followup": "Describe exact zonal distribution and correlate with fever, leukocytosis, and prior films; consider chest CT when opacity persists or morphology remains indeterminate.",
+      "citations": ["ICD", "FLEISCHNER"]
+    },
+    {
+      "disease": "Mass",
+      "slug": "mass",
+      "icd10": "R91",
+      "aliases": ["Mass", "lung mass", "pulmonary mass", "focal mass", "khoi phoi", "Khối phổi"],
+      "hallmarks": "Rounded or lobulated focal parenchymal opacity measuring > 30 mm in diameter; plain chest radiography cannot definitively distinguish benign from malignant etiology.",
+      "differential": "Primary bronchogenic carcinoma, solitary metastasis, round pneumonia, lung abscess, granuloma, and superimposed extrapulmonary structure.",
+      "followup": "Dedicated contrast-enhanced chest CT is recommended for morphological characterization, staging, and multidisciplinary tissue sampling assessment.",
+      "citations": ["ICD", "FLEISCHNER"]
+    },
+    {
+      "disease": "Nodule",
+      "slug": "nodule",
+      "icd10": "R91",
+      "aliases": ["Nodule", "pulmonary nodule", "lung nodule", "solitary pulmonary nodule", "not phoi", "Nốt phổi"],
+      "hallmarks": "Well- or poorly-defined rounded focal opacity measuring <= 30 mm in diameter surrounded by aerated lung parenchyma; must exclude nipple shadow or rib osteophyte overlap.",
+      "differential": "Calcified granuloma, primary lung neoplasm, metastatic nodule, hamartoma, nipple shadow, and cutaneous lesion.",
+      "followup": "Compare with historical radiographs to assess temporal stability; perform thin-section chest CT to confirm true parenchymal location and apply Fleischner nodule risk stratification.",
+      "citations": ["ICD", "FLEISCHNER"]
+    },
+    {
+      "disease": "Pneumonia",
+      "slug": "pneumonia",
+      "icd10": "J18.9",
+      "aliases": ["Pneumonia", "lung infection", "lobar pneumonia", "bronchopneumonia", "viem phoi", "Viêm phổi"],
+      "hallmarks": "Airspace consolidation or patchy parenchymal opacity, frequently with air bronchograms and silhouette sign obscuring adjacent cardiac or diaphragmatic borders.",
+      "differential": "Pulmonary edema, alveolar hemorrhage, pulmonary infarction, organizing pneumonia, and atelectasis.",
+      "followup": "Correlate with clinical severity scores, inflammatory biomarkers, and microbiology per local protocol; consider follow-up radiography in high-risk adults to document radiographic resolution.",
+      "citations": ["ICD", "FLEISCHNER"]
+    },
+    {
+      "disease": "Pneumothorax",
+      "slug": "pneumothorax",
+      "icd10": "J93.9",
+      "aliases": ["Pneumothorax", "collapsed lung", "visceral pleural line", "tension pneumothorax", "tran khi mang phoi", "Tràn khí màng phổi"],
+      "hallmarks": "Thin sharp white visceral pleural line displaced away from the chest wall with complete absence of peripheral bronchovascular markings beyond the line.",
+      "differential": "Skin fold artifact (vessels continue beyond the edge), giant emphysematous bulla, pneumomediastinum, and medial scapular border.",
+      "followup": "Immediate emergency clinical assessment if dyspnea, hypoxia, or hemodynamic instability (tension physiology) is present; physician determines observation, aspiration, or chest drain placement per BTS guidance.",
+      "citations": ["ICD", "FLEISCHNER", "BTS_PLEURAL"]
+    },
+    {
+      "disease": "Consolidation",
+      "slug": "consolidation",
+      "icd10": "R91",
+      "aliases": ["Consolidation", "airspace consolidation", "air bronchogram", "dong dac", "Đông đặc"],
+      "hallmarks": "Homogeneous increase in pulmonary parenchymal attenuation that obscures underlying vessels and airway walls, often containing patent air bronchograms without major volume loss.",
+      "differential": "Infectious pneumonia, cardiogenic or non-cardiogenic edema, diffuse alveolar hemorrhage, mucinous adenocarcinoma, and aspiration.",
+      "followup": "Consolidation is a radiographic pattern rather than a final etiology; correlate with clinical history, laboratory markers, and prior studies to narrow infectious versus non-infectious causes.",
+      "citations": ["ICD", "FLEISCHNER"]
+    },
+    {
+      "disease": "Edema",
+      "slug": "edema",
+      "icd10": "J81",
+      "aliases": ["Edema", "pulmonary edema", "kerley b lines", "bat wing", "vascular congestion", "phu phoi", "Phù phổi"],
+      "hallmarks": "Bilateral perihilar airspace opacities (bat-wing distribution), upper-lobe pulmonary venous cephalization, peribronchial cuffing, Kerley B septal lines, and often bilateral pleural effusions.",
+      "differential": "Atypical or viral pneumonia, diffuse alveolar hemorrhage, acute respiratory distress syndrome (ARDS), and lymphangitic carcinomatosis.",
+      "followup": "Prompt cardiopulmonary assessment including oxygen saturation, volume status, and cardiac biomarkers; acute hypoxemic respiratory distress requires urgent stabilization.",
+      "citations": ["ICD", "FLEISCHNER"]
+    },
+    {
+      "disease": "Emphysema",
+      "slug": "emphysema",
+      "icd10": "J43.9",
+      "aliases": ["Emphysema", "hyperinflation", "copd", "flattened diaphragm", "bullae", "khi phe thung", "Khí phế thũng"],
+      "hallmarks": "Bilateral pulmonary hyperlucency with attenuated peripheral vascular markings, flattened low-lying hemidiaphragms, widened retrosternal airspace, and possible focal bullae.",
+      "differential": "Over-penetrated exposure technique, acute asthma hyperinflation, unilateral Swyer-James syndrome, and large pneumothorax.",
+      "followup": "Correlate with smoking history and spirometry (FEV1/FVC) for COPD diagnosis; chest CT is reserved for surgical/bronchoscopic lung volume reduction or bullous disease evaluation.",
+      "citations": ["ICD", "FLEISCHNER"]
+    },
+    {
+      "disease": "Fibrosis",
+      "slug": "fibrosis",
+      "icd10": "J84.1",
+      "aliases": ["Fibrosis", "pulmonary fibrosis", "interstitial lung disease", "reticular opacity", "honeycombing", "xo phoi", "Xơ phổi"],
+      "hallmarks": "Coarse reticular or reticulonodular opacities, architectural distortion, traction bronchiectasis, and basal or upper-zone volume loss suggesting chronic fibrotic remodeling.",
+      "differential": "Interstitial pulmonary edema, post-infectious scarring (including prior tuberculosis), asbestosis, and lymphangitic tumor spread.",
+      "followup": "Refer for pulmonology evaluation; high-resolution chest CT (HRCT) and pulmonary function tests (including DLCO) are recommended to classify interstitial lung disease subtype.",
+      "citations": ["ICD", "FLEISCHNER"]
+    },
+    {
+      "disease": "Pleural_Thickening",
+      "slug": "pleural_thickening",
+      "icd10": "J94.1",
+      "aliases": ["Pleural Thickening", "Pleural_Thickening", "pleural plaque", "apical capping", "day mang phoi", "Dày màng phổi"],
+      "hallmarks": "Focal or diffuse soft-tissue thickening along the parietal or visceral pleura (commonly apical capping or lateral chest wall), occasionally accompanied by pleural calcification.",
+      "differential": "Loculated pleural effusion, extrapleural fat pad, asbestos-related pleural plaques, and pleural neoplasm (mesothelioma or metastasis).",
+      "followup": "Review occupational asbestos exposure, prior empyema/tuberculosis history, and historical radiographs; obtain contrast-enhanced chest CT if nodular, circumferential, or progressive.",
+      "citations": ["ICD", "FLEISCHNER", "BTS_PLEURAL"]
+    },
+    {
+      "disease": "Hernia",
+      "slug": "hernia",
+      "icd10": "K44.9",
+      "aliases": ["Hernia", "hiatal hernia", "diaphragmatic hernia", "retrocardiac air fluid", "thoat vi hoanh", "Thoát vị hoành"],
+      "hallmarks": "Retrocardiac radiolucent gas bubble or air-fluid level projecting behind the cardiac silhouette above the diaphragmatic contour, characteristic of hiatal or diaphragmatic herniation.",
+      "differential": "Posterior mediastinal mass, esophageal achalasia, lower-lobe lung abscess, and eventration of the hemidiaphragm.",
+      "followup": "Confirm anatomical hernia subtype and correlate with reflux or obstructive symptoms; consider chest/abdominal CT or upper gastrointestinal endoscopy if complicated.",
+      "citations": ["ICD", "FLEISCHNER"]
+    },
+    {
+      "disease": "Tuberculosis",
+      "slug": "tuberculosis",
+      "icd10": "A16.2",
+      "aliases": ["Tuberculosis", "tb", "pulmonary tb", "cavitary lesion", "apical infiltrate", "lao phoi", "Lao phổi"],
+      "hallmarks": "Upper-lobe or superior-segment fibronodular opacities, parenchymal cavitation, hilar/mediastinal lymphadenopathy, or miliary micronodules; radiographic appearance is suggestive but not bacteriologically specific.",
+      "differential": "Non-tuberculous mycobacterial infection, necrotizing bacterial pneumonia, fungal cavitation (aspergillosis), lung malignancy, and sarcoidosis.",
+      "followup": "Positive chest X-ray triage requires clinical assessment and WHO-recommended rapid molecular sputum testing (mWRD such as Xpert MTB/RIF Ultra), with AFB smear and culture as indicated.",
+      "citations": ["ICD", "FLEISCHNER", "TB_WHO"]
+    },
+    {
+      "disease": "COVID-19",
+      "slug": "covid_19",
+      "icd10": "U07.1",
+      "aliases": ["COVID-19", "covid", "sars cov 2", "viral pneumonia", "coronavirus"],
+      "hallmarks": "Bilateral peripheral and lower-zone predominant hazy ground-glass opacities or consolidation; chest radiography is non-specific and cannot confirm SARS-CoV-2 infection.",
+      "differential": "Other viral pneumonias (influenza, RSV), bacterial atypical pneumonia, cardiogenic pulmonary edema, and cryptogenic organizing pneumonia.",
+      "followup": "Perform viral confirmation testing (RT-PCR or antigen assay per local guidance), evaluate pulse oximetry and clinical risk factors, and audit Grad-CAM in-lung energy (>= 80%) to exclude shortcut artifacts.",
+      "citations": ["ICD", "FLEISCHNER", "COVID_WHO"]
+    }
+  ]
+}

@@ -124,5 +124,5 @@ async def audit(file: UploadFile = File(...)) -> AuditResponse:
 
 @app.post("/api/v1/rag-query", response_model=RagQueryResponse)
 async def rag_query(payload: RagQueryRequest) -> RagQueryResponse:
-    """Retrieve educational references from caller-supplied context, without an LLM."""
-    return RagQueryResponse(**query_clinical_rag(**payload.model_dump()))
+    """Execute the LangGraph Corrective RAG workflow from caller-supplied clinical context."""
+    return RagQueryResponse(**query_clinical_rag(**payload.model_dump(), include_timing=True))
