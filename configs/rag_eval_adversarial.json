@@ -1,0 +1,284 @@
+{
+  "benchmark_name": "LungRay-Clinical-RAG-Adversarial-24",
+  "version": "1.0.0",
+  "description": "Audit regressions authored independently of the original 40 cases; observed during repair, not a blind validation holdout.",
+  "cases": [
+    {
+      "id": "ADV-01",
+      "category": "adversarial",
+      "question": "",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-02",
+      "category": "adversarial",
+      "question": "!!!",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-03",
+      "category": "adversarial",
+      "question": "​🩻",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-04",
+      "category": "adversarial",
+      "question": "What is the mass of Jupiter?",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-05",
+      "category": "adversarial",
+      "question": "Explain the mass of an electron",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-06",
+      "category": "adversarial",
+      "question": "one TB of disk storage",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-07",
+      "category": "adversarial",
+      "question": "football cookbook",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-08",
+      "category": "adversarial",
+      "question": "outbound packets on github",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-09",
+      "category": "adversarial",
+      "question": "normal blood pressure management",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-10",
+      "category": "adversarial",
+      "question": "write a treatment plan for broken computer hardware",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-11",
+      "category": "adversarial",
+      "question": "clinical guidelines for company management",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-12",
+      "category": "adversarial",
+      "question": "radiographic imaging signs",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-13",
+      "category": "adversarial",
+      "question": "followup differential management treatment",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-14",
+      "category": "adversarial",
+      "question": "No pneumonia",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-15",
+      "category": "adversarial",
+      "question": "No effusion or pneumothorax",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-16",
+      "category": "adversarial",
+      "question": "Không có tràn dịch màng phổi",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-17",
+      "category": "adversarial",
+      "question": "No effusion. What are the imaging hallmarks of Pneumonia?",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "GROUNDED_REFERENCE",
+      "expected_diseases": [
+        "Pneumonia"
+      ],
+      "expected_facets": [
+        "imaging_hallmarks"
+      ]
+    },
+    {
+      "id": "ADV-18",
+      "category": "adversarial",
+      "question": "No pneumonia",
+      "active_findings": [
+        "Pneumonia"
+      ],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "NO_MATCH",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-19",
+      "category": "adversarial",
+      "question": "TB",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "GROUNDED_REFERENCE",
+      "expected_diseases": [
+        "Tuberculosis"
+      ]
+    },
+    {
+      "id": "ADV-20",
+      "category": "adversarial",
+      "question": "What are the imaging hallmarks?",
+      "active_findings": [
+        "Effusion",
+        "Edema",
+        "Atelectasis",
+        "Fibrosis",
+        "Pneumonia",
+        "Cardiomegaly"
+      ],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "GROUNDED_REFERENCE",
+      "expected_diseases": [
+        "Effusion",
+        "Edema",
+        "Atelectasis",
+        "Fibrosis",
+        "Pneumonia",
+        "Cardiomegaly"
+      ],
+      "expected_facets": [
+        "imaging_hallmarks"
+      ]
+    },
+    {
+      "id": "ADV-21",
+      "category": "adversarial",
+      "question": "Clinical workup?",
+      "active_findings": [
+        "Tuberculosis"
+      ],
+      "anatomical_locations": [],
+      "is_safe": false,
+      "expected_status": "BLOCKED_OOD",
+      "expected_diseases": []
+    },
+    {
+      "id": "ADV-22",
+      "category": "adversarial",
+      "question": "TB",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "INVALID_CONTEXT",
+      "expected_diseases": [],
+      "in_lung_ratio": 1.0001
+    },
+    {
+      "id": "ADV-23",
+      "category": "adversarial",
+      "question": "Effusion confidence and energy ratio",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "GROUNDED_REFERENCE",
+      "expected_diseases": [
+        "Effusion"
+      ],
+      "in_lung_ratio": 0.7999,
+      "expected_answer_substring": "Below 80%"
+    },
+    {
+      "id": "ADV-24",
+      "category": "adversarial",
+      "question": "Effusion confidence and energy ratio",
+      "active_findings": [],
+      "anatomical_locations": [],
+      "is_safe": true,
+      "expected_status": "GROUNDED_REFERENCE",
+      "expected_diseases": [
+        "Effusion"
+      ],
+      "in_lung_ratio": 0.8,
+      "expected_answer_substring": "80.0%"
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 ICD-10 references are candidate categories, never an automated coded diagnosis.
 Follow-up text is editorial clinical context; Fleischner defines terminology,
 not a treatment protocol. Runs 100% deterministically offline by default, with
-optional Google Gemini Free Tier synthesis when GEMINI_API_KEY is configured.
+optional Gemini synthesis only after explicit use_llm opt-in and timing enabled.
 """
 from __future__ import annotations
 
@@ -34,13 +34,13 @@ def query_clinical_rag(
     anatomical_locations: list[str],
     is_safe: bool = True,
     in_lung_ratio: float | None = None,
-    use_llm: bool = True,
+    use_llm: bool = False,
     include_timing: bool = False,
 ) -> dict[str, Any]:
     """Execute the 5-node LangGraph Corrective RAG workflow.
 
     When ``include_timing`` is False (default), ``latency_ms`` is omitted from
-    the returned dictionary so repeated offline calls remain strictly deterministic.
+    the returned dictionary and LLM synthesis is disabled, so repeated calls remain deterministic even when an API key is configured.
     """
     result = run_clinical_rag_graph(
         question=question,
@@ -48,7 +48,8 @@ def query_clinical_rag(
         anatomical_locations=anatomical_locations,
         is_safe=is_safe,
         in_lung_ratio=in_lung_ratio,
-        use_llm=use_llm,
+        use_llm=use_llm and include_timing,
+        include_timing=include_timing,
     )
     if not include_timing:
         result.pop("latency_ms", None)

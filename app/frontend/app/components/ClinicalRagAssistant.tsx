@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { BookOpen, Search, Sparkles, ExternalLink, ShieldAlert, CheckCircle2, GitBranch } from "lucide-react";
 import { PredictionResponse, RagQueryResponse } from "../types";
 import { queryClinicalRag } from "../lib/api";
+import { clinicalRagContextKey, ragVerificationLabel, ragSynthesisLabel } from "../lib/ragPresentation";
 
 const QUICK_PROMPTS = [
   "What are the key imaging hallmarks?",
-  "What are the differential diagnoses (Fleischner criteria)?",
+  "What are the differential diagnoses?",
   "Recommended follow-up and clinical workup?",
 ];
 
@@ -16,12 +17,17 @@ interface Props {
   ratio: number | null;
 }
 
-export default function ClinicalRagAssistant({ prediction, ratio }: Props) {
+export default function ClinicalRagAssistant(props: Props) {
+  return <ClinicalRagSession key={clinicalRagContextKey(props.prediction, props.ratio)} {...props} />;
+}
+
+function ClinicalRagSession({ prediction, ratio }: Props) {
   const [result, setResult] = useState<RagQueryResponse | null>(null);
   const [question, setQuestion] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const generation = useRef(0);
+  const sourceChecked = ragVerificationLabel(result) === "Source text checked";
   const safe =
     prediction.safety?.is_safe === true &&
     prediction.safety.decision !== "REJECT" &&
@@ -73,15 +79,15 @@ export default function ClinicalRagAssistant({ prediction, ratio }: Props) {
               Grounded Clinical Knowledge Assistant (RAG)
             </h3>
             <p className="text-xs text-[#8C9DB0]">
-              LangGraph Corrective RAG (BM25 + TF-IDF RRF) · WHO ICD-10 &amp; Fleischner Society (2024)
+              Clinical reference retrieval (BM25 + TF-IDF RRF) · WHO ICD-10 &amp; Fleischner Society (2024)
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
-          {result?.synthesis_mode && (
+          {ragSynthesisLabel(result) && (
             <span className="rounded-md bg-[#111C2B] border border-[#1C2937] px-2 py-1 text-[10px] font-mono text-[#8C9DB0]">
-              {result.synthesis_mode === "gemini_grounded" ? "Gemini Grounded" : "Offline Grounded"}
+              {ragSynthesisLabel(result)}
             </span>
           )}
           {typeof result?.latency_ms === "number" && (
@@ -89,9 +95,9 @@ export default function ClinicalRagAssistant({ prediction, ratio }: Props) {
               {result.latency_ms.toFixed(1)} ms
             </span>
           )}
-          <span className="rounded-md bg-[#111C2B] border border-[#1C2937] px-2.5 py-1 text-[10px] font-mono font-medium text-[#3FD0C4] inline-flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" />
-            {result?.faithfulness_verified === false ? "Guardrail Fallback" : "Citation Verified"}
+          <span className={`rounded-md bg-[#111C2B] border border-[#1C2937] px-2.5 py-1 text-[10px] font-mono font-medium inline-flex items-center gap-1 ${sourceChecked ? "text-[#3FD0C4]" : "text-[#8C9DB0]"}`}>
+            {sourceChecked ? <CheckCircle2 className="w-3 h-3" /> : <ShieldAlert className="w-3 h-3" />}
+            {ragVerificationLabel(result)}
           </span>
         </div>
       </div>
@@ -152,7 +158,7 @@ export default function ClinicalRagAssistant({ prediction, ratio }: Props) {
             {busy ? (
               <div className="flex items-center gap-2 text-[#3FD0C4] animate-pulse">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Executing LangGraph CRAG (Safety Gate → Hybrid RRF → Citation Verifier)...</span>
+                <span>Retrieving clinical reference evidence...</span>
               </div>
             ) : error ? (
               <span className="text-rose-400">{error}</span>
@@ -161,7 +167,7 @@ export default function ClinicalRagAssistant({ prediction, ratio }: Props) {
                 {result?.graph_trace && result.graph_trace.length > 0 && (
                   <div
                     className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono text-[#8C9DB0]"
-                    aria-label="LangGraph execution trace"
+                    aria-label="Clinical retrieval execution trace"
                   >
                     <GitBranch className="w-3 h-3 text-[#3FD0C4] shrink-0" />
                     {result.graph_trace.map((step, idx) => (
@@ -208,8 +214,8 @@ export default function ClinicalRagAssistant({ prediction, ratio }: Props) {
                       <span className="text-[#3FD0C4]">{card.disease}</span>
                       <span className="flex items-center gap-1.5">
                         {topRel > 0 && (
-                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#0A7A74]/25 text-[#3FD0C4] border border-[#3FD0C4]/30">
-                            Rel {(topRel * 100).toFixed(0)}%
+                          <span title="Heuristic retrieval score, not diagnostic confidence" className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#0A7A74]/25 text-[#3FD0C4] border border-[#3FD0C4]/30">
+                            Lexical score {topRel.toFixed(2)}
                           </span>
                         )}
                         <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#070B12] text-[#F2A93B] border border-[#1C2937]">
@@ -253,7 +259,7 @@ export default function ClinicalRagAssistant({ prediction, ratio }: Props) {
           {result && result.citations.length > 0 && (
             <details className="text-xs text-[#8C9DB0] pt-1">
               <summary className="cursor-pointer font-mono text-[11px] font-semibold hover:text-[#E6EDF4]">
-                Official Clinical Guidelines &amp; References ({result.citations.length})
+                Reference Sources (editorial summaries; clinician review) ({result.citations.length})
               </summary>
               <ul className="space-y-1.5 pt-2 pl-4 list-disc text-[11px]">
                 {result.citations.map((source) => {

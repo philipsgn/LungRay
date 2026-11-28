@@ -153,3 +153,28 @@ def test_rag_endpoint_contract_and_validation() -> None:
     assert blocked["status"] == "BLOCKED_OOD" and blocked["retrieved_cards"] == []
     payload["in_lung_ratio"] = 1.5
     assert post(payload).status_code == 422
+
+def test_rag_slow_synthesis_does_not_block_the_async_api(monkeypatch):
+    import asyncio
+    import threading
+    from app.backend import main
+    from app.backend.schemas import RagQueryRequest
+    started, release = threading.Event(), threading.Event()
+    def slow_reference(**kwargs):
+        started.set()
+        release.wait(3)
+        return dict(status="NO_MATCH", answer="reference", citations=[], retrieved_cards=[])
+    monkeypatch.setattr(main, "query_clinical_rag", slow_reference)
+    async def check():
+        task = asyncio.create_task(main.rag_query(RagQueryRequest(question="TB")))
+        try:
+            for _ in range(100):
+                if started.is_set():
+                    break
+                await asyncio.sleep(0.01)
+            assert started.is_set()
+            assert not task.done(), "Blocking synthesis must run in a worker thread"
+        finally:
+            release.set()
+            await task
+    asyncio.run(check())

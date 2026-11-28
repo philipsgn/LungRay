@@ -1,23 +1,56 @@
 {
   "benchmark_name": "LungRay-Clinical-RAG-Golden-40",
   "version": "1.0.0",
+  "evaluation_protocol": "strict-chunk-facet-v2",
+  "limitations": "Development/regression cases, not an independent clinical holdout. Queries share vocabulary and aliases with the curated corpus. Scores do not establish medical accuracy or generalization; adversarial cases are regressions used during this audit.",
+  "known_annotation_issues": [
+    "Original golden cases expect 'WHO consolidated guidelines on tuberculosis' for ISBN 9789240110991; the WHO source is actually the operational handbook. Five citation-presence checks therefore fail without editing the original labels.",
+    "Some differential questions name multiple topics but original relevance labels list only one; judgments are not exhaustive."
+  ],
+  "metric_definitions": {
+    "recall_at_3": "Macro mean of relevant chunk IDs retrieved among the first three / all relevant chunk IDs; disease AND requested facet define relevance. Cards excluded.",
+    "mrr": "First relevant chunk reciprocal rank using the same disease/facet judgments.",
+    "context_precision": "Relevant chunk IDs / all returned graded evidence IDs, macro averaged.",
+    "faithfulness_rate": "Legacy alias of source_copy_compliance. Exact source-text/citation/frame matching, independent of engine flags; NOT semantic or clinical faithfulness.",
+    "citation_accuracy": "Allowed corpus citation membership and expected citation presence; NOT validation of source entailment.",
+    "latency": "One separately timed setup call excluded from warmed aggregates; warmed per-case graph latency excludes facade import/index construction. Cold call reported separately. Hardware/runtime dependent."
+  },
+  "corpus_sha256": "f90f83bc64f58f902bded1e33120a49b7cacf34d43a1348107f47682291fe4e1",
+  "cases_sha256": "86c859940561da02984c2c60a2c0bd8b4f6145acb914c2708eeea9a58ea95291",
+  "source_sha256": {
+    "src/safety/rag_retriever.py": "ea6103f1c63ed4c039162636c989d0f8caf496bb716624e97a20468a481b0922",
+    "src/safety/rag_graph.py": "057627329f144839911fd3ad5ab0ff633c222395d3c1fdbee548cf9d745c8655",
+    "src/safety/rag_knowledge.py": "da00bbc5eb5d2224422be1314c4e59f569e65c7b04a0ad2d4ace686172566565",
+    "scripts/evaluate_rag.py": "96d0611c3b3ed33a311a58a8c6f8e1d18493a7e0aef9fd8090236eb75fd18f3c"
+  },
+  "environment": {
+    "python": "3.14.6",
+    "numpy": "2.5.1",
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
   "total_cases": 40,
   "retrieval_cases": 36,
   "ood_and_abstention_cases": 4,
   "graph_engine": "deterministic_state_machine",
-  "synthesis_mode": "offline_extractive",
+  "synthesis_modes": [
+    "blocked_ood",
+    "offline_extractive",
+    "safe_abstention"
+  ],
+  "cold_call_latency_ms": 3.88,
   "metrics": {
     "status_accuracy": 1.0,
     "recall_at_3": 1.0,
     "mrr": 1.0,
-    "context_precision": 0.963,
+    "context_precision": 0.9028,
     "facet_routing_accuracy": 1.0,
-    "citation_accuracy": 1.0,
+    "citation_accuracy": 0.8611,
+    "source_copy_compliance": 1.0,
     "faithfulness_rate": 1.0,
     "ood_and_abstention_accuracy": 1.0,
     "guardrail_compliance": 1.0,
-    "mean_latency_ms": 1.964,
-    "p95_latency_ms": 1.356
+    "mean_latency_ms": 0.825,
+    "p95_latency_ms": 1.564
   },
   "cases": [
     {
@@ -29,12 +62,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 47.21,
+      "facet_ok": true,
+      "citation_ok": false,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.87,
       "top_chunks": [
-        "tuberculosis_hallmarks",
-        "tuberculosis_differential",
-        "tuberculosis_workup"
+        "tuberculosis_hallmarks"
+      ],
+      "actual_card_diseases": [
+        "Tuberculosis"
       ]
     },
     {
@@ -46,12 +84,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.65,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.76,
       "top_chunks": [
-        "effusion_hallmarks",
-        "effusion_differential",
-        "effusion_workup"
+        "effusion_hallmarks"
+      ],
+      "actual_card_diseases": [
+        "Effusion"
       ]
     },
     {
@@ -62,13 +105,20 @@
       "status_ok": true,
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
-      "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 1.21,
+      "context_precision": 0.3333333333333333,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 1.05,
       "top_chunks": [
         "pneumothorax_hallmarks",
         "pneumothorax_differential",
         "pneumothorax_workup"
+      ],
+      "actual_card_diseases": [
+        "Pneumothorax"
       ]
     },
     {
@@ -79,13 +129,20 @@
       "status_ok": true,
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
-      "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.79,
+      "context_precision": 0.3333333333333333,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.87,
       "top_chunks": [
         "edema_hallmarks",
         "edema_differential",
         "edema_workup"
+      ],
+      "actual_card_diseases": [
+        "Edema"
       ]
     },
     {
@@ -96,13 +153,23 @@
       "status_ok": true,
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
-      "context_precision": 0.5,
-      "faithfulness_verified": true,
-      "latency_ms": 1.23,
+      "context_precision": 0.16666666666666666,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 1.15,
       "top_chunks": [
         "hernia_hallmarks",
-        "pneumonia_hallmarks",
-        "hernia_differential"
+        "cardiomegaly_hallmarks",
+        "pneumonia_hallmarks"
+      ],
+      "actual_card_diseases": [
+        "Hernia",
+        "Cardiomegaly",
+        "Pneumonia",
+        "Edema"
       ]
     },
     {
@@ -114,12 +181,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.95,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.87,
       "top_chunks": [
-        "cardiomegaly_hallmarks",
-        "cardiomegaly_differential",
-        "cardiomegaly_workup"
+        "cardiomegaly_hallmarks"
+      ],
+      "actual_card_diseases": [
+        "Cardiomegaly"
       ]
     },
     {
@@ -131,12 +203,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.81,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.67,
       "top_chunks": [
-        "emphysema_hallmarks",
-        "emphysema_differential",
-        "emphysema_workup"
+        "emphysema_hallmarks"
+      ],
+      "actual_card_diseases": [
+        "Emphysema"
       ]
     },
     {
@@ -148,12 +225,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.84,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.68,
       "top_chunks": [
-        "fibrosis_hallmarks",
-        "fibrosis_differential",
-        "fibrosis_workup"
+        "fibrosis_hallmarks"
+      ],
+      "actual_card_diseases": [
+        "Fibrosis"
       ]
     },
     {
@@ -164,13 +246,20 @@
       "status_ok": true,
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
-      "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.84,
+      "context_precision": 0.3333333333333333,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.78,
       "top_chunks": [
         "mass_hallmarks",
         "mass_differential",
         "mass_workup"
+      ],
+      "actual_card_diseases": [
+        "Mass"
       ]
     },
     {
@@ -182,12 +271,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.66,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.67,
       "top_chunks": [
-        "covid_19_hallmarks",
-        "covid_19_differential",
-        "covid_19_workup"
+        "covid_19_hallmarks"
+      ],
+      "actual_card_diseases": [
+        "COVID-19"
       ]
     },
     {
@@ -199,12 +293,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.77,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.82,
       "top_chunks": [
-        "pneumonia_differential",
-        "pneumonia_hallmarks",
-        "pneumonia_workup"
+        "pneumonia_differential"
+      ],
+      "actual_card_diseases": [
+        "Pneumonia"
       ]
     },
     {
@@ -215,13 +314,22 @@
       "status_ok": true,
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
-      "context_precision": 0.16666666666666666,
-      "faithfulness_verified": true,
-      "latency_ms": 0.79,
+      "context_precision": 0.3333333333333333,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.82,
       "top_chunks": [
         "atelectasis_differential",
         "effusion_differential",
         "consolidation_differential"
+      ],
+      "actual_card_diseases": [
+        "Atelectasis",
+        "Effusion",
+        "Consolidation"
       ]
     },
     {
@@ -233,12 +341,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 1.33,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.77,
       "top_chunks": [
-        "nodule_differential",
-        "nodule_workup",
-        "nodule_hallmarks"
+        "nodule_differential"
+      ],
+      "actual_card_diseases": [
+        "Nodule"
       ]
     },
     {
@@ -250,12 +363,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 1.16,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.66,
       "top_chunks": [
-        "pleural_thickening_differential",
-        "pleural_thickening_hallmarks",
-        "pleural_thickening_workup"
+        "pleural_thickening_differential"
+      ],
+      "actual_card_diseases": [
+        "Pleural_Thickening"
       ]
     },
     {
@@ -267,12 +385,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.58,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.65,
       "top_chunks": [
-        "consolidation_differential",
-        "consolidation_hallmarks",
-        "consolidation_workup"
+        "consolidation_differential"
+      ],
+      "actual_card_diseases": [
+        "Consolidation"
       ]
     },
     {
@@ -284,12 +407,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.64,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.8,
       "top_chunks": [
-        "infiltration_differential",
-        "infiltration_hallmarks",
-        "infiltration_workup"
+        "infiltration_differential"
+      ],
+      "actual_card_diseases": [
+        "Infiltration"
       ]
     },
     {
@@ -301,12 +429,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 1.07,
+      "facet_ok": true,
+      "citation_ok": false,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.91,
       "top_chunks": [
-        "tuberculosis_differential",
-        "tuberculosis_workup",
-        "tuberculosis_hallmarks"
+        "tuberculosis_differential"
+      ],
+      "actual_card_diseases": [
+        "Tuberculosis"
       ]
     },
     {
@@ -318,12 +451,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.67,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 1.14,
       "top_chunks": [
-        "pneumothorax_differential",
-        "pneumothorax_hallmarks",
-        "pneumothorax_workup"
+        "pneumothorax_differential"
+      ],
+      "actual_card_diseases": [
+        "Pneumothorax"
       ]
     },
     {
@@ -335,12 +473,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.69,
+      "facet_ok": true,
+      "citation_ok": false,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 1.64,
       "top_chunks": [
-        "tuberculosis_workup",
-        "tuberculosis_differential",
-        "tuberculosis_hallmarks"
+        "tuberculosis_workup"
+      ],
+      "actual_card_diseases": [
+        "Tuberculosis"
       ]
     },
     {
@@ -352,12 +495,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.86,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 1.56,
       "top_chunks": [
-        "effusion_workup",
-        "effusion_differential",
-        "effusion_hallmarks"
+        "effusion_workup"
+      ],
+      "actual_card_diseases": [
+        "Effusion"
       ]
     },
     {
@@ -369,12 +517,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.97,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 2.33,
       "top_chunks": [
-        "mass_workup",
-        "mass_hallmarks",
-        "mass_differential"
+        "mass_workup"
+      ],
+      "actual_card_diseases": [
+        "Mass"
       ]
     },
     {
@@ -386,12 +539,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.87,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.98,
       "top_chunks": [
-        "covid_19_workup",
-        "covid_19_differential",
-        "covid_19_hallmarks"
+        "covid_19_workup"
+      ],
+      "actual_card_diseases": [
+        "COVID-19"
       ]
     },
     {
@@ -403,12 +561,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.92,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.72,
       "top_chunks": [
-        "pneumothorax_workup",
-        "pneumothorax_hallmarks",
-        "pneumothorax_differential"
+        "pneumothorax_workup"
+      ],
+      "actual_card_diseases": [
+        "Pneumothorax"
       ]
     },
     {
@@ -420,12 +583,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.86,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.61,
       "top_chunks": [
-        "fibrosis_workup",
-        "fibrosis_differential",
-        "fibrosis_hallmarks"
+        "fibrosis_workup"
+      ],
+      "actual_card_diseases": [
+        "Fibrosis"
       ]
     },
     {
@@ -437,12 +605,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.9,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.68,
       "top_chunks": [
-        "emphysema_workup",
-        "emphysema_differential",
-        "emphysema_hallmarks"
+        "emphysema_workup"
+      ],
+      "actual_card_diseases": [
+        "Emphysema"
       ]
     },
     {
@@ -454,12 +627,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.81,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.64,
       "top_chunks": [
-        "cardiomegaly_workup",
-        "cardiomegaly_hallmarks",
-        "cardiomegaly_differential"
+        "cardiomegaly_workup"
+      ],
+      "actual_card_diseases": [
+        "Cardiomegaly"
       ]
     },
     {
@@ -471,12 +649,21 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.93,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.77,
       "top_chunks": [
         "cardiomegaly_hallmarks",
         "effusion_hallmarks",
         "edema_hallmarks"
+      ],
+      "actual_card_diseases": [
+        "Cardiomegaly",
+        "Effusion",
+        "Edema"
       ]
     },
     {
@@ -488,12 +675,19 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 1.04,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.79,
       "top_chunks": [
         "effusion_workup",
-        "pneumonia_workup",
-        "effusion_differential"
+        "pneumonia_workup"
+      ],
+      "actual_card_diseases": [
+        "Effusion",
+        "Pneumonia"
       ]
     },
     {
@@ -505,12 +699,19 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.7,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.86,
       "top_chunks": [
         "mass_differential",
-        "nodule_differential",
-        "nodule_workup"
+        "nodule_differential"
+      ],
+      "actual_card_diseases": [
+        "Mass",
+        "Nodule"
       ]
     },
     {
@@ -522,12 +723,19 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.47,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.77,
       "top_chunks": [
         "atelectasis_hallmarks",
-        "consolidation_hallmarks",
-        "atelectasis_differential"
+        "consolidation_hallmarks"
+      ],
+      "actual_card_diseases": [
+        "Atelectasis",
+        "Consolidation"
       ]
     },
     {
@@ -539,12 +747,19 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.71,
+      "facet_ok": true,
+      "citation_ok": false,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.8,
       "top_chunks": [
         "fibrosis_workup",
-        "tuberculosis_workup",
-        "fibrosis_differential"
+        "tuberculosis_workup"
+      ],
+      "actual_card_diseases": [
+        "Fibrosis",
+        "Tuberculosis"
       ]
     },
     {
@@ -556,12 +771,19 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.53,
+      "facet_ok": null,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.81,
       "top_chunks": [
         "pneumothorax_hallmarks",
         "pneumothorax_differential",
         "pneumothorax_workup"
+      ],
+      "actual_card_diseases": [
+        "Pneumothorax"
       ]
     },
     {
@@ -573,12 +795,19 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 1.85,
+      "facet_ok": null,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": true,
+      "latency_ms": 1.05,
       "top_chunks": [
         "covid_19_workup",
         "covid_19_hallmarks",
         "covid_19_differential"
+      ],
+      "actual_card_diseases": [
+        "COVID-19"
       ]
     },
     {
@@ -590,12 +819,19 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.66,
+      "facet_ok": null,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.72,
       "top_chunks": [
         "pneumothorax_hallmarks",
         "pneumothorax_differential",
         "pneumothorax_workup"
+      ],
+      "actual_card_diseases": [
+        "Pneumothorax"
       ]
     },
     {
@@ -607,12 +843,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.52,
+      "facet_ok": true,
+      "citation_ok": false,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.75,
       "top_chunks": [
-        "tuberculosis_workup",
-        "tuberculosis_differential",
-        "tuberculosis_hallmarks"
+        "tuberculosis_workup"
+      ],
+      "actual_card_diseases": [
+        "Tuberculosis"
       ]
     },
     {
@@ -624,12 +865,17 @@
       "recall_at_3": 1.0,
       "reciprocal_rank": 1.0,
       "context_precision": 1.0,
-      "faithfulness_verified": true,
-      "latency_ms": 0.44,
+      "facet_ok": true,
+      "citation_ok": true,
+      "source_copy_compliant": true,
+      "abstention_ok": null,
+      "guardrail_ok": null,
+      "latency_ms": 0.92,
       "top_chunks": [
-        "effusion_hallmarks",
-        "effusion_differential",
-        "effusion_workup"
+        "effusion_hallmarks"
+      ],
+      "actual_card_diseases": [
+        "Effusion"
       ]
     },
     {
@@ -641,9 +887,14 @@
       "recall_at_3": null,
       "reciprocal_rank": null,
       "context_precision": null,
-      "faithfulness_verified": true,
-      "latency_ms": 0.01,
-      "top_chunks": []
+      "facet_ok": null,
+      "citation_ok": null,
+      "source_copy_compliant": null,
+      "abstention_ok": true,
+      "guardrail_ok": null,
+      "latency_ms": 0.0,
+      "top_chunks": [],
+      "actual_card_diseases": []
     },
     {
       "id": "OOD-02",
@@ -654,9 +905,14 @@
       "recall_at_3": null,
       "reciprocal_rank": null,
       "context_precision": null,
-      "faithfulness_verified": true,
+      "facet_ok": null,
+      "citation_ok": null,
+      "source_copy_compliant": null,
+      "abstention_ok": true,
+      "guardrail_ok": null,
       "latency_ms": 0.0,
-      "top_chunks": []
+      "top_chunks": [],
+      "actual_card_diseases": []
     },
     {
       "id": "OOD-03",
@@ -667,9 +923,14 @@
       "recall_at_3": null,
       "reciprocal_rank": null,
       "context_precision": null,
-      "faithfulness_verified": true,
-      "latency_ms": 0.72,
-      "top_chunks": []
+      "facet_ok": null,
+      "citation_ok": null,
+      "source_copy_compliant": null,
+      "abstention_ok": true,
+      "guardrail_ok": null,
+      "latency_ms": 0.33,
+      "top_chunks": [],
+      "actual_card_diseases": []
     },
     {
       "id": "OOD-04",
@@ -680,9 +941,537 @@
       "recall_at_3": null,
       "reciprocal_rank": null,
       "context_precision": null,
-      "faithfulness_verified": true,
-      "latency_ms": 0.88,
-      "top_chunks": []
+      "facet_ok": null,
+      "citation_ok": null,
+      "source_copy_compliant": null,
+      "abstention_ok": true,
+      "guardrail_ok": null,
+      "latency_ms": 0.34,
+      "top_chunks": [],
+      "actual_card_diseases": []
     }
-  ]
+  ],
+  "adversarial": {
+    "benchmark_name": "LungRay-Clinical-RAG-Adversarial-24",
+    "version": "1.0.0",
+    "evaluation_protocol": "strict-chunk-facet-v2",
+    "limitations": "Development/regression cases, not an independent clinical holdout. Queries share vocabulary and aliases with the curated corpus. Scores do not establish medical accuracy or generalization; adversarial cases are regressions used during this audit.",
+    "known_annotation_issues": [
+      "Original golden cases expect 'WHO consolidated guidelines on tuberculosis' for ISBN 9789240110991; the WHO source is actually the operational handbook. Five citation-presence checks therefore fail without editing the original labels.",
+      "Some differential questions name multiple topics but original relevance labels list only one; judgments are not exhaustive."
+    ],
+    "metric_definitions": {
+      "recall_at_3": "Macro mean of relevant chunk IDs retrieved among the first three / all relevant chunk IDs; disease AND requested facet define relevance. Cards excluded.",
+      "mrr": "First relevant chunk reciprocal rank using the same disease/facet judgments.",
+      "context_precision": "Relevant chunk IDs / all returned graded evidence IDs, macro averaged.",
+      "faithfulness_rate": "Legacy alias of source_copy_compliance. Exact source-text/citation/frame matching, independent of engine flags; NOT semantic or clinical faithfulness.",
+      "citation_accuracy": "Allowed corpus citation membership and expected citation presence; NOT validation of source entailment.",
+      "latency": "One separately timed setup call excluded from warmed aggregates; warmed per-case graph latency excludes facade import/index construction. Cold call reported separately. Hardware/runtime dependent."
+    },
+    "corpus_sha256": "f90f83bc64f58f902bded1e33120a49b7cacf34d43a1348107f47682291fe4e1",
+    "cases_sha256": "9161b4996b41e1e31301298166a233b0098a33dfda4e6701b99e41e227a6a91f",
+    "source_sha256": {
+      "src/safety/rag_retriever.py": "ea6103f1c63ed4c039162636c989d0f8caf496bb716624e97a20468a481b0922",
+      "src/safety/rag_graph.py": "057627329f144839911fd3ad5ab0ff633c222395d3c1fdbee548cf9d745c8655",
+      "src/safety/rag_knowledge.py": "da00bbc5eb5d2224422be1314c4e59f569e65c7b04a0ad2d4ace686172566565",
+      "scripts/evaluate_rag.py": "96d0611c3b3ed33a311a58a8c6f8e1d18493a7e0aef9fd8090236eb75fd18f3c"
+    },
+    "environment": {
+      "python": "3.14.6",
+      "numpy": "2.5.1",
+      "platform": "Windows-11-10.0.26200-SP0"
+    },
+    "total_cases": 24,
+    "retrieval_cases": 5,
+    "ood_and_abstention_cases": 19,
+    "graph_engine": "deterministic_state_machine",
+    "synthesis_modes": [
+      "blocked_ood",
+      "invalid_context",
+      "offline_extractive",
+      "safe_abstention"
+    ],
+    "cold_call_latency_ms": 0.97,
+    "metrics": {
+      "status_accuracy": 1.0,
+      "recall_at_3": 0.9,
+      "mrr": 1.0,
+      "context_precision": 1.0,
+      "facet_routing_accuracy": 1.0,
+      "citation_accuracy": 1.0,
+      "source_copy_compliance": 1.0,
+      "faithfulness_rate": 1.0,
+      "ood_and_abstention_accuracy": 1.0,
+      "guardrail_compliance": 1.0,
+      "mean_latency_ms": 0.63,
+      "p95_latency_ms": 1.522
+    },
+    "cases": [
+      {
+        "id": "ADV-01",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.02,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-02",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.01,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-03",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 1.24,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-04",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.29,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-05",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.24,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-06",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.32,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-07",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.49,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-08",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.57,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-09",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.58,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-10",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.7,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-11",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.67,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-12",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.31,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-13",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.5,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-14",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.49,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-15",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.58,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-16",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 1.15,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-17",
+        "category": "adversarial",
+        "expected_status": "GROUNDED_REFERENCE",
+        "actual_status": "GROUNDED_REFERENCE",
+        "status_ok": true,
+        "recall_at_3": 1.0,
+        "reciprocal_rank": 1.0,
+        "context_precision": 1.0,
+        "facet_ok": true,
+        "citation_ok": true,
+        "source_copy_compliant": true,
+        "abstention_ok": null,
+        "guardrail_ok": null,
+        "latency_ms": 1.19,
+        "top_chunks": [
+          "pneumonia_hallmarks"
+        ],
+        "actual_card_diseases": [
+          "Pneumonia"
+        ]
+      },
+      {
+        "id": "ADV-18",
+        "category": "adversarial",
+        "expected_status": "NO_MATCH",
+        "actual_status": "NO_MATCH",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.21,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-19",
+        "category": "adversarial",
+        "expected_status": "GROUNDED_REFERENCE",
+        "actual_status": "GROUNDED_REFERENCE",
+        "status_ok": true,
+        "recall_at_3": 1.0,
+        "reciprocal_rank": 1.0,
+        "context_precision": 1.0,
+        "facet_ok": null,
+        "citation_ok": true,
+        "source_copy_compliant": true,
+        "abstention_ok": null,
+        "guardrail_ok": null,
+        "latency_ms": 0.63,
+        "top_chunks": [
+          "tuberculosis_differential",
+          "tuberculosis_hallmarks",
+          "tuberculosis_workup"
+        ],
+        "actual_card_diseases": [
+          "Tuberculosis"
+        ]
+      },
+      {
+        "id": "ADV-20",
+        "category": "adversarial",
+        "expected_status": "GROUNDED_REFERENCE",
+        "actual_status": "GROUNDED_REFERENCE",
+        "status_ok": true,
+        "recall_at_3": 0.5,
+        "reciprocal_rank": 1.0,
+        "context_precision": 1.0,
+        "facet_ok": true,
+        "citation_ok": true,
+        "source_copy_compliant": true,
+        "abstention_ok": null,
+        "guardrail_ok": null,
+        "latency_ms": 2.03,
+        "top_chunks": [
+          "atelectasis_hallmarks",
+          "cardiomegaly_hallmarks",
+          "effusion_hallmarks"
+        ],
+        "actual_card_diseases": [
+          "Atelectasis",
+          "Cardiomegaly",
+          "Effusion",
+          "Pneumonia",
+          "Edema",
+          "Fibrosis"
+        ]
+      },
+      {
+        "id": "ADV-21",
+        "category": "adversarial",
+        "expected_status": "BLOCKED_OOD",
+        "actual_status": "BLOCKED_OOD",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.01,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-22",
+        "category": "adversarial",
+        "expected_status": "INVALID_CONTEXT",
+        "actual_status": "INVALID_CONTEXT",
+        "status_ok": true,
+        "recall_at_3": null,
+        "reciprocal_rank": null,
+        "context_precision": null,
+        "facet_ok": null,
+        "citation_ok": null,
+        "source_copy_compliant": null,
+        "abstention_ok": true,
+        "guardrail_ok": null,
+        "latency_ms": 0.01,
+        "top_chunks": [],
+        "actual_card_diseases": []
+      },
+      {
+        "id": "ADV-23",
+        "category": "adversarial",
+        "expected_status": "GROUNDED_REFERENCE",
+        "actual_status": "GROUNDED_REFERENCE",
+        "status_ok": true,
+        "recall_at_3": 1.0,
+        "reciprocal_rank": 1.0,
+        "context_precision": 1.0,
+        "facet_ok": null,
+        "citation_ok": true,
+        "source_copy_compliant": true,
+        "abstention_ok": null,
+        "guardrail_ok": true,
+        "latency_ms": 1.31,
+        "top_chunks": [
+          "effusion_differential",
+          "effusion_hallmarks",
+          "effusion_workup"
+        ],
+        "actual_card_diseases": [
+          "Effusion"
+        ]
+      },
+      {
+        "id": "ADV-24",
+        "category": "adversarial",
+        "expected_status": "GROUNDED_REFERENCE",
+        "actual_status": "GROUNDED_REFERENCE",
+        "status_ok": true,
+        "recall_at_3": 1.0,
+        "reciprocal_rank": 1.0,
+        "context_precision": 1.0,
+        "facet_ok": null,
+        "citation_ok": true,
+        "source_copy_compliant": true,
+        "abstention_ok": null,
+        "guardrail_ok": true,
+        "latency_ms": 1.56,
+        "top_chunks": [
+          "effusion_differential",
+          "effusion_hallmarks",
+          "effusion_workup"
+        ],
+        "actual_card_diseases": [
+          "Effusion"
+        ]
+      }
+    ]
+  }
 }

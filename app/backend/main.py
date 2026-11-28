@@ -6,6 +6,7 @@ from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
 
 from app.backend.schemas import (
     AuditResponse,
@@ -125,4 +126,5 @@ async def audit(file: UploadFile = File(...)) -> AuditResponse:
 @app.post("/api/v1/rag-query", response_model=RagQueryResponse)
 async def rag_query(payload: RagQueryRequest) -> RagQueryResponse:
     """Execute the LangGraph Corrective RAG workflow from caller-supplied clinical context."""
-    return RagQueryResponse(**query_clinical_rag(**payload.model_dump(), include_timing=True))
+    result = await run_in_threadpool(query_clinical_rag, **payload.model_dump(), include_timing=True)
+    return RagQueryResponse(**result)

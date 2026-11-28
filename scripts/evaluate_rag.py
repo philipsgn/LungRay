@@ -1,15 +1,14 @@
-"""Quantitative evaluation suite for LungRay LangGraph Corrective RAG (CRAG).
+"""Reproduce development-set retrieval metrics; these are not clinical validation.
 
-Executes the live 5-node CRAG workflow against ``configs/rag_eval_golden.json``
-(40 clinical Q&A cases across 6 categories) and exports real, reproducible metrics
-to ``results/rag_evaluation_report.json``.
-
-Usage:
-    python scripts/evaluate_rag.py
+The immutable original 40 cases and a separate adversarial regression set are
+reported separately. Source-copy checks are independent of the engine's flag.
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import platform
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -20,164 +19,150 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.safety.rag_graph import LANGGRAPH_AVAILABLE, run_clinical_rag_graph
+from src.safety.rag_graph import run_clinical_rag_graph
+from src.safety.rag_retriever import get_clinical_retriever
 
-GOLDEN_PATH = PROJECT_ROOT / "configs" / "rag_eval_golden.json"
-REPORT_PATH = PROJECT_ROOT / "results" / "rag_evaluation_report.json"
+GOLDEN_PATH = PROJECT_ROOT / "configs/rag_eval_golden.json"
+ADVERSARIAL_PATH = PROJECT_ROOT / "configs/rag_eval_adversarial.json"
+REPORT_PATH = PROJECT_ROOT / "results/rag_evaluation_report.json"
+
+
+def _source_copy_check(case: dict, result: dict, corpus: dict) -> bool:
+    """Check exact source spans and trusted framing, not semantic medical truth."""
+    if result.get("status") != "GROUNDED_REFERENCE":
+        return False
+    chunks = result.get("retrieval_chunks", [])
+    if not chunks or any(ch.get("chunk_id") not in corpus or ch.get("text") != corpus[ch["chunk_id"]].text for ch in chunks):
+        return False
+    text = result.get("answer", "")
+    # An independently enumerated allowlist of deterministic context statements.
+    frame = ["Structured clinical reference only; model predictions do not establish a confirmed diagnosis."]
+    ratio = case.get("in_lung_ratio")
+    if ratio is None:
+        frame.append("In-lung Grad-CAM energy audit not yet executed.")
+    else:
+        frame.append(f"In-lung Grad-CAM energy: {ratio:.1%} (rounded).")
+        if ratio < 0.8:
+            frame.append("Below 80% (< 80%): inspect for text/border shortcut artifacts; reference caution only; this RAG endpoint does not change the model clinical flag.")
+    frame.append("Grad-CAM and energy ratios are not calibrated diagnostic probabilities.")
+    frame.append("Caller-supplied anatomical regions: " + (", ".join(case.get("anatomical_locations", [])) or "unverified localization") + ".")
+    prefix = " ".join(frame)
+    if not text.startswith(prefix):
+        return False
+    remaining = text[len(prefix):].strip()
+    if not remaining:
+        return any(word in case["question"].lower() for word in ("confidence", "tin cậy", "giải phẫu", "energy ratio", "shortcut"))
+    valid = {ch["chunk_id"]: ch["text"] for ch in chunks}
+    while remaining:
+        match = re.match(r"(.+?)\s*\[([A-Za-z0-9_]+)\]", remaining, re.DOTALL)
+        if not match or valid.get(match[2]) != match[1].strip():
+            return False
+        remaining = remaining[match.end():].strip()
+    return True
+
+
+def _score_case(case: dict, result: dict, corpus: dict) -> dict[str, Any]:
+    expected = set(case.get("expected_diseases", []))
+    facets = set(case.get("expected_facets", []))
+    relevant_ids = set(case.get("expected_chunk_ids", [])) or {
+        cid for cid, ch in corpus.items() if ch.disease in expected and (not facets or ch.facet in facets)
+    }
+    chunks = result.get("retrieval_chunks", [])
+    # Only the ranked evidence is evaluated. Cards never rescue a retrieval miss.
+    ids = list(dict.fromkeys(ch["chunk_id"] for ch in chunks))
+    top3 = set(ids[:3])
+    grounded_case = case["expected_status"] == "GROUNDED_REFERENCE" and bool(expected)
+    recall = len(top3 & relevant_ids) / len(relevant_ids) if grounded_case and relevant_ids else None
+    rr = next((1.0 / rank for rank, cid in enumerate(ids, 1) if cid in relevant_ids), 0.0) if grounded_case else None
+    precision = sum(cid in relevant_ids for cid in ids) / len(ids) if grounded_case and ids else (0.0 if grounded_case else None)
+    allowed_citations = {citation for ch in chunks if ch.get("chunk_id") in corpus for citation in corpus[ch["chunk_id"]].citations}
+    citations = result.get("citations", [])
+    expected_citation = case.get("expected_citation_substring")
+    citation_ok = bool(citations) and all(c in allowed_citations for c in citations) and (not expected_citation or any(expected_citation in c for c in citations))
+    status_ok = result.get("status") == case["expected_status"]
+    return {
+        "id": case["id"], "category": case["category"],
+        "expected_status": case["expected_status"], "actual_status": result.get("status"), "status_ok": status_ok,
+        "recall_at_3": recall, "reciprocal_rank": rr, "context_precision": precision,
+        "facet_ok": facets.issubset({ch["facet"] for ch in chunks[:3]}) if grounded_case and facets else None,
+        "citation_ok": citation_ok if grounded_case else None,
+        "source_copy_compliant": _source_copy_check(case, result, corpus) if grounded_case else None,
+        "abstention_ok": status_ok and not chunks and not result.get("retrieved_cards") and not citations if not grounded_case else None,
+        "guardrail_ok": case["expected_answer_substring"] in result.get("answer", "") if case.get("expected_answer_substring") else None,
+        "latency_ms": result.get("latency_ms"), "top_chunks": ids[:3],
+        "actual_card_diseases": [card["disease"] for card in result.get("retrieved_cards", [])],
+    }
 
 
 def evaluate_golden_benchmark(
     golden_path: Path = GOLDEN_PATH,
     report_path: Path | None = REPORT_PATH,
     use_llm: bool = False,
+    graph_backend: str = "auto",
 ) -> dict[str, Any]:
-    """Run all Golden Clinical Q&A cases and compute verified IR + Safety metrics."""
+    """Measure strict chunk/facet Recall@3, MRR, precision and source-copy compliance."""
     benchmark = json.loads(golden_path.read_text(encoding="utf-8"))
-    cases: list[dict[str, Any]] = benchmark["cases"]
-
-    retrieval_cases = 0
-    recall_at_3_hits = 0
-    mrr_scores: list[float] = []
-    context_precisions: list[float] = []
-    facet_total = 0
-    facet_hits = 0
-    citation_total = 0
-    citation_hits = 0
-    faithfulness_hits = 0
-    status_hits = 0
-    ood_total = 0
-    ood_hits = 0
-    guardrail_total = 0
-    guardrail_hits = 0
-    latencies_ms: list[float] = []
-    per_case_results: list[dict[str, Any]] = []
-
-    for case in cases:
-        res = run_clinical_rag_graph(
-            question=case["question"],
-            active_findings=case.get("active_findings", []),
-            anatomical_locations=case.get("anatomical_locations", []),
-            is_safe=case.get("is_safe", True),
-            in_lung_ratio=case.get("in_lung_ratio"),
-            use_llm=use_llm,
+    retriever = get_clinical_retriever()
+    corpus = {ch.chunk_id: ch for ch in retriever.chunks}
+    cold = run_clinical_rag_graph("Tuberculosis", [], [], use_llm=False, graph_backend=graph_backend)
+    rows, engines, modes = [], set(), set()
+    for case in benchmark["cases"]:
+        result = run_clinical_rag_graph(
+            question=case["question"], active_findings=case.get("active_findings", []),
+            anatomical_locations=case.get("anatomical_locations", []), is_safe=case.get("is_safe", True),
+            in_lung_ratio=case.get("in_lung_ratio"), use_llm=use_llm, graph_backend=graph_backend,
         )
-        latencies_ms.append(float(res.get("latency_ms", 0.0)))
+        rows.append(_score_case(case, result, corpus))
+        engines.add(result["graph_engine"])
+        modes.add(result["synthesis_mode"])
 
-        expected_status = case["expected_status"]
-        status_ok = res["status"] == expected_status
-        if status_ok:
-            status_hits += 1
+    def mean(key):
+        values = [row[key] for row in rows if row[key] is not None]
+        return round(float(np.mean(values)), 4) if values else None
 
-        if res.get("faithfulness_verified", False):
-            faithfulness_hits += 1
-
-        expected_diseases = case.get("expected_diseases", [])
-        expected_facets = case.get("expected_facets", [])
-        chunks = res.get("retrieval_chunks", [])
-        cards = res.get("retrieved_cards", [])
-
-        case_recall_at_3: float | None = None
-        case_rr: float | None = None
-        case_precision: float | None = None
-
-        if expected_status == "GROUNDED_REFERENCE" and expected_diseases:
-            retrieval_cases += 1
-            top3_diseases = list(dict.fromkeys(ch["disease"] for ch in chunks[:3]))
-            card_diseases = [c["disease"] for c in cards[:3]]
-            combined_top3 = set(top3_diseases) | set(card_diseases)
-            expected_set = set(expected_diseases)
-
-            hit_all = expected_set.issubset(combined_top3)
-            case_recall_at_3 = 1.0 if hit_all else len(expected_set & combined_top3) / len(expected_set)
-            if hit_all:
-                recall_at_3_hits += 1
-
-            # Reciprocal Rank of first expected disease chunk
-            rr = 0.0
-            for rank, ch in enumerate(chunks, start=1):
-                if ch["disease"] in expected_set:
-                    rr = 1.0 / rank
-                    break
-            case_rr = rr
-            mrr_scores.append(rr)
-
-            # Context precision across graded chunks
-            if chunks:
-                prec = sum(1 for ch in chunks if ch["disease"] in expected_set) / len(chunks)
-            else:
-                prec = 0.0
-            case_precision = prec
-            context_precisions.append(prec)
-
-            if expected_facets:
-                facet_total += 1
-                top_facets = {ch["facet"] for ch in chunks[: max(2, len(expected_diseases))]}
-                if any(f in top_facets for f in expected_facets):
-                    facet_hits += 1
-
-            expected_cit = case.get("expected_citation_substring")
-            if expected_cit:
-                citation_total += 1
-                if any(expected_cit in c for c in res.get("citations", [])):
-                    citation_hits += 1
-
-            expected_ans = case.get("expected_answer_substring")
-            if expected_ans:
-                guardrail_total += 1
-                if expected_ans in res.get("answer", ""):
-                    guardrail_hits += 1
-        else:
-            ood_total += 1
-            if status_ok and not cards and not res.get("citations"):
-                ood_hits += 1
-
-        per_case_results.append(
-            {
-                "id": case["id"],
-                "category": case["category"],
-                "expected_status": expected_status,
-                "actual_status": res["status"],
-                "status_ok": status_ok,
-                "recall_at_3": case_recall_at_3,
-                "reciprocal_rank": case_rr,
-                "context_precision": case_precision,
-                "faithfulness_verified": res.get("faithfulness_verified", False),
-                "latency_ms": res.get("latency_ms", 0.0),
-                "top_chunks": [ch["chunk_id"] for ch in chunks[:3]],
-            }
-        )
-
+    latencies = [row["latency_ms"] for row in rows]
     summary = {
-        "benchmark_name": benchmark["benchmark_name"],
-        "version": benchmark["version"],
-        "total_cases": len(cases),
-        "retrieval_cases": retrieval_cases,
-        "ood_and_abstention_cases": ood_total,
-        "graph_engine": "langgraph_state_graph" if LANGGRAPH_AVAILABLE else "deterministic_state_machine",
-        "synthesis_mode": "gemini_grounded" if use_llm else "offline_extractive",
-        "metrics": {
-            "status_accuracy": round(status_hits / max(len(cases), 1), 4),
-            "recall_at_3": round(recall_at_3_hits / max(retrieval_cases, 1), 4),
-            "mrr": round(float(np.mean(mrr_scores)) if mrr_scores else 0.0, 4),
-            "context_precision": round(float(np.mean(context_precisions)) if context_precisions else 0.0, 4),
-            "facet_routing_accuracy": round(facet_hits / max(facet_total, 1), 4),
-            "citation_accuracy": round(citation_hits / max(citation_total, 1), 4),
-            "faithfulness_rate": round(faithfulness_hits / max(len(cases), 1), 4),
-            "ood_and_abstention_accuracy": round(ood_hits / max(ood_total, 1), 4),
-            "guardrail_compliance": round(guardrail_hits / max(guardrail_total, 1), 4),
-            "mean_latency_ms": round(float(np.mean(latencies_ms)) if latencies_ms else 0.0, 3),
-            "p95_latency_ms": round(float(np.percentile(latencies_ms, 95)) if latencies_ms else 0.0, 3),
+        "benchmark_name": benchmark["benchmark_name"], "version": benchmark["version"],
+        "evaluation_protocol": "strict-chunk-facet-v2",
+        "limitations": "Development/regression cases, not an independent clinical holdout. Queries share vocabulary and aliases with the curated corpus. Scores do not establish medical accuracy or generalization; adversarial cases are regressions used during this audit.",
+        "known_annotation_issues": ["Original golden cases expect 'WHO consolidated guidelines on tuberculosis' for ISBN 9789240110991; the WHO source is actually the operational handbook. Five citation-presence checks therefore fail without editing the original labels.", "Some differential questions name multiple topics but original relevance labels list only one; judgments are not exhaustive."],
+        "metric_definitions": {
+            "recall_at_3": "Macro mean of relevant chunk IDs retrieved among the first three / all relevant chunk IDs; disease AND requested facet define relevance. Cards excluded.",
+            "mrr": "First relevant chunk reciprocal rank using the same disease/facet judgments.",
+            "context_precision": "Relevant chunk IDs / all returned graded evidence IDs, macro averaged.",
+            "faithfulness_rate": "Legacy alias of source_copy_compliance. Exact source-text/citation/frame matching, independent of engine flags; NOT semantic or clinical faithfulness.",
+            "citation_accuracy": "Allowed corpus citation membership and expected citation presence; NOT validation of source entailment.",
+            "latency": "One separately timed setup call excluded from warmed aggregates; warmed per-case graph latency excludes facade import/index construction. Cold call reported separately. Hardware/runtime dependent.",
         },
-        "cases": per_case_results,
+        "corpus_sha256": hashlib.sha256(retriever.corpus_path.read_bytes()).hexdigest(),
+        "cases_sha256": hashlib.sha256(golden_path.read_bytes()).hexdigest(),
+        "source_sha256": {name: hashlib.sha256((PROJECT_ROOT / name).read_bytes()).hexdigest() for name in ("src/safety/rag_retriever.py", "src/safety/rag_graph.py", "src/safety/rag_knowledge.py", "scripts/evaluate_rag.py")},
+        "environment": {"python": platform.python_version(), "numpy": np.__version__, "platform": platform.platform()},
+        "total_cases": len(rows), "retrieval_cases": sum(row["recall_at_3"] is not None for row in rows),
+        "ood_and_abstention_cases": sum(row["abstention_ok"] is not None for row in rows),
+        "graph_engine": ",".join(sorted(engines)), "synthesis_modes": sorted(modes),
+        "cold_call_latency_ms": cold["latency_ms"],
+        "metrics": {
+            "status_accuracy": mean("status_ok"), "recall_at_3": mean("recall_at_3"),
+            "mrr": mean("reciprocal_rank"), "context_precision": mean("context_precision"),
+            "facet_routing_accuracy": mean("facet_ok"), "citation_accuracy": mean("citation_ok"),
+            "source_copy_compliance": mean("source_copy_compliant"), "faithfulness_rate": mean("source_copy_compliant"),
+            "ood_and_abstention_accuracy": mean("abstention_ok"), "guardrail_compliance": mean("guardrail_ok"),
+            "mean_latency_ms": round(float(np.mean(latencies)), 3), "p95_latency_ms": round(float(np.percentile(latencies, 95)), 3),
+        },
+        "cases": rows,
     }
-
     if report_path is not None:
         report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-
+        report_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return summary
 
 
 if __name__ == "__main__":
-    report = evaluate_golden_benchmark()
-    print(json.dumps({k: v for k, v in report.items() if k != "cases"}, indent=2))
+    report = evaluate_golden_benchmark(report_path=None)
+    if ADVERSARIAL_PATH.exists():
+        report["adversarial"] = evaluate_golden_benchmark(ADVERSARIAL_PATH, report_path=None)
+    REPORT_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({k: v for k, v in report.items() if k not in {"cases", "adversarial", "metric_definitions"}}, indent=2))
+    if "adversarial" in report:
+        print("Adversarial metrics:", json.dumps(report["adversarial"]["metrics"]))

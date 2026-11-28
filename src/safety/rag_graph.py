@@ -6,15 +6,16 @@
     3. grade_evidence      -> Filters candidates by relevance threshold (triggers NO_MATCH)
     4. synthesize_grounded -> Optional Google Gemini Free Tier API (GEMINI_API_KEY)
                               with deterministic Offline Extractive Grounded Fallback
-    5. verify_citations    -> Verifies all claims/citations against graded evidence;
-                              auto-downgrades hallucinated LLM outputs to verified offline text.
+    5. verify_citations    -> Checks exact source copying/citation membership, not clinical truth;
+                              accepts only exact evidence extracts; other LLM outputs fall back to offline text.
 
 Uses real ``langgraph.graph.StateGraph`` whenever ``langgraph`` is installed,
-with a 100% equivalent deterministic state runner fallback in minimal environments.
+with a deterministic runner fallback using the same nodes in minimal environments.
 """
 from __future__ import annotations
 
 import logging
+import math
 import os
 import re
 import time
@@ -39,7 +40,7 @@ except ImportError:  # pragma: no cover - covered by fallback path
     LANGGRAPH_AVAILABLE = False
 
 RELEVANCE_THRESHOLD = 0.24
-GEMINI_MODEL_DEFAULT = "gemini-2.0-flash"
+GEMINI_MODEL_DEFAULT = ""  # Provider model lifecycle is external; configure GEMINI_RAG_MODEL explicitly.
 
 
 class ClinicalRagState(TypedDict, total=False):
@@ -92,9 +93,9 @@ def _build_clinical_context_prefix(
     if in_lung_ratio is None:
         context += " In-lung Grad-CAM energy audit not yet executed."
     else:
-        context += f" In-lung Grad-CAM energy: {in_lung_ratio:.1%}."
+        context += f" In-lung Grad-CAM energy: {in_lung_ratio:.1%} (rounded)."
         if in_lung_ratio < 0.8:
-            context += " Below 80% (< 80%): inspect for text/border shortcut artifacts; clinical suspicion flag downgraded."
+            context += " Below 80% (< 80%): inspect for text/border shortcut artifacts; reference caution only; this RAG endpoint does not change the model clinical flag."
     context += " Grad-CAM and energy ratios are not calibrated diagnostic probabilities."
     location_text = ", ".join(anatomical_locations) if anatomical_locations else "unverified localization"
     context += f" Caller-supplied anatomical regions: {location_text}."
@@ -103,7 +104,7 @@ def _build_clinical_context_prefix(
 
 def _node_safety_gate(state: ClinicalRagState) -> ClinicalRagState:
     trace = list(state.get("graph_trace", []))
-    if not state.get("is_safe", True):
+    if state.get("is_safe", True) is not True:
         trace.append("safety_gate:BLOCKED_OOD")
         return {
             **state,
@@ -116,13 +117,13 @@ def _node_safety_gate(state: ClinicalRagState) -> ClinicalRagState:
             "retrieved_cards": [],
             "graded_chunks": [],
             "synthesis_mode": "blocked_ood",
-            "faithfulness_verified": True,
+            "faithfulness_verified": False,
             "hallucination_guard_triggered": False,
             "graph_trace": trace,
         }
 
     in_lung_ratio = state.get("in_lung_ratio")
-    if in_lung_ratio is not None and not (0.0 <= in_lung_ratio <= 1.0):
+    if in_lung_ratio is not None and (not isinstance(in_lung_ratio, (int, float)) or isinstance(in_lung_ratio, bool) or not math.isfinite(in_lung_ratio) or not (0.0 <= in_lung_ratio <= 1.0)):
         trace.append("safety_gate:INVALID_CONTEXT")
         return {
             **state,
@@ -132,7 +133,7 @@ def _node_safety_gate(state: ClinicalRagState) -> ClinicalRagState:
             "retrieved_cards": [],
             "graded_chunks": [],
             "synthesis_mode": "invalid_context",
-            "faithfulness_verified": True,
+            "faithfulness_verified": False,
             "hallucination_guard_triggered": False,
             "graph_trace": trace,
         }
@@ -197,17 +198,16 @@ def _node_grade_evidence(
                 + " No curated thoracic evidence matched the query; do not infer a normal study from abstention."
             ).strip(),
             "synthesis_mode": "safe_abstention",
-            "faithfulness_verified": True,
+            "faithfulness_verified": False,
             "hallucination_guard_triggered": False,
             "graph_trace": trace,
         }
 
-    # Build deduplicated reference cards in ranked disease order (max 4 cards)
+    # Preserve every represented disease; do not silently truncate multi-pathology context.
     seen_diseases: list[str] = []
     for ch in graded:
         if ch["disease"] not in seen_diseases:
             seen_diseases.append(ch["disease"])
-    seen_diseases = seen_diseases[:4]
 
     cards = [engine.get_card(disease) for disease in seen_diseases]
     citations = list(dict.fromkeys(src for card in cards for src in card["citations"]))
@@ -224,7 +224,7 @@ def _node_grade_evidence(
 
 
 def _offline_extractive_synthesis(state: ClinicalRagState) -> str:
-    """Deterministic, zero-hallucination extractive synthesis strictly from graded chunks."""
+    """Copy graded evidence with deterministic framing; no semantic truth guarantee."""
     question_norm = normalize_text(state.get("question", ""))
     context_prefix = state.get("context_prefix", "")
     cards = state.get("retrieved_cards", [])
@@ -239,24 +239,12 @@ def _offline_extractive_synthesis(state: ClinicalRagState) -> str:
         return context_prefix
 
     snippets: list[str] = []
-    if detected_facet == "clinical_workup_and_coding":
-        for card in cards:
-            snippets.append(f"{card['disease']} (ICD-10 {card['icd10']}): {card['followup']}")
-    elif detected_facet == "differential_diagnosis":
-        for card in cards:
-            snippets.append(f"{card['disease']} differential: {card['differential']}")
-    elif detected_facet == "imaging_hallmarks":
-        for card in cards:
-            snippets.append(f"{card['disease']} hallmarks: {card['hallmarks']} Differential: {card['differential']}")
-    else:
-        # Use top graded chunks directly (one per disease for conciseness)
-        used_diseases: set[str] = set()
-        for ch in graded_chunks:
-            if ch["disease"] in used_diseases:
-                continue
-            used_diseases.add(ch["disease"])
+    for card in cards:
+        evidence = [ch for ch in graded_chunks if ch["disease"] == card["disease"]]
+        preferred = [ch for ch in evidence if ch["facet"] == detected_facet] or evidence
+        if preferred:
+            ch = preferred[0]
             snippets.append(f"{ch['text']} [{ch['chunk_id']}]")
-
     return f"{context_prefix} {' '.join(snippets)}".strip()
 
 
@@ -276,12 +264,12 @@ def _call_gemini_free_api(
 
     evidence_block = "\n".join(
         f"- [{ch['chunk_id']}] ({ch['disease']}, ICD-10 {ch['icd10']}): {ch['text']}"
-        for ch in graded_chunks[:6]
+        for ch in graded_chunks
     )
     prompt = (
         "You are a thoracic radiology reference assistant. Answer strictly using ONLY the verified "
         "clinical evidence chunks below. Never invent findings, probabilities, or guidelines not present "
-        "in the chunks. Keep the response concise (2-4 sentences) and cite chunk IDs in square brackets "
+        "in the chunks. Select only complete evidence chunk texts verbatim, each followed by its chunk ID in square brackets. Do not paraphrase or add words. Cite IDs "
         "like [chunk_id].\n\n"
         f"Clinical Safety Context: {context_prefix}\n\n"
         f"Verified Evidence Chunks:\n{evidence_block}\n\n"
@@ -291,7 +279,7 @@ def _call_gemini_free_api(
 
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{model}:generateContent?key={api_key}"
+        f"{model}:generateContent"
     )
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -299,7 +287,7 @@ def _call_gemini_free_api(
     }
     try:
         with httpx.Client(timeout=timeout_s) as client:
-            resp = client.post(url, json=payload)
+            resp = client.post(url, json=payload, headers={"x-goog-api-key": api_key})
             resp.raise_for_status()
             data = resp.json()
         candidates = data.get("candidates") or []
@@ -309,7 +297,7 @@ def _call_gemini_free_api(
         text = " ".join(part.get("text", "").strip() for part in parts if part.get("text")).strip()
         return text or None
     except Exception as exc:  # pragma: no cover - network/quota fallback
-        logger.warning("Gemini Free API synthesis unavailable, falling back to offline grounded mode: %s", exc)
+        logger.warning("Gemini synthesis unavailable; using offline extraction (%s)", type(exc).__name__)
         return None
 
 
@@ -318,8 +306,8 @@ def _node_synthesize_grounded(state: ClinicalRagState) -> ClinicalRagState:
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     use_llm = state.get("use_llm", True)
 
-    if use_llm and api_key:
-        model_name = os.environ.get("GEMINI_RAG_MODEL", GEMINI_MODEL_DEFAULT).strip() or GEMINI_MODEL_DEFAULT
+    model_name = os.environ.get("GEMINI_RAG_MODEL", GEMINI_MODEL_DEFAULT).strip()
+    if use_llm and api_key and model_name:
         llm_text = _call_gemini_free_api(
             question=state.get("question", ""),
             context_prefix=state.get("context_prefix", ""),
@@ -331,7 +319,7 @@ def _node_synthesize_grounded(state: ClinicalRagState) -> ClinicalRagState:
             trace.append(f"synthesize_grounded:gemini({model_name})")
             return {
                 **state,
-                "draft_answer": f"{state.get('context_prefix', '')} {llm_text}".strip(),
+                "draft_answer": llm_text,
                 "synthesis_mode": "gemini_grounded",
                 "graph_trace": trace,
             }
@@ -350,24 +338,26 @@ def _verify_draft_against_evidence(
     draft: str,
     graded_chunks: list[dict[str, Any]],
 ) -> bool:
-    """Verify that any [chunk_id] citations exist in graded_chunks and draft has grounded overlap."""
+    """Accept only a sequence of whole, exactly cited source extracts.
+
+    Lexical overlap cannot verify a medical claim, negation, dose or fabricated
+    number. Arbitrary paraphrases are deliberately rejected rather than labeled
+    clinically faithful. This checks source copying, not the truth of the corpus.
+    """
     if not draft or not graded_chunks:
         return False
-
-    valid_chunk_ids = {ch["chunk_id"] for ch in graded_chunks}
-    cited_ids = re.findall(r"\[([a-z0-9_]+)\]", draft)
-    if any(cid not in valid_chunk_ids for cid in cited_ids):
-        return False
-
-    # Require lexical grounding: at least one graded disease or substantial token overlap
-    draft_norm = normalize_text(draft)
-    evidence_norm = normalize_text(" ".join(ch["text"] for ch in graded_chunks))
-    evidence_tokens = {tok for tok in evidence_norm.split() if len(tok) >= 4}
-    draft_tokens = {tok for tok in draft_norm.split() if len(tok) >= 4}
-    if not evidence_tokens:
-        return True
-    overlap = len(draft_tokens & evidence_tokens)
-    return overlap >= 3
+    sources = {ch["chunk_id"]: " ".join(ch["text"].split()) for ch in graded_chunks}
+    position = 0
+    count = 0
+    for match in re.finditer(r"(.+?)\s*\[([A-Za-z0-9_]+)\]", draft, re.DOTALL):
+        if match.start() != position:
+            return False
+        claim, chunk_id = match.groups()
+        if chunk_id not in sources or " ".join(claim.split()) != sources[chunk_id]:
+            return False
+        count += 1
+        position = match.end()
+    return count > 0 and not draft[position:].strip()
 
 
 def _node_verify_citations(state: ClinicalRagState) -> ClinicalRagState:
@@ -376,7 +366,7 @@ def _node_verify_citations(state: ClinicalRagState) -> ClinicalRagState:
     graded_chunks = state.get("graded_chunks", [])
     synthesis_mode = state.get("synthesis_mode", "offline_extractive")
 
-    if synthesis_mode == "offline_extractive":
+    if synthesis_mode == "offline_extractive" and draft == _offline_extractive_synthesis(state):
         trace.append("verify_citations:PASS(deterministic)")
         return {
             **state,
@@ -388,12 +378,16 @@ def _node_verify_citations(state: ClinicalRagState) -> ClinicalRagState:
         }
 
     is_grounded = _verify_draft_against_evidence(draft, graded_chunks)
+    cited_ids = set(re.findall(r"\[([A-Za-z0-9_]+)\]", draft))
+    covered_diseases = {ch["disease"] for ch in graded_chunks if ch["chunk_id"] in cited_ids}
+    required_diseases = {card["disease"] for card in state.get("retrieved_cards", [])}
+    is_grounded = is_grounded and required_diseases.issubset(covered_diseases)
     if is_grounded:
         trace.append("verify_citations:PASS(llm_grounded)")
         return {
             **state,
             "status": "GROUNDED_REFERENCE",
-            "answer": draft,
+            "answer": f"{state.get('context_prefix', '')} {draft}".strip(),
             "faithfulness_verified": True,
             "hallucination_guard_triggered": False,
             "graph_trace": trace,
@@ -466,8 +460,10 @@ def run_clinical_rag_graph(
     anatomical_locations: list[str],
     is_safe: bool = True,
     in_lung_ratio: float | None = None,
-    use_llm: bool = True,
+    use_llm: bool = False,
     retriever: HybridClinicalRetriever | None = None,
+    include_timing: bool = True,
+    graph_backend: str = "auto",
 ) -> dict[str, Any]:
     """Execute the 5-node LangGraph Corrective RAG workflow and return structured output."""
     t0 = time.perf_counter()
@@ -477,11 +473,15 @@ def run_clinical_rag_graph(
         "anatomical_locations": list(anatomical_locations),
         "is_safe": is_safe,
         "in_lung_ratio": in_lung_ratio,
-        "use_llm": use_llm,
+        "use_llm": use_llm and include_timing,
         "graph_trace": [],
     }
 
-    compiled = build_clinical_rag_graph(retriever) if retriever is not None else _get_compiled_graph()
+    if graph_backend not in {"auto", "langgraph", "fallback"}:
+        raise ValueError("graph_backend must be auto, langgraph or fallback")
+    if graph_backend == "langgraph" and not LANGGRAPH_AVAILABLE:
+        raise RuntimeError("LangGraph is not installed")
+    compiled = None if graph_backend == "fallback" else (build_clinical_rag_graph(retriever) if retriever is not None else _get_compiled_graph())
     if compiled is not None:
         final_state = compiled.invoke(initial_state)
         engine_label = "langgraph_state_graph"
@@ -498,7 +498,7 @@ def run_clinical_rag_graph(
         engine_label = "deterministic_state_machine"
 
     latency_ms = round((time.perf_counter() - t0) * 1000.0, 2)
-    return {
+    result = {
         "status": final_state.get("status", "NO_MATCH"),
         "answer": final_state.get("answer", ""),
         "citations": final_state.get("citations", []),
@@ -509,5 +509,8 @@ def run_clinical_rag_graph(
         "synthesis_mode": final_state.get("synthesis_mode", "offline_extractive"),
         "faithfulness_verified": bool(final_state.get("faithfulness_verified", True)),
         "hallucination_guard_triggered": bool(final_state.get("hallucination_guard_triggered", False)),
-        "latency_ms": latency_ms,
+        "verification_scope": "extractive_source_match" if final_state.get("status") == "GROUNDED_REFERENCE" else "not_applicable",
     }
+    if include_timing:
+        result["latency_ms"] = latency_ms
+    return result

@@ -130,6 +130,7 @@ export interface RagKnowledgeCard {
   citations: string[];
 }
 export interface RagQueryRequest {
+  use_llm?: boolean;
   question: string;
   active_findings: string[];
   anatomical_locations: string[];
@@ -156,6 +157,7 @@ export interface RagQueryResponse {
   retrieval_chunks?: RagEvidenceChunk[];
   graph_trace?: string[];
   graph_engine?: string;
+  verification_scope?: string;
   synthesis_mode?: string;
   faithfulness_verified?: boolean;
   hallucination_guard_triggered?: boolean;

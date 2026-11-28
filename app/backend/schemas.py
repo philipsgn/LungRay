@@ -120,6 +120,7 @@ class RagKnowledgeCard(BaseModel):
 
 class RagQueryRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
+    use_llm: bool = False
     active_findings: list[str] = Field(default_factory=list, max_length=32)
     anatomical_locations: list[str] = Field(default_factory=list, max_length=16)
     is_safe: bool = True
@@ -146,8 +147,9 @@ class RagQueryResponse(BaseModel):
     retrieved_cards: list[RagKnowledgeCard]
     retrieval_chunks: list[RagEvidenceChunk] = Field(default_factory=list)
     graph_trace: list[str] = Field(default_factory=list)
-    graph_engine: str = Field(default="langgraph_state_graph")
+    graph_engine: str = Field(default="unknown")
+    verification_scope: str = Field(default="not_verified")
     synthesis_mode: str = Field(default="offline_extractive")
-    faithfulness_verified: bool = Field(default=True)
+    faithfulness_verified: bool = Field(default=False)
     hallucination_guard_triggered: bool = Field(default=False)
     latency_ms: Optional[float] = Field(default=None)

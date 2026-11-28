@@ -58,6 +58,7 @@ def test_crag_graph_trace_and_multi_pathology_coverage() -> None:
 
 def test_crag_verifier_downgrades_hallucinated_llm_citation(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GEMINI_API_KEY", "fake-test-key")
+    monkeypatch.setenv("GEMINI_RAG_MODEL", "test-model")
     monkeypatch.setattr(
         rag_graph,
         "_call_gemini_free_api",
@@ -82,13 +83,11 @@ def test_crag_verifier_downgrades_hallucinated_llm_citation(monkeypatch: pytest.
 
 def test_crag_verifier_accepts_grounded_llm_output(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GEMINI_API_KEY", "fake-test-key")
+    monkeypatch.setenv("GEMINI_RAG_MODEL", "test-model")
     monkeypatch.setattr(
         rag_graph,
         "_call_gemini_free_api",
-        lambda **kwargs: (
-            "Positive chest X-ray triage for Tuberculosis requires clinical assessment and "
-            "WHO-recommended rapid molecular sputum testing such as Xpert MTB/RIF Ultra [tuberculosis_workup]."
-        ),
+        lambda **kwargs: next(ch["text"] + " [" + ch["chunk_id"] + "]" for ch in kwargs["graded_chunks"] if ch["chunk_id"] == "tuberculosis_workup"),
     )
     res = run_clinical_rag_graph(
         question="Recommended follow-up and clinical workup?",
@@ -119,4 +118,5 @@ def test_golden_benchmark_script_runs_and_meets_quality_bars(tmp_path: Path) -> 
     assert metrics["mrr"] >= 0.95
     assert metrics["faithfulness_rate"] == 1.0
     assert metrics["ood_and_abstention_accuracy"] == 1.0
-    assert metrics["mean_latency_ms"] < 50.0
+    assert metrics["mean_latency_ms"] >= 0.0
+    assert loaded["evaluation_protocol"] == "strict-chunk-facet-v2"

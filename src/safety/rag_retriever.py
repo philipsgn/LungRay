@@ -1,6 +1,6 @@
 """Lightweight Hybrid Retriever (Okapi BM25 + TF-IDF Word/Char Cosine + RRF).
 
-Zero external model downloads, pure Python + NumPy, sub-15 ms CPU latency.
+No external model downloads; Python + NumPy. Latency is measured, not guaranteed.
 Indexes 48 atomic clinical evidence chunks (16 LungRay pathologies x 3 facets)
 from ``configs/clinical_rag_corpus.json``.
 """
@@ -132,7 +132,7 @@ def extract_tfidf_features(text: str) -> list[str]:
     for w in words:
         if len(w) >= 4:
             padded = f"^{w}$"
-            for n in (3, 4):
+            for n in (3, 4, 5):
                 for i in range(len(padded) - n + 1):
                     feats.append(f"c{n}:{padded[i : i + n]}")
     return feats
@@ -204,7 +204,7 @@ class HybridClinicalRetriever:
 
             facet_texts = (
                 ("imaging_hallmarks", f"{disease} imaging hallmarks: {entry['hallmarks']}"),
-                ("differential_diagnosis", f"{disease} differential diagnosis (Fleischner criteria): {entry['differential']}"),
+                ("differential_diagnosis", f"{disease} differential diagnosis (editorial reference): {entry['differential']}"),
                 (
                     "clinical_workup_and_coding",
                     f"{disease} follow-up and clinical workup (ICD-10 {icd10}): {entry['followup']}",
@@ -237,6 +237,9 @@ class HybridClinicalRetriever:
         # Build BM25 & TF-IDF indices
         self._build_bm25_index()
         self._build_tfidf_index()
+        # Facet-routing terms are not sufficient evidence of a thoracic topic.
+        generic = set(tokenize_words(" ".join(kw for words in FACET_KEYWORDS.values() for kw in words)))
+        self._content_terms = [set(tokenize_words(ch.text)) - generic - {"clinical", "diagnosis", "follow", "up", "criteria", "fleischner", "icd", "10", "recommended", "assessment", "editorial", "reference"} for ch in self.chunks]
 
     def _chunk_index_text(self, chunk: ClinicalChunk) -> str:
         alias_str = " ".join(chunk.aliases)
@@ -319,16 +322,43 @@ class HybridClinicalRetriever:
         if norm == 0.0:
             return np.zeros(len(self.chunks), dtype=np.float64)
         q_vec /= norm
-        return (self._tfidf_matrix @ q_vec).astype(np.float64)
+        return np.clip(self._tfidf_matrix @ q_vec, 0.0, 1.0).astype(np.float64)
+
+    def _query_mentions(self, question: str) -> tuple[list[str], set[str]]:
+        """Boundary-aware aliases with conservative ambiguity and local negation handling.
+
+        This is reference-topic routing, not clinical negation extraction or diagnosis.
+        """
+        norm = normalize_text(re.sub(r"[.;!?]", " clauseboundary ", question))
+        matched: list[str] = []
+        negated: set[str] = set()
+        clinical_anchor = bool(re.search(r"\b(lung|pulmonary|chest|thoracic|radiograph|radiographic|imaging|cxr|phoi)\b", norm))
+        for disease, aliases in self._alias_map.items():
+            for alias in sorted(aliases):
+                if not alias:
+                    continue
+                # 'mass' is a physical quantity, and TB also denotes storage capacity.
+                if alias == "mass" and normalize_text(question) != "mass" and not clinical_anchor:
+                    continue
+                if alias == "tb" and re.search(r"\b(storage|disk|drive|terabyte|ssd|capacity)\b", norm):
+                    continue
+                for match in re.finditer(r"\b" + re.escape(alias) + r"\b", norm):
+                    # Keep conjunction scope, but stop at sentence punctuation or contrast.
+                    prefix = norm[:match.start()].split("clauseboundary")[-1]
+                    # Up to twelve preceding words; avoid treating a distant negation as global.
+                    tail = " ".join(prefix.split()[-12:])
+                    denied = bool(re.search(r"\b(no|not|without|denies|negative for|no evidence of|khong co|khong ghi nhan)\b[^.]*$", tail))
+                    if re.search(r"\b(but|however|nhung)\b", tail):
+                        denied = False
+                    if denied:
+                        negated.add(disease)
+                    elif disease not in matched:
+                        matched.append(disease)
+        return [d for d in matched if d not in negated], negated
 
     def match_explicit_diseases(self, question: str) -> list[str]:
-        """Return diseases explicitly named in the user's question (English or Vietnamese aliases)."""
-        norm = normalize_text(question)
-        matched: list[str] = []
-        for disease, alias_set in self._alias_map.items():
-            if any(re.search(r"\b" + re.escape(alias) + r"\b", norm) for alias in alias_set if alias):
-                matched.append(disease)
-        return matched
+        """Resolve explicit non-negated reference topics; short aliases match whole words."""
+        return self._query_mentions(question)[0]
 
     def match_active_findings(self, active_findings: list[str]) -> list[str]:
         """Resolve caller-supplied active finding labels to canonical LungRay disease names."""
@@ -354,13 +384,32 @@ class HybridClinicalRetriever:
         Returns:
             (scored_chunks, target_diseases, detected_facet)
         """
-        explicit_diseases = self.match_explicit_diseases(question)
-        active_diseases = self.match_active_findings(active_findings or [])
+        if top_k < 1 or rrf_k < 0:
+            raise ValueError("top_k must be positive and rrf_k must be nonnegative")
+        if not normalize_text(question):
+            return [], [], None
+        explicit_diseases, negated = self._query_mentions(question)
+        active_diseases = [d for d in self.match_active_findings(active_findings or []) if d not in negated]
         detected_facet = detect_query_facet(question)
 
         # Explicitly named diseases take precedence (treated as reference lookup,
         # not as an additional positive finding on the scan).
         scoped_diseases = explicit_diseases if explicit_diseases else active_diseases
+        query_terms = set(tokenize_words(question))
+        domain_overlap = any(len(query_terms & terms) >= 2 for terms in self._content_terms)
+        if scoped_diseases and not explicit_diseases:
+            generic = set(tokenize_words(" ".join(kw for words in FACET_KEYWORDS.values() for kw in words)))
+            generic |= {"clinical", "please", "tell", "me", "findings", "detected", "study", "these", "those", "diagnoses", "criteria", "10"}
+            confidence_query = any(term in normalize_text(question) for term in ("confidence", "tin cay", "giai phau", "energy ratio", "shortcut"))
+            if len(query_terms - generic) >= 2 and not domain_overlap and not confidence_query:
+                return [], [], detected_facet
+        if not scoped_diseases:
+            # Do not reintroduce negated topics via the open lexical search.
+            if negated or not domain_overlap:
+                return [], [], detected_facet
+            # An ambiguous mass-only query cannot be rescued by character overlap.
+            if "mass" in query_terms and not explicit_diseases and "Mass" not in active_diseases:
+                return [], [], detected_facet
 
         # Build enriched query string for lexical + subword scoring
         query_for_scoring = question
@@ -377,9 +426,13 @@ class HybridClinicalRetriever:
         else:
             candidate_indices = list(range(len(self.chunks)))
 
+        if detected_facet:
+            candidate_indices = [i for i in candidate_indices if self.chunks[i].facet == detected_facet]
+        top_k = max(top_k, len(scoped_diseases))
+
         # Compute ranks within candidate pool for RRF
-        bm25_order = sorted(candidate_indices, key=lambda idx: (-bm25_raw[idx], idx))
-        tfidf_order = sorted(candidate_indices, key=lambda idx: (-tfidf_raw[idx], idx))
+        bm25_order = sorted((i for i in candidate_indices if bm25_raw[i] > 0), key=lambda idx: (-bm25_raw[idx], idx))
+        tfidf_order = sorted((i for i in candidate_indices if tfidf_raw[i] > 0), key=lambda idx: (-tfidf_raw[idx], idx))
         bm25_rank = {idx: rank for rank, idx in enumerate(bm25_order, start=1)}
         tfidf_rank = {idx: rank for rank, idx in enumerate(tfidf_order, start=1)}
 
@@ -390,7 +443,7 @@ class HybridClinicalRetriever:
             chunk = self.chunks[idx]
             bm25_val = float(bm25_raw[idx])
             tfidf_val = float(tfidf_raw[idx])
-            rrf_val = (1.0 / (rrf_k + bm25_rank[idx])) + (1.0 / (rrf_k + tfidf_rank[idx]))
+            rrf_val = (1.0 / (rrf_k + bm25_rank[idx]) if idx in bm25_rank else 0.0) + (1.0 / (rrf_k + tfidf_rank[idx]) if idx in tfidf_rank else 0.0)
 
             # Normalized relevance score in [0, 1] combining lexical + subword + scoping + facet match
             bm25_norm = (bm25_val / max_bm25) if max_bm25 > 0.0 else 0.0
@@ -413,10 +466,10 @@ class HybridClinicalRetriever:
             scored.append(
                 ScoredChunk(
                     chunk=chunk,
-                    bm25_score=round(bm25_val, 4),
-                    tfidf_cosine=round(tfidf_val, 4),
-                    rrf_score=round(rrf_val, 6),
-                    relevance_score=round(relevance, 4),
+                    bm25_score=bm25_val,
+                    tfidf_cosine=tfidf_val,
+                    rrf_score=rrf_val,
+                    relevance_score=relevance,
                 )
             )
 

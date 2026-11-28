@@ -339,7 +339,7 @@ details .inner { margin-top: 8px; display: flex; flex-direction: column; gap: 6p
     <div class="screen-head">
       <div>
         <h2>Interactive 3D WSOL 6-Layer Stack</h2>
-        <p>Use one-click camera presets or drag to inspect how the 16×16 feature grid transforms into localized lesion contours.</p>
+        <p>Synthetic teaching stack using a single 16×16 map. The backend uses multi-scale Grad-CAM++: denseblock3 (32×32, 0.40) and denseblock4 (16×16, 0.60) at 512×512 input.</p>
       </div>
     </div>
 
@@ -412,7 +412,7 @@ details .inner { margin-top: 8px; display: flex; flex-direction: column; gap: 6p
     <div class="screen-head">
       <div>
         <h2>16-Finding Signature Atlas</h2>
-        <p>Click any pathology tile to open it immediately inside the 3D WSOL Stack (Tab 2). Thresholds reflect calibrated validation cutoffs.</p>
+        <p>Click any pathology tile to open it immediately inside the 3D WSOL Stack (Tab 2). Tiles show Standard checkpoint Youden cutoffs from optimal_thresholds_20_11.json. Images, boxes, IoU and in-lung ratios below are synthetic teaching examples, not patient measurements.</p>
       </div>
     </div>
     <div class="tiles" id="tiles"></div>
@@ -423,7 +423,7 @@ details .inner { margin-top: 8px; display: flex; flex-direction: column; gap: 6p
     <div class="screen-head">
       <div>
         <h2>Verified Benchmarks &amp; Clinical Safety Policy</h2>
-        <p>Strictly audited figures from deployed checkpoints only — zero synthetic estimates or unverified model claims.</p>
+        <p>Stored baseline results at training resolution 256×256 (best epoch 16), not a re-evaluation of current 512×512 serving. Sources: training_history_20_11.csv, independent_test_metrics_20_11.csv and dense_unet_manifest.json. Values are rounded; TB test AUROC is 0.999959, not exactly 1.0.</p>
       </div>
     </div>
 
@@ -437,8 +437,8 @@ details .inner { margin-top: 8px; display: flex; flex-direction: column; gap: 6p
         <h3>Dense-UNet Anatomical Gate <small>Stage 1 · 3,014 pairs @ 256×256</small></h3>
         <div id="bars-denseunet"></div>
         <div class="meta-strip" style="margin-top:12px">
-          <span class="meta-chip">Dilation: <b>+6%</b></span>
-          <span class="meta-chip">Outer Attenuation: <b>10%</b></span>
+          <span class="meta-chip">Dilation kernel width: <b>6%</b></span>
+          <span class="meta-chip">Outside intensity retained: <b>10%</b></span>
           <span class="meta-chip">Hard Bypass: <b>&lt; 5%</b></span>
           <span class="meta-chip">Soft Bypass: <b>&lt; 18%</b></span>
         </div>
@@ -451,6 +451,28 @@ details .inner { margin-top: 8px; display: flex; flex-direction: column; gap: 6p
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script id="atlas-thresholds" type="application/json">
+{
+  "head_a": {
+    "Atelectasis": 0.3929876983165741,
+    "Cardiomegaly": 0.18556353449821472,
+    "Effusion": 0.4423869550228119,
+    "Infiltration": 0.4824499487876892,
+    "Mass": 0.4447276294231415,
+    "Nodule": 0.4053550064563751,
+    "Pneumonia": 0.11821740865707397,
+    "Pneumothorax": 0.26930320262908936,
+    "Consolidation": 0.48905181884765625,
+    "Edema": 0.23041240870952606,
+    "Emphysema": 0.12392838299274445,
+    "Fibrosis": 0.14804601669311523,
+    "Pleural_Thickening": 0.3689516484737396,
+    "Hernia": 0.0030003876890987158
+  },
+  "head_b_tb": 0.20992349088191986,
+  "head_c_covid_binary": 0.3644193708896637
+}
+</script>
 <script>
 (function(){
 "use strict";
@@ -464,7 +486,7 @@ var reduced=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").ma
 
 /* ---------- finding definitions (x,y in 0..1 image coords; image-left = patient right) ---------- */
 var D=[
-{id:"atel",name:"Atelectasis",vi:"Xẹp phổi",head:"A",icd:"J98.11",diff:"Medium",gt:[.20,.62,.47,.75],
+{id:"atel",name:"Atelectasis",vi:"Xẹp phổi",head:"A",icd:"J98.1",diff:"Medium",gt:[.20,.62,.47,.75],
  les:[{t:"op",x:.34,y:.68,rx:.13,ry:.03,r:.18,a:.6},{t:"op",x:.33,y:.72,rx:.14,ry:.05,r:.1,a:.3}],
  cam:[[.34,.69,.12,.04,1,.18]],
  n:["Thin band at the right base, plus a raised hemidiaphragm.","Faint and linear. One 32 px cell is wider than the band, so boxes come out fat.","Compare with Effusion: both sit low, but this one is a band, not a meniscus."]},
@@ -475,15 +497,15 @@ var D=[
  les:[{t:"op",x:.30,y:.77,rx:.15,ry:.07,r:-.1,a:.8}],
  cam:[[.30,.76,.13,.06,1,-.1]],
  n:["Costophrenic angle and lower zone, with a curved upper edge.","Dense, low and next to the diaphragm, so the lower edge of the box is ambiguous.","Compare with Consolidation: effusion fills the base, consolidation is lobar."]},
-{id:"infi",name:"Infiltration",vi:"Thâm nhiễm",head:"A",icd:"J18.9",diff:"Hard",gt:[.58,.40,.80,.66],
+{id:"infi",name:"Infiltration",vi:"Thâm nhiễm",head:"A",icd:"R91",diff:"Hard",gt:[.58,.40,.80,.66],
  les:[{t:"op",x:.66,y:.46,rx:.06,ry:.05,r:0,a:.4},{t:"op",x:.70,y:.58,rx:.07,ry:.05,r:.3,a:.4},{t:"op",x:.36,y:.56,rx:.07,ry:.05,r:0,a:.32},{t:"op",x:.30,y:.40,rx:.05,ry:.04,r:0,a:.28}],
  cam:[[.66,.46,.06,.05,.8,0],[.70,.58,.07,.05,.9,.3],[.36,.56,.07,.05,.6,0],[.30,.40,.05,.04,.5,0]],
  n:["Patchy: several weak peaks across mid and lower zones.","Ill-defined label. Peaks split into components, so one box covers only one of them.","Raise α and watch the mask break into islands."]},
-{id:"mass",name:"Mass",vi:"Khối mờ lồng ngực",head:"A",icd:"R91.8",diff:"Easier",gt:[.22,.26,.38,.42],
+{id:"mass",name:"Mass",vi:"Khối mờ lồng ngực",head:"A",icd:"R91",diff:"Easier",gt:[.22,.26,.38,.42],
  les:[{t:"op",x:.30,y:.34,rx:.07,ry:.07,r:0,a:.85}],
  cam:[[.30,.34,.07,.07,1,0]],
- n:["One compact peak over the right upper zone.","Large round lesions are the easy case. IoU is limited mainly by the 16×16 grid.","Drag α up: the box shrinks toward the core, IoU peaks and then falls."]},
-{id:"nodu",name:"Nodule",vi:"Nốt mờ phế trường",head:"A",icd:"R91.1",diff:"Medium",gt:[.64,.34,.72,.43],
+ n:["One compact peak over the right upper zone.","Large round lesions are the easy case. This synthetic example uses a 16×16 grid; it does not measure clinical localization accuracy.","Drag α up: the box shrinks toward the core, IoU peaks and then falls."]},
+{id:"nodu",name:"Nodule",vi:"Nốt mờ phế trường",head:"A",icd:"R91",diff:"Medium",gt:[.64,.34,.72,.43],
  les:[{t:"op",x:.68,y:.385,rx:.022,ry:.022,r:0,a:.95}],
  cam:[[.68,.385,.03,.03,1,0]],
  n:["A single small peak in the left mid zone.","Smaller than one 32 px cell. The heat spreads well past the nodule, so IoU against a tight box is low.","This is the case for finer maps: try LayerCAM on denseblock3."]},
@@ -495,23 +517,23 @@ var D=[
  les:[{t:"dark",x:.77,y:.30,rx:.06,ry:.17,r:0,a:.8},{t:"line",x:.715,y:.30,rx:.008,ry:.16,r:0,a:.7}],
  cam:[[.755,.31,.04,.13,1,0]],
  n:["Thin strip along the left apex and lateral edge, outside the dense lung.","The finding is missing lung markings and a hairline. Gradients sit on the edge, and a tight mask can clip it.","Toggle grounding: the dilated mask must keep a peripheral peak."]},
-{id:"cons",name:"Consolidation",vi:"Đông đặc phổi",head:"A",icd:"J18.9",diff:"Easier",gt:[.56,.48,.78,.72],
+{id:"cons",name:"Consolidation",vi:"Đông đặc phổi",head:"A",icd:"R91",diff:"Easier",gt:[.56,.48,.78,.72],
  les:[{t:"op",x:.66,y:.60,rx:.08,ry:.10,r:-.1,a:.75}],
  cam:[[.66,.60,.08,.09,1,-.1]],
  n:["Left lower lobe, a uniform dense patch.","Similar to pneumonia but on the other side; the heat sits on the dense core.","Use Compare with Pneumonia to see how much the masks overlap."]},
-{id:"edem",name:"Edema",vi:"Phù phổi cấp",head:"A",icd:"J81.0",diff:"Hard",gt:null,
+{id:"edem",name:"Edema",vi:"Phù phổi cấp",head:"A",icd:"J81",diff:"Hard",gt:null,
  les:[{t:"op",x:.40,y:.45,rx:.08,ry:.12,r:.2,a:.5},{t:"op",x:.62,y:.45,rx:.08,ry:.12,r:-.2,a:.5}],
  cam:[[.40,.45,.07,.11,1,.2],[.62,.45,.07,.11,1,-.2]],
- n:["Two symmetric perihilar peaks, a bat-wing shape.","Bilateral and diffuse: there is no single expert box, so box IoU is not defined.","Compare with Infiltration and read the mask overlap."]},
+ n:["Two symmetric perihilar peaks, a bat-wing shape.","Bilateral and diffuse: this demonstration has no single reference box, so box IoU is not defined.","Compare with Infiltration and read the mask overlap."]},
 {id:"emph",name:"Emphysema",vi:"Khí phế thũng",head:"A",icd:"J43.9",diff:"Hard",gt:null,hyper:1,
  les:[{t:"dark",x:.33,y:.46,rx:.13,ry:.26,r:0,a:.5},{t:"dark",x:.67,y:.47,rx:.12,ry:.25,r:0,a:.5}],
  cam:[[.33,.44,.12,.20,.6,0],[.67,.45,.11,.19,.6,0],[.5,.62,.2,.08,.25,0]],
  n:["Broad, weak activation over both lungs.","A hyperlucent lung is an absence of structure, so maps are flat and low contrast.","Raise α: almost nothing survives, which is the honest outcome."]},
-{id:"fibr",name:"Fibrosis",vi:"Xơ hóa phổi",head:"A",icd:"J84.10",diff:"Hard",gt:null,
+{id:"fibr",name:"Fibrosis",vi:"Xơ hóa phổi",head:"A",icd:"J84.1",diff:"Hard",gt:null,
  les:[{t:"dots",x:.32,y:.62,rx:.12,ry:.12,r:0,a:.35},{t:"dots",x:.68,y:.62,rx:.11,ry:.12,r:0,a:.35}],
  cam:[[.32,.63,.1,.1,1,0],[.68,.63,.1,.1,.9,0]],
  n:["Both lower zones, reticular texture.","Fine texture lives at a scale the 16×16 grid cannot resolve. The map only marks the zone.","Open the Coarse map layer: texture turns into big cells."]},
-{id:"pleu",name:"Pleural Thickening",vi:"Dày màng phổi",head:"A",icd:"J94.9",diff:"Medium",gt:[.12,.30,.24,.62],
+{id:"pleu",name:"Pleural Thickening",vi:"Dày màng phổi",head:"A",icd:"J94.1",diff:"Medium",gt:[.12,.30,.24,.62],
  les:[{t:"op",x:.185,y:.46,rx:.018,ry:.15,r:.05,a:.8}],
  cam:[[.19,.46,.025,.14,1,.05]],
  n:["Narrow band along the right lateral chest wall.","Thin and at the edge of the mask. Dilation and grounding decide whether it survives.","Compare the boxes with grounding on and off."]},
@@ -519,7 +541,7 @@ var D=[
  les:[{t:"ring",x:.56,y:.72,rx:.055,ry:.05,r:0,a:.6}],
  cam:[[.56,.72,.05,.05,1,0]],
  n:["Retrocardiac gas bubble behind the heart.","Rare (about 0.2% of NIH) and hidden behind the heart shadow.","The 50× pos_weight clamp exists for this class. This view shows only the localisation side."]},
-{id:"tb",name:"Tuberculosis",vi:"Lao phổi",head:"B",icd:"A15.0",diff:"Hard",gt:null,
+{id:"tb",name:"Tuberculosis",vi:"Lao phổi",head:"B",icd:"A16.2",diff:"Hard",gt:null,
  les:[{t:"ring",x:.30,y:.24,rx:.07,ry:.06,r:0,a:.55},{t:"op",x:.68,y:.26,rx:.06,ry:.05,r:0,a:.45}],
  cam:[[.30,.24,.07,.06,1,0],[.68,.26,.06,.05,.7,0]],
  n:["Both upper zones, apical, often with a cavity.","Bilateral and upper-zone dominated. Head B has image-level labels only.","Compare with COVID-19: upper versus lower, central versus peripheral."]},
@@ -527,7 +549,7 @@ var D=[
  les:[{t:"op",x:.22,y:.58,rx:.06,ry:.13,r:.1,a:.4},{t:"op",x:.78,y:.58,rx:.06,ry:.13,r:-.1,a:.4},{t:"op",x:.30,y:.72,rx:.08,ry:.05,r:0,a:.35},{t:"op",x:.70,y:.72,rx:.08,ry:.05,r:0,a:.35}],
  cam:[[.22,.58,.06,.12,.9,.1],[.78,.58,.06,.12,.9,-.1],[.30,.72,.08,.05,.7,0],[.70,.72,.08,.05,.7,0]],
  shortcut:[[.09,.07,.045,.045,.95,0],[.91,.07,.045,.045,.8,0]],
- n:["Peripheral and lower, both sides. In raw mode the R/L markers light up too.","The shortcut case. With grounding off, the corners dominate and the in-lung ratio collapses.","Toggle grounding and watch the corner peaks vanish. Head C is active on PACS with Youden threshold τ = 0.6123 and Smart Clinical Guardrail."]}
+ n:["Peripheral and lower, both sides. In raw mode the R/L markers light up too.","The shortcut case. With grounding off, the corners dominate and the in-lung ratio collapses.","Toggle grounding and watch the corner peaks vanish. Standard Head C uses validation Youden τ = 0.3644. The automatic Smart Clinical Guardrail is scoped to positive AG-MTCNet predictions in services.py."]}
 ];
 var byId={};D.forEach(function(d){byId[d.id]=d});
 var LEAK=[[.08,.10,.05,.05,.16,0],[.92,.09,.05,.05,.13,0],[.5,.04,.12,.04,.10,0],[.14,.92,.08,.06,.10,0],[.88,.93,.08,.06,.10,0]];
@@ -642,10 +664,12 @@ function layerCtx(c){var x=c.getContext("2d");x.clearRect(0,0,S,S);x.imageSmooth
 var cv={xray:mk(S),gate:mk(S),feat:mk(S),heat:mk(S),mask:mk(S),box:mk(S)};
 
 /* ---------- state ---------- */
+var THRESHOLDS=JSON.parse(document.getElementById("atlas-thresholds").textContent);
+function findingThreshold(d){return d.head==="B"?THRESHOLDS.head_b_tb:d.head==="C"?THRESHOLDS.head_c_covid_binary:THRESHOLDS.head_a[d.name.replace(/ /g,"_")];}
 var state={id:"pneu",cmp:"",alpha:.30,grounded:true,heatOp:.9,explode:.55,rot:false,step:0,hl:-1,custom:null};
 var LAYERS=[
  {k:"xray",n:"Input X-ray",s:"512×512, letterboxed",c:"#8a8a8a"},
- {k:"gate",n:"Anatomical gate",s:"lung mask, 6% dilation",c:"#3FD0C4"},
+ {k:"gate",n:"Anatomical gate",s:"illustrative mask, 6% kernel width",c:"#3FD0C4"},
  {k:"feat",n:"Coarse map 16×16",s:"one cell = 32 px",c:"#6fa8ff"},
  {k:"heat",n:"Grad-CAM heatmap",s:"bilinear, ÷ max",c:"#f2d03f"},
  {k:"mask",n:"Binary mask",s:"H ≥ α·max(H)",c:"#3FD0C4"},
@@ -653,12 +677,12 @@ var LAYERS=[
 var vis=[1,1,1,1,1,1];
 var STEPS=[
  {n:"Stack",vis:[1,1,1,1,1,1],t:"All six layers",f:"same 512×512 grid in every layer",d:"Drag to rotate. The gold line follows the activation peak straight down through every stage, so you can see where each step moves or blurs it."},
- {n:"1 Input",vis:[1,0,0,0,0,0],t:"Input",f:"x ∈ ℝ³ˣ⁵¹²ˣ⁵¹²",d:"Grayscale is letterboxed to 512 px, repeated to three channels and ImageNet-normalised. Your docs fix 512 px because 224 px loses small nodules and shrinks the final map to 7×7."},
- {n:"2 Gate",vis:[1,1,0,0,0,0],t:"Anatomical gate",f:"x̃ = x · (0.10 + 0.90 · dilate₆%(P_lung))",d:"Dense-UNet marks the lungs (Val Dice 0.9630, IoU 0.9300). Used for dilated soft-masking (6% dilation, 10% attenuation) and heatmap grounding. Coverage fail-safe bypasses masking below 5% (hard mask) or 18% (soft mask) to protect diffuse white-out lesions."},
- {n:"3 Coarse map",vis:[1,0,1,0,0,0],t:"Coarse class activation map",f:"Mᶜ = ReLU(Σₖ αₖᶜ Aᵏ),  αₖᶜ = (1/Z) Σᵢⱼ ∂yᶜ/∂Aᵏᵢⱼ",d:"DenseNet-121 denseblock4 yields 1024×16×16. Each cell covers 32×32 input pixels, so the map cannot place a boundary more finely than that."},
+ {n:"1 Input",vis:[1,0,0,0,0,0],t:"Input",f:"x ∈ ℝ³ˣ⁵¹²ˣ⁵¹²",d:"Grayscale is letterboxed to 512 px, repeated to three channels and ImageNet-normalised. Serving uses 512 px (DB4: 16×16); the dated checkpoint was trained and evaluated at 256 px (DB4: 8×8)."},
+ {n:"2 Gate",vis:[1,1,0,0,0,0],t:"Anatomical gate",f:"x̃ = x · (0.10 + 0.90 · blur(dilate(M_lung)))",d:"Optional Dense-UNet: reported validation Dice 0.9630 / IoU 0.9300 at 256 px. Dilation kernel width is 6% of the shorter side; outside intensity retains 10%. Separate hard-mask helper bypasses below 5%; soft masking bypasses below 18% or low bilateral symmetry with coverage below 25%. Standard-only serving uses morphology fallback. This display uses a synthetic mask."},
+ {n:"3 Coarse map",vis:[1,0,1,0,0,0],t:"Coarse class activation map",f:"Synthetic M: Gaussian peaks → 16×16 sampling (not model inference)",d:"At 512 px, DB4 is 1024×16×16 with 32 px sampling spacing. This schematic is not Grad-CAM++; the backend fuses DB3 (0.40) and DB4 (0.60). Sampling spacing is not a measured boundary error."},
  {n:"4 Upsample",vis:[1,0,0,1,0,0],t:"Upsample and normalise",f:"H = bilinear₅₁₂(M) / max(M)",d:"Smooth interpolation makes the map look precise, but it contains no new information. The blur you see is the 16×16 grid."},
- {n:"5 Binarise",vis:[1,0,0,0,1,0],t:"Adaptive binarisation",f:"B(x,y) = 𝟙[ H(x,y) ≥ α · max(H) ],  α ∈ [0.2, 0.4]",d:"Low α gives a fat mask and a large box. High α keeps only the core. Move the α slider and watch the IoU in the panel."},
- {n:"6 Box + IoU",vis:[1,0,0,0,1,1],t:"Box and IoU",f:"IoU = |B̂ ∩ Bᴳᵀ| / |B̂ ∪ Bᴳᵀ|",d:"The bounding box of the largest connected component is compared with the expert box. Training never sees boxes; they exist only for evaluation."}];
+ {n:"5 Binarise",vis:[1,0,0,0,1,0],t:"Adaptive binarisation",f:"B(x,y) = 𝟙[ H(x,y) ≥ α · max(H) ],  demo slider α ∈ [0.15, 0.70]",d:"Low α gives a fat mask and a large box. High α keeps only the core. Move the α slider and watch the IoU in the panel."},
+ {n:"6 Box + IoU",vis:[1,0,0,0,1,1],t:"Box and IoU",f:"IoU = |B̂ ∩ Bᴳᵀ| / |B̂ ∪ Bᴳᵀ|",d:"The largest-component box is compared with a hand-authored illustrative box here. This demo IoU is not expert-annotated validation. Real training uses image labels; expert boxes are reserved for evaluation."}];
 
 /* ---------- three.js ---------- */
 var ok=typeof THREE!=="undefined",planes=[],textures=[],renderer,scene,cam,group,axis,cur={gap:.64};
@@ -673,7 +697,6 @@ function initGL(){
     this.tx=rx;this.tz=rz;this.active=true;
     if(typeof exp==="number"){var s=$("#s-exp");if(s){s.value=String(exp);s.dispatchEvent(new Event("input"));}}
   }};
-  window.__wsolResize=function(){resize();};
   var geo=new THREE.PlaneGeometry(4,4),edge=new THREE.EdgesGeometry(geo);
   LAYERS.forEach(function(L,i){
     var t=new THREE.CanvasTexture(cv[L.k]);t.generateMipmaps=false;t.minFilter=THREE.LinearFilter;
@@ -684,7 +707,7 @@ function initGL(){
     var d=document.createElement("div");d.className="lbl";d.textContent=(i+1)+" · "+L.n;$("#labels").appendChild(d);labs.push(d);
   });
   var g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,-1),new THREE.Vector3(0,0,1)]);
-  axis=new THREE.Line(g,new THREE.LineBasicMaterial({color:0xF2A93B}));group.add(axis);
+  axis=new THREE.Line(g,new THREE.LineBasicMaterial({color:0xF2A93B}));group.add(axis);syncScene();
   var dragging=false,lx=0,ly=0;
   glc.addEventListener("pointerdown",function(e){dragging=true;if(window.__wsolCam)window.__wsolCam.active=false;lx=e.clientX;ly=e.clientY;glc.setPointerCapture(e.pointerId)});
   glc.addEventListener("pointermove",function(e){if(!dragging)return;
@@ -695,7 +718,7 @@ function initGL(){
   new ResizeObserver(resize).observe(stage);resize();
   (function loop(){
     requestAnimationFrame(loop);
-    if(document.hidden)return;
+    if(document.hidden||!stage.clientWidth||!stage.clientHeight)return;
     if(window.__wsolCam&&window.__wsolCam.active&&!dragging){
       var k=reduced?1:.14;
       group.rotation.x+=(window.__wsolCam.tx-group.rotation.x)*k;
@@ -724,7 +747,14 @@ function labels(){
     labs[i].style.left=((tv.x+1)/2*w)+"px";labs[i].style.top=((1-tv.y)/2*h)+"px";
     labs[i].style.opacity=(vis[i]&&(state.hl<0||state.hl===i))?1:0});
 }
-function resize(){var w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+function resize(){var w=stage.clientWidth,h=stage.clientHeight;if(!renderer||!w||!h)return false;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();return true}
+function ensureGL(){
+  if(!stage.clientWidth||!stage.clientHeight)return false;
+  if(!renderer&&ok)initGL();
+  if(!ok){$("#nogl").style.display="grid";return false;}
+  return resize();
+}
+window.__wsolResize=ensureGL;
 
 /* ---------- refresh: run pipeline and repaint every layer ---------- */
 var resA,resB,pending=false;
@@ -765,11 +795,14 @@ function doRefresh(){
     var tx=resA.iou==null?"no reference box":"IoU "+resA.iou.toFixed(2);
     var ty=Math.max(30,resA.box[1]*S-6),tw=x.measureText(tx).width+14;
     x.fillStyle="rgba(7,11,18,.85)";x.fillRect(resA.box[0]*S,ty-28,tw,32);x.fillStyle="#3FD0C4";x.fillText(tx,resA.box[0]*S+7,ty)}
-  if(ok){
-    textures.forEach(function(t){t.needsUpdate=true});
-    var px=(resA.peak.x-.5)*4,py=-(resA.peak.y-.5)*4;axis.position.set(px,py,0);
-  }
+  syncScene();
   metrics();tilesUpdate();
+}
+
+function syncScene(){
+  if(!renderer||!axis||!resA)return;
+  textures.forEach(function(t){t.needsUpdate=true});
+  axis.position.set((resA.peak.x-.5)*4,-(resA.peak.y-.5)*4,0);
 }
 
 /* ---------- panels ---------- */
@@ -790,7 +823,7 @@ function metrics(){
   var dc=$("#dcard");
   if(cu){dc.innerHTML="<h3>Custom output</h3><p>Showing your heatmap through the same coarse-map, threshold and box steps. Grounding is not re-applied to uploads.</p>"}
   else dc.innerHTML="<h3>"+d.name+" <small class='mono' style='color:var(--muted);font-weight:400'>"+d.vi+" · "+d.icd+"</small></h3>"+
-   "<p><span class='tag'>WSOL difficulty: "+d.diff+"</span></p>"+
+   "<p><span class='tag'>Illustrative WSOL difficulty: "+d.diff+"</span></p>"+
    "<p><b>Where the map peaks</b>"+d.n[0]+"</p><p><b>Why it is hard or easy</b>"+d.n[1]+"</p><p><b>Try this</b>"+d.n[2]+"</p>";
   $("#curhead").textContent=cu?"custom":"Head "+d.head;
   $("#groundnote").textContent=cu?"Grounding is off for uploads.":(state.grounded?"Heat outside the thorax and mediastinum is removed before normalising.":"Raw attention: corner and border activations stay in. This is the audit view for shortcut learning.");
@@ -801,6 +834,11 @@ function setStep(i){
   var c=$("#cap"),s=STEPS[i];c.children[0].textContent=s.t;c.children[1].textContent=s.f;c.children[2].textContent=s.d;
   Array.prototype.forEach.call(document.querySelectorAll("#layers input"),function(inp,k){inp.checked=!!vis[k]});
 }
+function resetStack(){
+  state.rot=false;state.hl=-1;$("#c-rot").checked=false;
+  setStep(0);
+}
+window.__wsolResetStack=resetStack;
 var tileCanvases={};
 function tilesUpdate(){
   D.forEach(function(d){
@@ -811,7 +849,7 @@ function tilesUpdate(){
     if(d.gt){x.strokeStyle="#F2A93B";x.setLineDash([5,3]);x.strokeRect(d.gt[0]*160,d.gt[1]*160,(d.gt[2]-d.gt[0])*160,(d.gt[3]-d.gt[1])*160)}
     if(r.box){x.strokeStyle="#3FD0C4";x.setLineDash([]);x.strokeRect(r.box[0]*160,r.box[1]*160,(r.box[2]-r.box[0])*160,(r.box[3]-r.box[1])*160)}
     if(state.cmp===d.id){x.strokeStyle="#B592FF";x.lineWidth=4;x.setLineDash([]);x.strokeRect(2,2,156,156)}
-    t.i.textContent=(r.iou==null?"no ref box":"IoU "+r.iou.toFixed(2))+" · "+(r.inLung*100).toFixed(0)+"% in-lung";
+    t.i.textContent="τ Youden "+findingThreshold(d).toFixed(4)+" · Demo "+(r.iou==null?"no ref box":"IoU "+r.iou.toFixed(2))+" · "+(r.inLung*100).toFixed(0)+"% in-lung";
     t.b.setAttribute("aria-pressed",d.id===state.id&&!state.custom?"true":"false");
   });
 }
@@ -844,7 +882,7 @@ function build(){
     var n=document.createElement("span");n.className="tn";n.textContent=d.name;
     var i=document.createElement("span");i.className="ti";
     b.appendChild(c);b.appendChild(n);b.appendChild(i);
-    b.onclick=function(){select(d.id);if(window.__switchAtlasTab)window.__switchAtlasTab("wsol");};
+    b.onclick=function(){select(d.id);resetStack();if(window.__switchAtlasTab)window.__switchAtlasTab("wsol");};
     tl.appendChild(b);tileCanvases[d.id]={c:c,i:i,b:b}});
   function bind(id,out,fmt,key,pct){var e=$(id),o=$(out);var u=function(){var v=parseFloat(e.value);state[key]=v;o.textContent=fmt(v);if(key!=="explode"&&key!=="heatOp")refresh()};e.oninput=u;u()}
   bind("#s-exp","#o-exp",function(v){return Math.round(v*100)+"%"},"explode");
@@ -864,7 +902,7 @@ function build(){
 }
 
 build();
-initGL();
+ensureGL();
 setStep(0);
 doRefresh();
 })();
@@ -896,29 +934,26 @@ $$(".tabbtn").forEach(function(b){
 });
 
 /* ==================== 2. 3D CAMERA PRESET CONTROLS ==================== */
+function applyCameraPreset(mode){
+  if(window.__wsolResize)window.__wsolResize();
+  if(mode==="reset"&&window.__wsolResetStack)window.__wsolResetStack();
+  if(!window.__wsolCam)return;
+  $$(".cam-bar button").forEach(function(x){x.classList.remove("active");});
+  var selected=mode==="reset"?"tilt":mode;
+  $('.cam-bar button[data-cam="'+selected+'"]').classList.add("active");
+  if(mode==="flat")window.__wsolCam.set(0,0,0);
+  else if(mode==="side")window.__wsolCam.set(-1.32,0.95,0.92);
+  else window.__wsolCam.set(-0.92,0.48,0.55);
+}
 $$(".cam-bar button").forEach(function(btn){
-  btn.addEventListener("click", function(){
-    var mode=btn.dataset.cam;
-    if(!window.__wsolCam) return;
-    $$(".cam-bar button").forEach(function(x){ x.classList.remove("active"); });
-    if(mode==="flat"){
-      btn.classList.add("active");
-      window.__wsolCam.set(0, 0, 0);
-    } else if(mode==="tilt" || mode==="reset"){
-      $('.cam-bar button[data-cam="tilt"]').classList.add("active");
-      window.__wsolCam.set(-0.92, 0.48, 0.55);
-    } else if(mode==="side"){
-      btn.classList.add("active");
-      window.__wsolCam.set(-1.32, 0.95, 0.92);
-    }
-  });
+  btn.addEventListener("click",function(){applyCameraPreset(btn.dataset.cam);});
 });
 
 /* ==================== 3. VERIFIED ARCHITECTURE DATA (SSOT) ==================== */
 var ARCHS = {
   densenet: {
     name: "DenseNet-121 Tri-Head",
-    badge: "Live Production · 6.97M params · 27.14 MiB",
+    badge: "Standard · 6,970,256 params · 27.14 MiB · trained 256 px / served 512 px",
     meta: [
       ["Input", "3 × 512 × 512"],
       ["Backbone", "DenseNet-121"],
@@ -931,7 +966,7 @@ var ARCHS = {
         shape:"3 × 512 × 512", act:"Linear", actClass:"",
         op:"Aspect-preserving 512×512 letterbox, 3-channel repeat",
         formula:"x_norm = (x - μ_ImageNet) / σ_ImageNet",
-        desc:"Preserves subtle nodules and cardiothoracic proportions without stretching distortion; 512 px avoids the 7×7 grid collapse of 224 px."
+        desc:"Letterboxing preserves aspect ratio. Tensor shapes below are for current 512 px serving; stored baseline AUROC was measured at 256 px. No localization gain is inferred from resizing alone."
       },
       {
         idx:"02", name:"Stem Block", sub:"conv0 · norm0 · relu0 · pool0",
@@ -943,23 +978,23 @@ var ARCHS = {
       {
         idx:"03", name:"DenseBlock 1 + Transition 1", sub:"6 Dense Layers · Growth Rate k=32",
         shape:"128 × 64 × 64", act:"BN + ReLU", actClass:"",
-        op:"6× [BN → ReLU → Conv1×1 → BN → ReLU → Conv3×3] → Trans(Conv1×1 + AvgPool2×2)",
+        op:"6× [BN → ReLU → Conv1×1 → BN → ReLU → Conv3×3] → Trans(BN → ReLU → Conv1×1(256→128) → AvgPool2×2)",
         formula:"x_l = H_l([x_0, x_1, ..., x_(l-1)])",
         desc:"Feature concatenation preserves fine interstitial textures across layers with compact parameter count."
       },
       {
         idx:"04", name:"DenseBlock 2 + Transition 2", sub:"12 Dense Layers · Compression 0.5",
         shape:"256 × 32 × 32", act:"BN + ReLU", actClass:"",
-        op:"12× Bottleneck Dense Layers → Conv1×1(512→256) + AvgPool2×2",
+        op:"12× Bottleneck Dense Layers → BN → ReLU → Conv1×1(512→256) → AvgPool2×2",
         formula:"F_2 ∈ ℝ^(256×32×32)",
         desc:"Captures mid-level parenchymal patterns such as infiltrates, blunted costophrenic angles, and vascular congestion."
       },
       {
         idx:"05", name:"DenseBlock 3 + Transition 3", sub:"24 Dense Layers · Grad-CAM++ Tap 1",
         shape:"1024 × 32 × 32 → 512 × 16 × 16", act:"BN + ReLU", actClass:"purple",
-        op:"24× Bottleneck Dense Layers (32×32 tap, weight 0.40) → AvgPool2×2",
+        op:"24× Bottleneck Dense Layers (32×32 tap, weight 0.40) → BN → ReLU → Conv1×1(1024→512) → AvgPool2×2",
         formula:"CAM_fuse = 0.40·CAM(DB3_32×32) + 0.60·CAM(DB4_16×16)",
-        desc:"Supplies high-resolution 32×32 spatial boundaries to Multi-Scale Grad-CAM++, sharply tightening lesion contours."
+        desc:"DB3 and DB4 CAMs are normalized, resized and fused with weights 0.40 / 0.60. This architecture diagram does not establish a measured localization improvement."
       },
       {
         idx:"06", name:"DenseBlock 4 + Norm5", sub:"16 Dense Layers · Grad-CAM++ Tap 2",
@@ -977,10 +1012,10 @@ var ARCHS = {
       },
       {
         idx:"08", name:"3 Isolated Clinical Heads", sub:"Head A (14) · Head B (1) · Head C (1)",
-        shape:"[14] · [1] · [1]", act:"Sigmoid + ASL/BCE", actClass:"warn",
-        op:"Linear(1024→14) + ASL(γ-=4, γ+=0, m=0.05) | Linear(1024→1) + Weighted BCE | Linear(1024→1) + BCE",
-        formula:"L = I(A)·L_ASL + 0.8·I(B)·L_TB + 0.8·I(C)·L_COVID",
-        desc:"Masked backpropagation updates only the active head per sample (zero cross-head gradient leakage). Per-class Youden cutoffs calibrated on validation."
+        shape:"[14] · [1] · [1]", act:"Logits → Sigmoid (predict)", actClass:"warn",
+        op:"Linear(1024→14) | Linear(1024→1) | Linear(1024→1); forward returns logits; predict applies sigmoid for binary heads",
+        formula:"L = 1.0·L_A + 0.8·L_B + 0.8·L_C (masked per task)",
+        desc:"MaskedMultiTaskLoss defaults: BCE for A/B/C; configurable A/C ASL uses AsymmetricLoss defaults γ−=4, γ+=1, clip=0.05. Separate AsymmetricFocalLoss defaults γ−=4, γ+=0, clip=0.05. These are training options, not inference activations; checkpoint metadata does not identify the loss. Validation-selected Youden thresholds are shown in Tab 3."
       }
     ]
   },
@@ -989,38 +1024,38 @@ var ARCHS = {
     badge: "Stage 1 Segmentation · Val Dice 0.9630 · Val IoU 0.9300",
     meta: [
       ["Input", "3 × 256 × 256"],
-      ["Trained On", "3,014 CXR-Mask Pairs"],
+      ["Paired Pool", "3,014 pairs (not validation count)"],
       ["Val Dice / IoU", "0.9630 / 0.9300"],
-      ["Soft Gate", "+6% Dilation · 10% Outer"]
+      ["Soft Gate", "6% kernel width · 10% outer residual"]
     ],
     layers: [
       {
         idx:"01", name:"Contracting Encoder", sub:"DenseNet-121 Backbone (DB1 → DB4)",
-        shape:"64 → 256 → 512 → 1024", act:"BN + ReLU", actClass:"",
+        shape:"64×128² → 256×64² → 512×32² → 1024×16²; DB4 1024×8²", act:"BN + ReLU", actClass:"",
         op:"Hierarchical dense feature extraction with 4 multi-scale skip taps",
         formula:"Skip taps: [init_relu, DB1, DB2, DB3] → Bottleneck DB4",
         desc:"Reuses DenseNet-121 contracting path to extract sharp ribcage, diaphragm, and cardiac boundary features."
       },
       {
         idx:"02", name:"Decoder Blocks 1–4", sub:"ConvTranspose2d + Skip Concat + Double Conv",
-        shape:"1024 → 512 → 256 → 128 → 64", act:"BN + ReLU", actClass:"purple",
-        op:"ConvTranspose2d(k=2, s=2) → Concat(Skip) → 2× [Conv3×3 → BatchNorm2d → ReLU]",
-        formula:"d_i = Conv3×3(BN(ReLU(Concat(Up(d_(i-1)), skip_i))))",
-        desc:"Reconstructs exact lung field geometry at full resolution by fusing deep semantics with high-resolution skip features."
+        shape:"Bridge 512×8² → 256×16² → 128×32² → 64×64² → 32×128²", act:"BN + ReLU", actClass:"purple",
+        op:"Bridge Conv3×3(1024→512) → BN → ReLU; each decoder: ConvTranspose2d(in→in/2, k=2, s=2) → Concat(Skip) → 2× [Conv3×3 → BN → ReLU]",
+        formula:"d_i = [ReLU(BN(Conv3×3))]²(Concat(Up(d_(i-1)), skip_i))",
+        desc:"Decoder skip channels are 1024, 512, 256 and 64. The decoder ends at half resolution; the final upsample restores the input dimensions."
       },
       {
-        idx:"03", name:"Binary Mask Head", sub:"Final 1×1 Projection",
+        idx:"03", name:"Binary Mask Head", sub:"Final Upsample + 3×3 + 1×1 Projection",
         shape:"1 × 256 × 256", act:"Sigmoid", actClass:"warn",
-        op:"Conv2d(64→1, k=1) → Sigmoid → Threshold ≥ 0.50",
-        formula:"M_lung = 𝟙[σ(Conv₁ₓ₁(d_4)) ≥ 0.50]",
-        desc:"Produces calibrated lung probability map (Val Dice 0.9630, Val IoU 0.9300 across 3,014 paired radiographs)."
+        op:"ConvTranspose2d(32→16, k=2, s=2) → Conv3×3(16→16) → BN → ReLU → Conv1×1(16→1) → Sigmoid; predict_mask thresholds ≥ 0.50",
+        formula:"M_lung = 𝟙[forward(x) ≥ 0.50], forward(x) ∈ [0,1]",
+        desc:"Forward produces sigmoid probabilities, without a probability-calibration claim. Manifest: epoch 15; validation Dice 0.9629816869 / IoU 0.9300364478 at 256×256; total paired pool 3,014. These are reported artifact metrics, not a re-evaluation here."
       },
       {
         idx:"04", name:"Dilated Soft Masking & White-Out Bypass", sub:"Anatomical Pre-Gate (Frozen)",
         shape:"3 × 512 × 512", act:"Fail-Safe Gate", actClass:"warn",
-        op:"+6% Dilation · 10% Outer Residual · Bypass if coverage < 5% (hard) / < 18% (soft)",
-        formula:"x̃ = x · (0.10 + 0.90 · dilate₆%(M_lung))",
-        desc:"Suppresses R/L lead markers and frame borders while preserving costophrenic angles and bypassing masking on severe white-out lungs."
+        op:"NumPy helper: 6% shorter-side odd elliptical kernel (31 px at 512) → Gaussian blur; tensor helper: max-pool → average-pool; 10% outside residual; separate hard helper bypass <5%; soft bypass <18% or symmetry<0.20 with coverage<25%",
+        formula:"x̃ = x · (0.10 + 0.90 · GaussianBlur(dilate(M_lung)))",
+        desc:"Frozen optional anatomical preprocessing reduces outside-mask intensity to 10% rather than removing it. Coverage/symmetry checks are heuristic bypasses, not diagnosis of white-out. Standard-only serving has no Dense-UNet and reports morphology fallback."
       }
     ]
   }
@@ -1087,11 +1122,11 @@ renderBars($("#bars-densenet"), DENSENET_BARS);
 renderBars($("#bars-denseunet"), DENSEUNET_BARS);
 
 var SAFETY = [
-  {tag:"TIER 1 · OOD", warn:true, name:"Helmholtz Free Energy Gate", code:"S_E ∈ [5.50, 24.00] · H ≤ 0.6800", desc:"Rejects non-thoracic scans, noise, or hyper-activation artifacts before clinical reporting."},
-  {tag:"TIER 2 · MASK", warn:false, name:"Anatomical Grounding", code:"Dilate +6% · Outer 10% · Bypass < 5%", desc:"Isolates lung parenchyma from R/L markers while protecting diffuse white-out consolidations."},
-  {tag:"TIER 3 · TTA", warn:false, name:"3-Pass Clinical TTA", code:"Original + HFlip + CLAHE · T = 1.20", desc:"Averages three calibrated views to reduce hospital scanner variance."},
-  {tag:"TIER 4 · GUARD", warn:true, name:"COVID Smart Guardrail", code:"In-Lung Energy ≥ 80% + Head A Check", desc:"Down-flags positive COVID alerts whenever Grad-CAM attribution falls outside lung fields."},
-  {tag:"TIER 5 · RAG", warn:false, name:"Deterministic ICD-10 RAG", code:"Zero-LLM · Fleischner / WHO KB", desc:"Retrieves verified diagnostic workups and locks automatically on OOD rejection."}
+  {tag:"TIER 1 · OOD", warn:true, name:"Helmholtz Free Energy Gate", code:"S_E ∈ [5.50, 24.00] · H ≤ 0.6800", desc:"Configured sigmoid-energy/mean binary-entropy rejection thresholds; not a guarantee of OOD detection. Input-quality checks also reject blank/noisy uploads. OOD bypass may disable score rejection."},
+  {tag:"TIER 2 · MASK", warn:false, name:"Anatomical Grounding", code:"6% kernel · 10% residual · hard <5% / soft <18%", desc:"Optional Dense-UNet has coverage/symmetry bypasses; Standard-only serving uses an approximate morphology mask and does not validate the in-lung ratio."},
+  {tag:"TIER 3 · TTA", warn:false, name:"3-Pass Clinical TTA", code:"Original + HFlip + CLAHE · T = 1.20", desc:"With TTA enabled: original, horizontal flip, LAB CLAHE (clipLimit=2.5, tileGridSize=8×8). Average probabilities first, then logit temperature scaling T=1.20. TTA disabled uses the original only; failed view preprocessing clones the original. No measured improvement is asserted."},
+  {tag:"TIER 4 · GUARD", warn:true, name:"COVID Smart Guardrail", code:"In-Lung Energy ≥ 80% + Head A Check", desc:"For positive AG-MTCNet COVID predictions: down-flag when the audit is unavailable, in-lung energy <80%, or Infiltration/Consolidation/Pneumonia are all below their thresholds. Probabilities remain visible. Standard does not run this automatic guardrail."},
+  {tag:"TIER 5 · RAG", warn:false, name:"Deterministic ICD-10 RAG", code:"Zero-LLM · Fleischner / WHO KB", desc:"Deterministic reference cards with ICD-10/Fleischner/WHO citations; not validated diagnoses. Returns BLOCKED_OOD when the supplied is_safe context is false; clinician review remains necessary."}
 ];
 $("#safety-strip").innerHTML=SAFETY.map(function(s){
   return '<div class="s-card"><span class="tag'+(s.warn?' warn':'')+'">'+s.tag+'</span><h4>'+s.name+'</h4><code>'+s.code+'</code><p>'+s.desc+'</p></div>';
